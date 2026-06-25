@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.local
+.env.*.local
+
+# Build
+.next/
+out/
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+npm-debug.log*
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Uploads (local dev)
+uploads/
+storage/
+
+# Docker volumes
+postgres_data/
+
+# Docx extract temp
+_docx_extract/
+_spec.zip
