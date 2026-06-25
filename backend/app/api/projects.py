@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.documents import get_s3_client
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user, require_roles
 from app.models import (
     Activity,
     ActivityDependency,
     ActivityStatus,
+    Document,
     Project,
     ProjectStatus,
     User,
@@ -42,7 +45,7 @@ def _project_to_card(project: Project) -> ProjectCard:
         delivery_date=project.delivery_date,
         completion_percent=project.completion_percent,
         project_manager_name=project.project_manager.full_name if project.project_manager else None,
-        site_manager_name=None,
+        site_manager_name=project.site_manager.full_name if project.site_manager else None,
     )
 
 
@@ -67,7 +70,9 @@ def list_projects(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    q = db.query(Project).options(joinedload(Project.project_manager))
+    q = db.query(Project).options(
+        joinedload(Project.project_manager), joinedload(Project.site_manager)
+    )
     if user.role == UserRole.PROJECT_MANAGER:
         q = q.filter(Project.project_manager_id == user.id)
     projects = q.order_by(Project.delivery_date).all()
@@ -79,7 +84,9 @@ def kanban_board(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    q = db.query(Project).options(joinedload(Project.project_manager))
+    q = db.query(Project).options(
+        joinedload(Project.project_manager), joinedload(Project.site_manager)
+    )
     if user.role == UserRole.PROJECT_MANAGER:
         q = q.filter(Project.project_manager_id == user.id)
     projects = q.all()
@@ -125,7 +132,16 @@ def get_project(
 
 
 def _get_project_detail(db: Session, project_id: int) -> ProjectDetail:
-    project = db.query(Project).options(joinedload(Project.project_manager)).get(project_id)
+    project = (
+        db.query(Project)
+        .options(
+            joinedload(Project.project_manager),
+            joinedload(Project.site_manager),
+            joinedload(Project.procurement),
+            joinedload(Project.billing),
+        )
+        .get(project_id)
+    )
     return ProjectDetail(
         id=project.id,
         name=project.name,
@@ -138,13 +154,17 @@ def _get_project_detail(db: Session, project_id: int) -> ProjectDetail:
         delivery_date=project.delivery_date,
         completion_percent=project.completion_percent,
         project_manager_name=project.project_manager.full_name if project.project_manager else None,
-        site_manager_name=None,
+        site_manager_name=project.site_manager.full_name if project.site_manager else None,
         address=project.address,
         lot_number=project.lot_number,
         client_phone=project.client_phone,
         client_email=project.client_email,
+        project_manager_id=project.project_manager_id,
+        site_manager_id=project.site_manager_id,
         procurement_id=project.procurement_id,
+        procurement_name=project.procurement.full_name if project.procurement else None,
         billing_id=project.billing_id,
+        billing_name=project.billing.full_name if project.billing else None,
         subcontractors=project.subcontractors,
         created_at=project.created_at,
         updated_at=project.updated_at,
@@ -164,6 +184,7 @@ def update_project(
     if not _can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     updates = body.model_dump(exclude_unset=True)
+    changed_fields = set()
     for field, value in updates.items():
         old = getattr(project, field)
         if old != value:
@@ -174,10 +195,44 @@ def update_project(
                 project.id, project.id,
             )
             setattr(project, field, value)
-    if "delivery_date" in updates:
+            changed_fields.add(field)
+    if "delivery_date" in changed_fields:
         recalculate_schedule(db, project)
     db.commit()
     return _get_project_detail(db, project_id)
+
+
+@router.delete("/{project_id}")
+def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = db.query(Project).get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not _can_edit_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Dependency rows (on both the activity_id and prerequisite_id side) and
+    # audit log rows are cleaned up by the DB itself via ondelete=CASCADE /
+    # ondelete=SET NULL on those foreign keys (see models.py + migration
+    # 69cf170f42ab) — no need to pre-delete/null them by hand here.
+    documents = db.query(Document).filter(Document.project_id == project_id).all()
+    if documents:
+        client = get_s3_client()
+        for doc in documents:
+            try:
+                client.delete_object(Bucket=settings.s3_bucket, Key=doc.s3_key)
+            except Exception:
+                pass
+
+    log_change(db, user, "project", "deleted", project.name, None, project_id, project_id)
+
+    project_name = project.name
+    db.delete(project)
+    db.commit()
+    return {"ok": True, "deleted": project_name}
 
 
 @router.get("/{project_id}/activities", response_model=list[ActivityResponse])
@@ -228,8 +283,8 @@ def update_activity(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if user.role not in (UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not _can_edit_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
     activity = db.query(Activity).filter(
         Activity.id == activity_id, Activity.project_id == project_id
     ).first()
@@ -246,6 +301,7 @@ def update_activity(
                 project.id, activity.id,
             )
             setattr(activity, field, value)
+    db.flush()
     if "duration_days" in updates or "prep_days" in updates:
         recalculate_schedule(db, project)
     else:
@@ -276,8 +332,15 @@ def add_dependency(
     activity_id: int,
     body: DependencyCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER)),
+    user: User = Depends(get_current_user),
 ):
+    project = db.query(Project).get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not _can_edit_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    if activity_id == body.prerequisite_id:
+        raise HTTPException(status_code=400, detail="An activity cannot depend on itself")
     activity = db.query(Activity).filter(
         Activity.id == activity_id, Activity.project_id == project_id
     ).first()
@@ -294,7 +357,46 @@ def add_dependency(
     ).first()
     if not existing:
         db.add(ActivityDependency(activity_id=activity_id, prerequisite_id=body.prerequisite_id))
+        log_change(
+            db, user, "activity_dependency", "added", None, prereq.name,
+            project_id, activity.id,
+        )
+    recalculate_schedule(db, project)
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/{project_id}/activities/{activity_id}/dependencies/{prerequisite_id}")
+def remove_dependency(
+    project_id: int,
+    activity_id: int,
+    prerequisite_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     project = db.query(Project).get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not _can_edit_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    activity = db.query(Activity).filter(
+        Activity.id == activity_id, Activity.project_id == project_id
+    ).first()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    dependency = db.query(ActivityDependency).filter(
+        ActivityDependency.activity_id == activity_id,
+        ActivityDependency.prerequisite_id == prerequisite_id,
+    ).first()
+    if not dependency:
+        raise HTTPException(status_code=404, detail="Dependency not found")
+    prereq = db.query(Activity).get(prerequisite_id)
+    db.delete(dependency)
+    log_change(
+        db, user, "activity_dependency", "removed",
+        prereq.name if prereq else str(prerequisite_id), None,
+        project_id, activity_id,
+    )
     recalculate_schedule(db, project)
     db.commit()
     return {"ok": True}
@@ -304,11 +406,13 @@ def add_dependency(
 def recalculate(
     project_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER)),
+    user: User = Depends(get_current_user),
 ):
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    if not _can_edit_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
     recalculate_schedule(db, project)
     db.commit()
     return {"ok": True}

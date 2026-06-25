@@ -12,6 +12,10 @@ const NAV = [
   { href: "/my-tasks", label: "Saját feladatok", icon: "✅" },
 ];
 
+const ADMIN_NAV = [{ href: "/users", label: "Felhasználók", icon: "👤" }];
+
+const MANAGEMENT_NAV = [{ href: "/audit-log", label: "Audit napló", icon: "🛡️" }];
+
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -26,6 +30,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     router.push("/login");
   }
 
+  const navItems = [
+    ...NAV,
+    ...(user?.role === "admin" ? ADMIN_NAV : []),
+    ...(user?.role === "admin" || user?.role === "management" ? MANAGEMENT_NAV : []),
+  ];
+
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-56 flex-col bg-[var(--sidebar)] text-white">
@@ -34,7 +44,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <p className="mt-1 text-xs text-white/50">Projektütemező</p>
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {NAV.map((item) => {
+          {navItems.map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <Link

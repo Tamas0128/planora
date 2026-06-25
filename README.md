@@ -21,6 +21,7 @@ docker compose up --build
 
 # Frontend: http://localhost:3001
 # Backend API: http://localhost:8000/docs
+# PostgreSQL: localhost:5433 (5432 foglalt más projekt miatt)
 # MinIO console: http://localhost:9001
 ```
 

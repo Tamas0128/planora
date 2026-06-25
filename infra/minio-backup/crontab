@@ -1,0 +1,1 @@
+0 1 * * * /backup.sh >> /var/log/minio-backup.log 2>&1

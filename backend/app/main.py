@@ -1,14 +1,20 @@
+import logging
 from contextlib import asynccontextmanager
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, dashboard, documents, projects, tasks
+from app.api import auth, dashboard, documents, notifications, projects, tasks
 from app.config import settings
 from app.core.security import hash_password
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.models import User, UserRole
+from app.services.notifications import send_daily_digest
 from app.services.schedule_engine import seed_activity_templates
+
+logger = logging.getLogger("planora.scheduler")
 
 
 def seed_admin():
@@ -30,11 +36,32 @@ def seed_admin():
         db.close()
 
 
+def run_daily_digest_job():
+    db = SessionLocal()
+    try:
+        sent = send_daily_digest(db)
+        logger.info("Daily digest run: emails sent/logged for %d users", sent)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    # Schema is managed by Alembic migrations (run via the container entrypoint),
+    # not by Base.metadata.create_all.
     seed_admin()
+    # Created fresh per startup (not module-level) so it always binds to the
+    # currently running event loop instead of a stale one from a prior run.
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        run_daily_digest_job,
+        CronTrigger(hour=settings.daily_digest_hour, minute=settings.daily_digest_minute),
+        id="daily_digest",
+        replace_existing=True,
+    )
+    scheduler.start()
     yield
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(title="PLANora API", version="1.0.0", lifespan=lifespan)
@@ -53,6 +80,7 @@ app.include_router(projects.router, prefix="/api")
 app.include_router(tasks.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
 
 
 @app.get("/api/health")

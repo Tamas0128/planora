@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_roles
@@ -67,7 +67,27 @@ def audit_logs(
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT)),
 ):
-    q = db.query(AuditLog).order_by(AuditLog.created_at.desc())
+    q = (
+        db.query(AuditLog)
+        .options(joinedload(AuditLog.user), joinedload(AuditLog.project))
+        .order_by(AuditLog.created_at.desc())
+    )
     if project_id:
         q = q.filter(AuditLog.project_id == project_id)
-    return q.limit(limit).all()
+    logs = q.limit(limit).all()
+    return [
+        AuditLogResponse(
+            id=log.id,
+            user_id=log.user_id,
+            user_name=log.user.full_name if log.user else None,
+            project_id=log.project_id,
+            project_name=log.project.name if log.project else None,
+            entity_type=log.entity_type,
+            entity_id=log.entity_id,
+            field_name=log.field_name,
+            old_value=log.old_value,
+            new_value=log.new_value,
+            created_at=log.created_at,
+        )
+        for log in logs
+    ]

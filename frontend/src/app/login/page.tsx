@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { api, setToken } from "@/lib/api";
+import { api, setTokens } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function LoginPage() {
     setError("");
     try {
       const res = await api.login(username, password);
-      setToken(res.access_token);
+      setTokens(res.access_token, res.refresh_token);
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bejelentkezés sikertelen");

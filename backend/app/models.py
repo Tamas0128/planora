@@ -128,6 +128,9 @@ class Project(Base):
     project_manager: Mapped["User | None"] = relationship(
         back_populates="managed_projects", foreign_keys=[project_manager_id]
     )
+    site_manager: Mapped["User | None"] = relationship(foreign_keys=[site_manager_id])
+    procurement: Mapped["User | None"] = relationship(foreign_keys=[procurement_id])
+    billing: Mapped["User | None"] = relationship(foreign_keys=[billing_id])
     activities: Mapped[list["Activity"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
@@ -187,8 +190,12 @@ class ActivityDependency(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"), index=True)
-    prerequisite_id: Mapped[int] = mapped_column(ForeignKey("activities.id"), index=True)
+    activity_id: Mapped[int] = mapped_column(
+        ForeignKey("activities.id", ondelete="CASCADE"), index=True
+    )
+    prerequisite_id: Mapped[int] = mapped_column(
+        ForeignKey("activities.id", ondelete="CASCADE"), index=True
+    )
 
     activity: Mapped["Activity"] = relationship(
         back_populates="prerequisites", foreign_keys=[activity_id]
@@ -217,7 +224,9 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
+    )
     entity_type: Mapped[str] = mapped_column(String(100))
     entity_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     field_name: Mapped[str] = mapped_column(String(100))
@@ -226,3 +235,4 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     project: Mapped["Project | None"] = relationship(back_populates="audit_logs")
+    user: Mapped["User"] = relationship()

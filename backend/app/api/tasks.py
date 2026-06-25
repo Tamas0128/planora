@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import Activity, ActivityStatus, Project, User, UserRole
+from app.models import Activity, ActivityStatus, User
 from app.schemas import PrepTaskItem
+from app.services.scoping import scoped_activity_query
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -18,17 +19,7 @@ def prep_center(
     user: User = Depends(get_current_user),
 ):
     today = date.today()
-    q = (
-        db.query(Activity, Project)
-        .join(Project, Activity.project_id == Project.id)
-        .filter(Activity.prep_date.isnot(None))
-    )
-    if user.role == UserRole.PROJECT_MANAGER:
-        q = q.filter(Project.project_manager_id == user.id)
-    elif user.role == UserRole.PROCUREMENT:
-        q = q.filter(Activity.responsible_role == UserRole.PROCUREMENT)
-    elif user.role == UserRole.BILLING:
-        q = q.filter(Activity.responsible_role == UserRole.BILLING)
+    q = scoped_activity_query(db, user).filter(Activity.prep_date.isnot(None))
 
     items: list[PrepTaskItem] = []
     for activity, project in q.all():
@@ -68,11 +59,7 @@ def my_tasks(
     user: User = Depends(get_current_user),
 ):
     today = date.today()
-    q = db.query(Activity, Project).join(Project, Activity.project_id == Project.id)
-    if user.role == UserRole.PROJECT_MANAGER:
-        q = q.filter(Project.project_manager_id == user.id)
-    elif user.role in (UserRole.PROCUREMENT, UserRole.BILLING):
-        q = q.filter(Activity.responsible_role == user.role)
+    q = scoped_activity_query(db, user)
 
     items = []
     for activity, project in q.filter(Activity.status != ActivityStatus.DONE).all():

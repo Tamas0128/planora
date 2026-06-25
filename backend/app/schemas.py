@@ -17,12 +17,23 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
     full_name: str
     password: str
     role: UserRole = UserRole.PROJECT_MANAGER
+
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -97,8 +108,12 @@ class ProjectDetail(ProjectCard):
     lot_number: Optional[str] = None
     client_phone: Optional[str] = None
     client_email: Optional[str] = None
+    project_manager_id: Optional[int] = None
+    site_manager_id: Optional[int] = None
     procurement_id: Optional[int] = None
+    procurement_name: Optional[str] = None
     billing_id: Optional[int] = None
+    billing_name: Optional[str] = None
     subcontractors: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -156,8 +171,11 @@ class DashboardStats(BaseModel):
 class AuditLogResponse(BaseModel):
     id: int
     user_id: int
+    user_name: Optional[str] = None
     project_id: Optional[int]
+    project_name: Optional[str] = None
     entity_type: str
+    entity_id: Optional[int] = None
     field_name: str
     old_value: Optional[str]
     new_value: Optional[str]
