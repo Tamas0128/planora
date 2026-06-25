@@ -5,6 +5,17 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { api, PrepTask, ROLE_LABELS } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const FILTERS = [
   { key: "all", label: "Összes" },
@@ -28,70 +39,76 @@ function PrepCenterContent() {
     <>
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
-          <button
+          <Button
             key={f.key}
+            size="sm"
+            variant={filter === f.key ? "default" : "outline"}
             onClick={() => setFilter(f.key)}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              filter === f.key ? "bg-indigo-600 text-white" : "bg-white text-gray-600 shadow-sm"
-            }`}
+            className={
+              filter === f.key
+                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+                : ""
+            }
           >
             {f.label}
-          </button>
+          </Button>
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50 text-left text-gray-500">
-              <th className="px-4 py-3">Projekt</th>
-              <th className="px-4 py-3">Ügyfél</th>
-              <th className="px-4 py-3">Tevékenység</th>
-              <th className="px-4 py-3">Előkészítés</th>
-              <th className="px-4 py-3">Kezdés</th>
-              <th className="px-4 py-3">Felelős</th>
-              <th className="px-4 py-3">Státusz</th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="py-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Projekt</TableHead>
+              <TableHead>Ügyfél</TableHead>
+              <TableHead>Tevékenység</TableHead>
+              <TableHead>Előkészítés</TableHead>
+              <TableHead>Kezdés</TableHead>
+              <TableHead>Felelős</TableHead>
+              <TableHead>Státusz</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {items.map((item) => (
-              <tr
+              <TableRow
                 key={`${item.project_id}-${item.activity_id}`}
-                className={`border-b hover:bg-gray-50 ${item.is_overdue ? "bg-red-50" : ""}`}
+                className={item.is_overdue ? "border-l-2 border-l-red-500 bg-red-50/50" : ""}
               >
-                <td className="px-4 py-3">
-                  <Link href={`/projects/${item.project_id}`} className="font-medium text-indigo-600 hover:underline">
+                <TableCell>
+                  <Link href={`/projects/${item.project_id}`} className="font-medium text-violet-600 hover:underline">
                     {item.project_name}
                   </Link>
-                </td>
-                <td className="px-4 py-3">{item.client_name}</td>
-                <td className="px-4 py-3">{item.activity_name}</td>
-                <td className="px-4 py-3">
+                </TableCell>
+                <TableCell>{item.client_name}</TableCell>
+                <TableCell>{item.activity_name}</TableCell>
+                <TableCell className="text-muted-foreground">
                   {item.prep_date ? new Date(item.prep_date).toLocaleDateString("hu-HU") : "—"}
-                </td>
-                <td className="px-4 py-3">
+                </TableCell>
+                <TableCell className="text-muted-foreground">
                   {item.start_date ? new Date(item.start_date).toLocaleDateString("hu-HU") : "—"}
-                </td>
-                <td className="px-4 py-3">{ROLE_LABELS[item.responsible_role] || item.responsible_role}</td>
-                <td className="px-4 py-3">
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {ROLE_LABELS[item.responsible_role] || item.responsible_role}
+                </TableCell>
+                <TableCell>
                   {item.is_overdue ? (
-                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Lejárt</span>
+                    <Badge className="bg-red-100 text-red-700">Lejárt</Badge>
                   ) : (
-                    <span className="text-gray-500">{item.days_until ?? "—"} nap</span>
+                    <span className="text-muted-foreground">{item.days_until ?? "—"} nap</span>
                   )}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
             {items.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+              <TableRow>
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nincs megjeleníthető tétel
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
     </>
   );
 }
@@ -101,9 +118,9 @@ export default function PrepCenterPage() {
     <AppLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Előkészítési központ</h1>
-        <p className="text-gray-500">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
+        <p className="text-muted-foreground">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
       </div>
-      <Suspense fallback={<p>Betöltés...</p>}>
+      <Suspense fallback={<p className="text-muted-foreground">Betöltés...</p>}>
         <PrepCenterContent />
       </Suspense>
     </AppLayout>

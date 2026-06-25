@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { Building2, Loader2 } from "lucide-react";
 import { api, setTokens } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,46 +32,50 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--sidebar)]">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl"
-      >
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-[var(--foreground)]">PLANora</h1>
-          <p className="mt-2 text-sm text-gray-500">Építőipari projektütemező</p>
-        </div>
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-950 via-violet-900 to-fuchsia-900 p-4">
+      <Card className="w-full max-w-md shadow-2xl">
+        <CardHeader className="items-center text-center">
+          <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md">
+            <Building2 className="size-6" />
           </div>
-        )}
-        <label className="mb-4 block">
-          <span className="mb-1 block text-sm font-medium text-gray-700">Felhasználónév</span>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-indigo-200"
-          />
-        </label>
-        <label className="mb-6 block">
-          <span className="mb-1 block text-sm font-medium text-gray-700">Jelszó</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-indigo-200"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-[var(--accent)] py-3 font-medium text-white transition hover:bg-indigo-600 disabled:opacity-50"
-        >
-          {loading ? "Bejelentkezés..." : "Bejelentkezés"}
-        </button>
-      </form>
+          <h1 className="text-2xl font-bold tracking-tight">PLANora</h1>
+          <p className="text-sm text-muted-foreground">Építőipari projektütemező</p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="username">Felhasználónév</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Jelszó</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+            >
+              {loading && <Loader2 className="animate-spin" />}
+              {loading ? "Bejelentkezés..." : "Bejelentkezés"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

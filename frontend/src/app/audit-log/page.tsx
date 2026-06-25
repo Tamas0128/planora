@@ -3,12 +3,28 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { api, AuditLogEntry, ProjectCard, User } from "@/lib/api";
+import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function AuditLogPage() {
   const [me, setMe] = useState<User | null>(null);
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [projects, setProjects] = useState<ProjectCard[]>([]);
-  const [projectId, setProjectId] = useState<string>("");
+  const [projectId, setProjectId] = useState<string>("all");
 
   useEffect(() => {
     api.me().then(setMe).catch(() => setMe(null));
@@ -17,7 +33,7 @@ export default function AuditLogPage() {
 
   useEffect(() => {
     api
-      .auditLogs(projectId ? Number(projectId) : undefined)
+      .auditLogs(projectId !== "all" ? Number(projectId) : undefined)
       .then(setLogs)
       .catch(console.error);
   }, [projectId]);
@@ -25,7 +41,7 @@ export default function AuditLogPage() {
   if (me && me.role !== "admin" && me.role !== "management") {
     return (
       <AppLayout>
-        <p className="text-gray-500">Nincs jogosultságod ehhez a felülethez.</p>
+        <p className="text-muted-foreground">Nincs jogosultságod ehhez a felülethez.</p>
       </AppLayout>
     );
   }
@@ -35,57 +51,58 @@ export default function AuditLogPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Audit napló</h1>
-          <p className="text-gray-500">Módosítások nyomon követése</p>
+          <p className="text-muted-foreground">Módosítások nyomon követése</p>
         </div>
-        <select
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          className="rounded-lg border px-3 py-2 text-sm"
-        >
-          <option value="">Összes projekt</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+        <Select value={projectId} onValueChange={(v) => setProjectId(v as string)}>
+          <SelectTrigger className="w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Összes projekt</SelectItem>
+            {projects.map((p) => (
+              <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50 text-left text-gray-500">
-              <th className="px-4 py-3">Időpont</th>
-              <th className="px-4 py-3">Felhasználó</th>
-              <th className="px-4 py-3">Projekt</th>
-              <th className="px-4 py-3">Entitás</th>
-              <th className="px-4 py-3">Mező</th>
-              <th className="px-4 py-3">Régi érték</th>
-              <th className="px-4 py-3">Új érték</th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="py-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Időpont</TableHead>
+              <TableHead>Felhasználó</TableHead>
+              <TableHead>Projekt</TableHead>
+              <TableHead>Entitás</TableHead>
+              <TableHead>Mező</TableHead>
+              <TableHead>Régi érték</TableHead>
+              <TableHead>Új érték</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {logs.map((log) => (
-              <tr key={log.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">
+              <TableRow key={log.id}>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
                   {new Date(log.created_at).toLocaleString("hu-HU")}
-                </td>
-                <td className="px-4 py-3">{log.user_name || `#${log.user_id}`}</td>
-                <td className="px-4 py-3">{log.project_name || "—"}</td>
-                <td className="px-4 py-3 text-gray-500">{log.entity_type}</td>
-                <td className="px-4 py-3 font-medium">{log.field_name}</td>
-                <td className="px-4 py-3 text-gray-500">{log.old_value || "—"}</td>
-                <td className="px-4 py-3">{log.new_value || "—"}</td>
-              </tr>
+                </TableCell>
+                <TableCell>{log.user_name || `#${log.user_id}`}</TableCell>
+                <TableCell>{log.project_name || "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{log.entity_type}</TableCell>
+                <TableCell className="font-medium">{log.field_name}</TableCell>
+                <TableCell className="text-muted-foreground">{log.old_value || "—"}</TableCell>
+                <TableCell>{log.new_value || "—"}</TableCell>
+              </TableRow>
             ))}
             {logs.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+              <TableRow>
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nincs naplóbejegyzés
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
     </AppLayout>
   );
 }

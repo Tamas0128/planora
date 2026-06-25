@@ -1,8 +1,37 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import { api, User } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const ROLE_OPTIONS: [string, string][] = [
   ["admin", "Admin"],
@@ -42,8 +71,9 @@ export default function UsersPage() {
       setShowNew(false);
       setForm({ username: "", email: "", full_name: "", password: "", role: "project_manager" });
       load();
+      toast.success("Felhasználó létrehozva");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Hiba a létrehozás során");
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
     } finally {
       setCreating(false);
     }
@@ -62,7 +92,7 @@ export default function UsersPage() {
   if (me && me.role !== "admin") {
     return (
       <AppLayout>
-        <p className="text-gray-500">Nincs jogosultságod ehhez a felülethez.</p>
+        <p className="text-muted-foreground">Nincs jogosultságod ehhez a felülethez.</p>
       </AppLayout>
     );
   }
@@ -72,139 +102,142 @@ export default function UsersPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Felhasználók</h1>
-          <p className="text-gray-500">Felhasználói fiókok és szerepkörök kezelése</p>
+          <p className="text-muted-foreground">Felhasználói fiókok és szerepkörök kezelése</p>
         </div>
-        <button
+        <Button
           onClick={() => setShowNew(true)}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600"
+          className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
         >
-          + Új felhasználó
-        </button>
+          <Plus /> Új felhasználó
+        </Button>
       </div>
 
-      {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <form onSubmit={createUser} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-lg font-bold">Új felhasználó</h2>
-            <label className="mb-3 block">
-              <span className="text-sm text-gray-600">Felhasználónév</span>
-              <input
-                required
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-              />
-            </label>
-            <label className="mb-3 block">
-              <span className="text-sm text-gray-600">Teljes név</span>
-              <input
-                required
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={form.full_name}
-                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-              />
-            </label>
-            <label className="mb-3 block">
-              <span className="text-sm text-gray-600">E-mail</span>
-              <input
-                type="email"
-                required
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
-            </label>
-            <label className="mb-3 block">
-              <span className="text-sm text-gray-600">Jelszó</span>
-              <input
-                type="password"
-                required
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-            </label>
-            <label className="mb-4 block">
-              <span className="text-sm text-gray-600">Szerepkör</span>
-              <select
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-              >
-                {ROLE_OPTIONS.map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </label>
-            <div className="flex gap-2">
-              <button
+      <Dialog open={showNew} onOpenChange={setShowNew}>
+        <DialogContent>
+          <form onSubmit={createUser}>
+            <DialogHeader>
+              <DialogTitle>Új felhasználó</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-3 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-username">Felhasználónév</Label>
+                <Input
+                  id="new-username"
+                  required
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-full-name">Teljes név</Label>
+                <Input
+                  id="new-full-name"
+                  required
+                  value={form.full_name}
+                  onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-email">E-mail</Label>
+                <Input
+                  id="new-email"
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-password">Jelszó</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  required
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Szerepkör</Label>
+                <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as string })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
                 type="submit"
                 disabled={creating}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50"
+                className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
               >
                 {creating ? "Mentés..." : "Létrehozás"}
-              </button>
-              <button type="button" onClick={() => setShowNew(false)} className="rounded-lg border px-4 py-2">
-                Mégse
-              </button>
-            </div>
+              </Button>
+            </DialogFooter>
           </form>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50 text-left text-gray-500">
-              <th className="px-4 py-3">Felhasználónév</th>
-              <th className="px-4 py-3">Teljes név</th>
-              <th className="px-4 py-3">E-mail</th>
-              <th className="px-4 py-3">Szerepkör</th>
-              <th className="px-4 py-3">Állapot</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="py-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Felhasználónév</TableHead>
+              <TableHead>Teljes név</TableHead>
+              <TableHead>E-mail</TableHead>
+              <TableHead>Szerepkör</TableHead>
+              <TableHead>Állapot</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((user) => (
-              <tr key={user.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{user.username}</td>
-                <td className="px-4 py-3">{user.full_name}</td>
-                <td className="px-4 py-3 text-gray-500">{user.email}</td>
-                <td className="px-4 py-3">
-                  <select
-                    value={user.role}
-                    onChange={(e) => changeRole(user, e.target.value)}
-                    className="rounded border px-2 py-1 text-xs"
-                  >
-                    {ROLE_OPTIONS.map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-4 py-3">
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.username}</TableCell>
+                <TableCell>{user.full_name}</TableCell>
+                <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                <TableCell>
+                  <Select value={user.role} onValueChange={(v) => changeRole(user, v as string)}>
+                    <SelectTrigger size="sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
                   {user.is_active ? (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">Aktív</span>
+                    <Badge className="bg-emerald-100 text-emerald-700">Aktív</Badge>
                   ) : (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Inaktív</span>
+                    <Badge variant="secondary">Inaktív</Badge>
                   )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => toggleActive(user)} className="text-indigo-600 hover:underline">
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="link" className="h-auto p-0" onClick={() => toggleActive(user)}>
                     {user.is_active ? "Letiltás" : "Aktiválás"}
-                  </button>
-                </td>
-              </tr>
+                  </Button>
+                </TableCell>
+              </TableRow>
             ))}
             {users.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                   Nincs felhasználó
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
     </AppLayout>
   );
 }
