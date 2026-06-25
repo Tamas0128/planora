@@ -89,7 +89,7 @@ const ACTIVITY_STATUS_COLOR: Record<string, string> = {
   pending: "text-slate-600",
   in_progress: "text-amber-600",
   done: "text-emerald-600",
-  blocked: "text-red-600",
+  blocked: "text-orange-600",
 };
 
 function formatBytes(bytes: number): string {
@@ -305,13 +305,13 @@ export default function ProjectDetailPage() {
                 <div className="mb-4 flex gap-2">
                   <Button
                     onClick={startEdit}
-                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
                   >
                     Szerkesztés
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger
-                      render={<Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" />}
+                      render={<Button variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50" />}
                     >
                       Törlés
                     </AlertDialogTrigger>
@@ -535,7 +535,7 @@ export default function ProjectDetailPage() {
                   <Button
                     type="submit"
                     disabled={saving}
-                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
                   >
                     {saving ? "Mentés..." : "Mentés"}
                   </Button>
@@ -664,7 +664,7 @@ export default function ProjectDetailPage() {
               <label
                 className={cn(
                   buttonVariants(),
-                  "cursor-pointer bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+                  "cursor-pointer bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
                 )}
               >
                 <Upload />

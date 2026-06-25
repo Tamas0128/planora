@@ -32,10 +32,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-950 via-violet-900 to-fuchsia-900 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-950 via-green-900 to-emerald-900 p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md">
+          <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-md">
             <Building2 className="size-6" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">PLANora</h1>
@@ -68,7 +68,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
             >
               {loading && <Loader2 className="animate-spin" />}
               {loading ? "Bejelentkezés..." : "Bejelentkezés"}

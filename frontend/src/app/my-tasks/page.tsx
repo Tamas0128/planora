@@ -24,11 +24,11 @@ export default function MyTasksPage() {
         {items.map((item) => (
           <Card
             key={`${item.project_id}-${item.activity_id}`}
-            className={`p-4 ${item.is_overdue ? "border-l-2 border-l-red-500" : "border-l-2 border-l-violet-400"}`}
+            className={`p-4 ${item.is_overdue ? "border-l-2 border-l-orange-500" : "border-l-2 border-l-green-400"}`}
           >
             <div className="flex items-start justify-between">
               <div>
-                <Link href={`/projects/${item.project_id}`} className="font-semibold text-violet-600 hover:underline">
+                <Link href={`/projects/${item.project_id}`} className="font-semibold text-green-600 hover:underline">
                   {item.project_name}
                 </Link>
                 <p className="mt-1 text-sm text-foreground">{item.activity_name}</p>
@@ -37,7 +37,7 @@ export default function MyTasksPage() {
               <div className="text-right text-sm">
                 <p className="text-muted-foreground">{ROLE_LABELS[item.responsible_role]}</p>
                 {item.prep_date && (
-                  <p className={`mt-1 ${item.is_overdue ? "font-medium text-red-600" : "text-muted-foreground"}`}>
+                  <p className={`mt-1 ${item.is_overdue ? "font-medium text-orange-600" : "text-muted-foreground"}`}>
                     Előkészítés: {new Date(item.prep_date).toLocaleDateString("hu-HU")}
                   </p>
                 )}

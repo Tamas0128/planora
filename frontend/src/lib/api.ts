@@ -284,7 +284,7 @@ export const STATUS_COLORS: Record<string, string> = {
   planning: "bg-slate-500",
   foundation: "bg-amber-500",
   structure: "bg-orange-500",
-  exterior_done: "bg-violet-500",
+  exterior_done: "bg-teal-500",
   turnkey: "bg-emerald-500",
 };
 

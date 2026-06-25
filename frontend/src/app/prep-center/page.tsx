@@ -46,7 +46,7 @@ function PrepCenterContent() {
             onClick={() => setFilter(f.key)}
             className={
               filter === f.key
-                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+                ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
                 : ""
             }
           >
@@ -72,10 +72,10 @@ function PrepCenterContent() {
             {items.map((item) => (
               <TableRow
                 key={`${item.project_id}-${item.activity_id}`}
-                className={item.is_overdue ? "border-l-2 border-l-red-500 bg-red-50/50" : ""}
+                className={item.is_overdue ? "border-l-2 border-l-orange-500 bg-orange-50/50" : ""}
               >
                 <TableCell>
-                  <Link href={`/projects/${item.project_id}`} className="font-medium text-violet-600 hover:underline">
+                  <Link href={`/projects/${item.project_id}`} className="font-medium text-green-600 hover:underline">
                     {item.project_name}
                   </Link>
                 </TableCell>
@@ -92,7 +92,7 @@ function PrepCenterContent() {
                 </TableCell>
                 <TableCell>
                   {item.is_overdue ? (
-                    <Badge className="bg-red-100 text-red-700">Lejárt</Badge>
+                    <Badge className="bg-orange-100 text-orange-700">Lejárt</Badge>
                   ) : (
                     <span className="text-muted-foreground">{item.days_until ?? "—"} nap</span>
                   )}

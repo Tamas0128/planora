@@ -36,7 +36,7 @@ const STATUS_DOT: Record<string, string> = {
 function ProjectCardComponent({ project }: { project: ProjectCard }) {
   return (
     <Link href={`/projects/${project.id}`} className="block">
-      <Card className="p-4 transition hover:shadow-md hover:ring-violet-300">
+      <Card className="p-4 transition hover:shadow-md hover:ring-green-300">
         <h3 className="font-semibold text-foreground">{project.name}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{project.settlement}</p>
         <div className="mt-3 space-y-1 text-xs text-muted-foreground">
@@ -49,7 +49,7 @@ function ProjectCardComponent({ project }: { project: ProjectCard }) {
           <span className="text-xs text-muted-foreground">
             Átadás: {new Date(project.delivery_date).toLocaleDateString("hu-HU")}
           </span>
-          <Badge className="bg-violet-100 text-violet-700">{project.completion_percent}%</Badge>
+          <Badge className="bg-green-100 text-green-700">{project.completion_percent}%</Badge>
         </div>
         <Progress value={project.completion_percent} className="mt-2" />
       </Card>
@@ -106,7 +106,7 @@ export default function ProjectsPage() {
         </div>
         <Button
           onClick={() => setShowNew(true)}
-          className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+          className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
         >
           <Plus /> Új projekt
         </Button>
@@ -163,7 +163,7 @@ export default function ProjectsPage() {
               <Button
                 type="submit"
                 disabled={creating}
-                className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
               >
                 {creating ? "Mentés..." : "Létrehozás"}
               </Button>

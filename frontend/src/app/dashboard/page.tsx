@@ -63,7 +63,7 @@ export default function DashboardPage() {
             label="Lejárt feladatok"
             value={stats.overdue_tasks}
             icon={TriangleAlert}
-            gradient="bg-gradient-to-br from-red-500 to-rose-600"
+            gradient="bg-gradient-to-br from-orange-600 to-amber-700"
           />
           <StatCard
             label="Előkészítés 7 napon belül"
@@ -81,13 +81,13 @@ export default function DashboardPage() {
             label="Csúszó projektek"
             value={stats.slipping_projects}
             icon={TrendingDown}
-            gradient="bg-gradient-to-br from-violet-500 to-purple-600"
+            gradient="bg-gradient-to-br from-sky-500 to-cyan-600"
           />
           <StatCard
             label="Összes projekt"
             value={stats.total_projects}
             icon={Building2}
-            gradient="bg-gradient-to-br from-fuchsia-500 to-pink-600"
+            gradient="bg-gradient-to-br from-green-600 to-emerald-600"
           />
         </div>
       )}
@@ -95,7 +95,7 @@ export default function DashboardPage() {
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
         <Link
           href="/prep-center?filter=overdue"
-          className="group rounded-xl bg-gradient-to-br from-red-500 to-rose-600 p-5 text-white shadow-sm transition hover:shadow-lg"
+          className="group rounded-xl bg-gradient-to-br from-orange-600 to-amber-700 p-5 text-white shadow-sm transition hover:shadow-lg"
         >
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Lejárt előkészítések</h3>
@@ -115,7 +115,7 @@ export default function DashboardPage() {
         </Link>
         <Link
           href="/projects"
-          className="group rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 p-5 text-white shadow-sm transition hover:shadow-lg"
+          className="group rounded-xl bg-gradient-to-br from-green-600 to-emerald-600 p-5 text-white shadow-sm transition hover:shadow-lg"
         >
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Projektek</h3>
