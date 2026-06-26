@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
-import { api, clearToken, User } from "@/lib/api";
+import { api, clearToken, ROLE_LABELS, User } from "@/lib/api";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,14 +42,6 @@ const ADMIN_NAV = [{ href: "/users", label: "Felhasználók", icon: Users }];
 
 const MANAGEMENT_NAV = [{ href: "/audit-log", label: "Audit napló", icon: ShieldCheck }];
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: "Admin",
-  project_manager: "Projektmenedzser",
-  management: "Menedzsment",
-  procurement: "Beszerzés",
-  billing: "Számlázás",
-};
-
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -73,6 +65,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const initials = user?.full_name
     ? user.full_name
         .split(" ")
+        .filter(Boolean)
         .map((part) => part[0])
         .slice(0, 2)
         .join("")

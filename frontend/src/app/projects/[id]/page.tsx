@@ -223,8 +223,12 @@ export default function ProjectDetailPage() {
   }
 
   async function handleDeleteDocument(documentId: number) {
-    await api.deleteDocument(id, documentId);
-    loadDocuments();
+    try {
+      await api.deleteDocument(id, documentId);
+      loadDocuments();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
+    }
   }
 
   async function addPrerequisite(activityId: number, prerequisiteId: number) {
@@ -237,8 +241,12 @@ export default function ProjectDetailPage() {
   }
 
   async function removePrerequisite(activityId: number, prerequisiteId: number) {
-    await api.removeDependency(id, activityId, prerequisiteId);
-    loadActivities();
+    try {
+      await api.removeDependency(id, activityId, prerequisiteId);
+      loadActivities();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba");
+    }
   }
 
   function updateLocalActivity(activityId: number, patch: Partial<Activity>) {
