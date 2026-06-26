@@ -136,41 +136,59 @@ def create_project_activities(db: Session, project: Project) -> list[Activity]:
 
 
 def recalculate_schedule(db: Session, project: Project) -> None:
+    # Load activities in ascending sort_order (0 = first in sequence, last = final)
     activities = (
         db.query(Activity)
         .filter(Activity.project_id == project.id)
-        .order_by(Activity.sort_order.desc())
+        .order_by(Activity.sort_order)
         .all()
     )
     if not activities:
         return
 
+    # Load all dependency edges in one query
+    all_deps = (
+        db.query(ActivityDependency)
+        .filter(ActivityDependency.activity_id.in_([a.id for a in activities]))
+        .all()
+    )
+    # successor_map[id] = set of activity IDs that list id as a prerequisite
+    successor_map: dict[int, set[int]] = {a.id: set() for a in activities}
+    for dep in all_deps:
+        successor_map[dep.prerequisite_id].add(dep.activity_id)
+
     activity_map = {a.id: a for a in activities}
+    start_dates: dict[int, date] = {}
     end_dates: dict[int, date] = {}
 
-    for activity in activities:
-        deps = (
-            db.query(ActivityDependency)
-            .filter(ActivityDependency.activity_id == activity.id)
-            .all()
-        )
-        if deps:
-            latest_end = max(
-                end_dates.get(d.prerequisite_id, project.delivery_date)
-                for d in deps
-            )
-            activity_end = add_workdays(latest_end, 1)
-            activity_end = add_workdays(activity_end, activity.duration_days - 1)
-        else:
-            activity_end = subtract_workdays(
-                project.delivery_date, activity.duration_days - 1
-            )
+    # BACKWARD SCHEDULING: process from last activity to first (reversed sort_order).
+    # Each activity ends as late as possible:
+    #   - activities with no successors use the rolling slot (which starts at delivery_date)
+    #   - activities whose successors have explicit dependency constraints end just
+    #     before the earliest successor starts
+    # The slot cursor advances backward after each activity so sequentially ordered
+    # activities tile backward from the delivery date without gaps.
+    slot = project.delivery_date
 
-        activity_start = subtract_workdays(activity_end, activity.duration_days - 1)
-        activity.start_date = activity_start
-        activity.end_date = activity_end
-        activity.prep_date = subtract_workdays(activity_start, activity.prep_days)
-        end_dates[activity.id] = activity_end
+    for activity in reversed(activities):
+        succ_ids = successor_map.get(activity.id, set())
+        processed_succs = [sid for sid in succ_ids if sid in start_dates]
+
+        if processed_succs:
+            # Must finish before the earliest successor starts
+            earliest_succ_start = min(start_dates[sid] for sid in processed_succs)
+            activity.end_date = subtract_workdays(earliest_succ_start, 1)
+        else:
+            # No explicit successor constraint — use sequential slot
+            activity.end_date = slot
+
+        activity.start_date = subtract_workdays(activity.end_date, activity.duration_days - 1)
+        activity.prep_date = subtract_workdays(activity.start_date, activity.prep_days)
+        start_dates[activity.id] = activity.start_date
+        end_dates[activity.id] = activity.end_date
+
+        # Advance the slot past this activity's start for the next (earlier) activity
+        slot = subtract_workdays(activity.start_date, 1)
 
     done_count = sum(1 for a in activities if a.status.value == "done")
     project.completion_percent = round((done_count / len(activities)) * 100, 1)

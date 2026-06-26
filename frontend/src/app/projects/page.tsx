@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
@@ -24,6 +25,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const STATUS_DOT: Record<string, string> = {
   planning: "bg-status-planning",
@@ -59,7 +67,15 @@ function ProjectCardComponent({ project }: { project: ProjectCard }) {
 
 const COLUMN_ORDER = ["planning", "foundation", "structure", "exterior_done", "turnkey"];
 
+const BUILDING_OPTIONS: [string, string][] = [
+  ["light_steel", "Könnyűszerkezetes"],
+  ["clt", "CLT"],
+  ["timber_frame", "Gerendaház"],
+  ["other", "Egyéb"],
+];
+
 export default function ProjectsPage() {
+  const router = useRouter();
   const [board, setBoard] = useState<Record<string, ProjectCard[]>>({});
   const [showNew, setShowNew] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -68,9 +84,12 @@ export default function ProjectsPage() {
     project_code: "",
     settlement: "",
     address: "",
+    lot_number: "",
     client_name: "",
+    client_phone: "",
+    client_email: "",
     floor_area_sqm: 145,
-    delivery_date: "2026-09-18",
+    delivery_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     building_type: "light_steel",
   });
 
@@ -86,10 +105,15 @@ export default function ProjectsPage() {
     e.preventDefault();
     setCreating(true);
     try {
-      await api.createProject(form);
+      const payload: Record<string, unknown> = { ...form };
+      payload.floor_area_sqm = Number(form.floor_area_sqm);
+      if (!payload.lot_number) payload.lot_number = null;
+      if (!payload.client_phone) payload.client_phone = null;
+      if (!payload.client_email) payload.client_email = null;
+      const created = await api.createProject(payload);
       setShowNew(false);
-      load();
       toast.success("Projekt létrehozva");
+      router.push(`/projects/${created.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
     } finally {
@@ -113,27 +137,30 @@ export default function ProjectsPage() {
       </div>
 
       <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <form onSubmit={createProject}>
             <DialogHeader>
               <DialogTitle>Új projekt</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-3 py-2">
+            <div className="grid gap-3 py-2 sm:grid-cols-2">
               {(
                 [
-                  ["name", "Projekt neve"],
-                  ["project_code", "Projekt azonosító"],
-                  ["settlement", "Település"],
-                  ["address", "Cím"],
-                  ["client_name", "Ügyfél neve"],
+                  ["name", "Projekt neve", true],
+                  ["project_code", "Projekt azonosító", true],
+                  ["settlement", "Település", true],
+                  ["address", "Cím", true],
+                  ["lot_number", "Helyrajzi szám", false],
+                  ["client_name", "Ügyfél neve", true],
+                  ["client_phone", "Ügyfél telefon", false],
+                  ["client_email", "Ügyfél e-mail", false],
                 ] as const
-              ).map(([key, label]) => (
+              ).map(([key, label, required]) => (
                 <div key={key} className="space-y-1.5">
                   <Label htmlFor={key}>{label}</Label>
                   <Input
                     id={key}
-                    required
-                    value={form[key]}
+                    required={required}
+                    value={form[key] as string}
                     onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                   />
                 </div>
@@ -157,6 +184,22 @@ export default function ProjectsPage() {
                   value={form.delivery_date}
                   onChange={(e) => setForm({ ...form, delivery_date: e.target.value })}
                 />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Épülettípus</Label>
+                <Select
+                  value={form.building_type}
+                  onValueChange={(v) => setForm({ ...form, building_type: v ?? "light_steel" })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BUILDING_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
