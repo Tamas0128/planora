@@ -24,8 +24,8 @@ def seed_admin():
     try:
         seed_activity_templates(db)
         admin = db.query(User).filter(User.username == "admin").first()
+        password = settings.admin_password
         if not admin:
-            password = settings.admin_password
             if not password:
                 password = _secrets.token_urlsafe(16)
                 logger.warning(
@@ -42,6 +42,10 @@ def seed_admin():
             )
             db.add(admin)
             db.commit()
+        elif password:
+            admin.hashed_password = hash_password(password)
+            db.commit()
+            logger.info("Admin password updated from ADMIN_PASSWORD env var.")
     finally:
         db.close()
 
