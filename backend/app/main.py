@@ -18,16 +18,26 @@ logger = logging.getLogger("planora.scheduler")
 
 
 def seed_admin():
+    import secrets as _secrets
+
     db = SessionLocal()
     try:
         seed_activity_templates(db)
         admin = db.query(User).filter(User.username == "admin").first()
         if not admin:
+            password = settings.admin_password
+            if not password:
+                password = _secrets.token_urlsafe(16)
+                logger.warning(
+                    "ADMIN_PASSWORD not set — generated random admin password: %s  "
+                    "(set ADMIN_PASSWORD in your environment to control this)",
+                    password,
+                )
             admin = User(
                 username="admin",
                 email="admin@planora.local",
-                full_name="Rendsszergazda",
-                hashed_password=hash_password("admin123"),
+                full_name="Rendszergazda",
+                hashed_password=hash_password(password),
                 role=UserRole.ADMIN,
             )
             db.add(admin)

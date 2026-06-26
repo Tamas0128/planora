@@ -10,8 +10,22 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import Document, Project, User
+from app.models import Document, Project, User, UserRole
 from app.schemas import DocumentResponse
+
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
+def _require_project_access(project_id: int, user: User, db, *, edit: bool = False) -> Project:
+    """Load project and assert the user has at least view (or edit) access."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if user.role in (UserRole.ADMIN, UserRole.MANAGEMENT):
+        return project
+    if edit and user.role == UserRole.PROJECT_MANAGER and project.project_manager_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return project
 
 router = APIRouter(prefix="/projects", tags=["documents"])
 
@@ -70,8 +84,9 @@ def ensure_bucket():
 def list_documents(
     project_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
+    _require_project_access(project_id, user, db)
     return (
         db.query(Document)
         .filter(Document.project_id == project_id)
@@ -95,8 +110,9 @@ def download_document(
     project_id: int,
     document_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
+    _require_project_access(project_id, user, db)
     doc = db.query(Document).filter(
         Document.id == document_id, Document.project_id == project_id
     ).first()
@@ -120,8 +136,9 @@ def delete_document(
     project_id: int,
     document_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
+    _require_project_access(project_id, user, db, edit=True)
     doc = db.query(Document).filter(
         Document.id == document_id, Document.project_id == project_id
     ).first()
@@ -153,6 +170,8 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=f"File type not allowed: {ext}")
 
     content = await file.read()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
     ensure_bucket()
     key = f"projects/{project_id}/{uuid.uuid4()}{ext}"
 

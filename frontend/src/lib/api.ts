@@ -101,25 +101,25 @@ export interface AuditLogEntry {
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("planora_token");
+  return sessionStorage.getItem("planora_token");
 }
 
 export function getRefreshToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("planora_refresh_token");
+  return sessionStorage.getItem("planora_refresh_token");
 }
 
 let meCache: Promise<User> | null = null;
 
 export function setTokens(accessToken: string, refreshToken: string) {
-  localStorage.setItem("planora_token", accessToken);
-  localStorage.setItem("planora_refresh_token", refreshToken);
+  sessionStorage.setItem("planora_token", accessToken);
+  sessionStorage.setItem("planora_refresh_token", refreshToken);
   meCache = null;
 }
 
 export function clearToken() {
-  localStorage.removeItem("planora_token");
-  localStorage.removeItem("planora_refresh_token");
+  sessionStorage.removeItem("planora_token");
+  sessionStorage.removeItem("planora_refresh_token");
   meCache = null;
 }
 

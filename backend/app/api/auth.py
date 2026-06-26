@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import time
+from collections import defaultdict
+from threading import Lock
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -23,9 +27,25 @@ from app.schemas import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_login_lock = Lock()
+_MAX_ATTEMPTS = 10
+_WINDOW_SECONDS = 60
+
+
+def _check_login_rate(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    with _login_lock:
+        _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < _WINDOW_SECONDS]
+        if len(_login_attempts[ip]) >= _MAX_ATTEMPTS:
+            raise HTTPException(status_code=429, detail="Too many login attempts, please wait.")
+        _login_attempts[ip].append(now)
+
 
 @router.post("/login", response_model=TokenResponse)
-def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    _check_login_rate(request)
     user = db.query(User).filter(User.username == form.username).first()
     if not user or not verify_password(form.password, user.hashed_password) or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -37,7 +57,8 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 
 
 @router.post("/login/json", response_model=TokenResponse)
-def login_json(body: LoginRequest, db: Session = Depends(get_db)):
+def login_json(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
+    _check_login_rate(request)
     user = db.query(User).filter(User.username == body.username).first()
     if not user or not verify_password(body.password, user.hashed_password) or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
