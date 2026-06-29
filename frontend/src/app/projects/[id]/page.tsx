@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Plus, Upload, X } from "lucide-react";
+import { Calendar, Pencil, Plus, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import {
@@ -117,12 +117,14 @@ export default function ProjectDetailPage() {
   const [me, setMe] = useState<User | null>(null);
   const [tab, setTab] = useState<"info" | "schedule" | "documents">("info");
   const [editing, setEditing] = useState(false);
+  const [scheduleEditing, setScheduleEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string | number>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deliveryDate, setDeliveryDate] = useState("");
 
   function loadProject() {
-    api.project(id).then(setProject).catch(console.error);
+    api.project(id).then((p) => { setProject(p); setDeliveryDate(p.delivery_date); }).catch(console.error);
   }
   function loadActivities() {
     api.activities(id).then(setActivities).catch(console.error);
@@ -325,11 +327,51 @@ export default function ProjectDetailPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
-        <p className="text-sm text-slate-500">
-          {project.project_code} · {project.settlement}
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            {project.project_code} · {project.settlement}
+          </p>
+        </div>
+        {/* Inline delivery date */}
+        <Card className="flex items-center gap-4 px-5 py-3 shadow-sm">
+          <Calendar className="size-4 shrink-0 text-slate-400" />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Átadási határidő
+            </p>
+            {canEdit ? (
+              <input
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                onBlur={async (e) => {
+                  const val = e.target.value;
+                  if (!val || val === project.delivery_date) return;
+                  try {
+                    await api.updateProject(id, { delivery_date: val });
+                    loadProject();
+                    loadActivities();
+                    toast.success("Határidő frissítve, ütemterv újraszámítva");
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Hiba");
+                    setDeliveryDate(project.delivery_date);
+                  }
+                }}
+                className="mt-0.5 block rounded border border-slate-200 bg-transparent px-1 py-0.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none"
+              />
+            ) : (
+              <p className="mt-0.5 text-sm font-semibold text-slate-900">
+                {new Date(project.delivery_date).toLocaleDateString("hu-HU")}
+              </p>
+            )}
+          </div>
+          <div className="ml-4 text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Készültség</p>
+            <p className="mt-0.5 text-sm font-bold text-blue-600">{project.completion_percent}%</p>
+          </div>
+        </Card>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
@@ -583,6 +625,19 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="schedule" className="mt-4">
+          {canEdit && (
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm text-slate-500">{activities.length} tevékenység</p>
+              <Button
+                size="sm"
+                variant={scheduleEditing ? "default" : "outline"}
+                onClick={() => setScheduleEditing((v) => !v)}
+              >
+                <Pencil className="size-3.5" />
+                {scheduleEditing ? "Szerkesztés kész" : "Szerkesztés"}
+              </Button>
+            </div>
+          )}
           <Card className="overflow-x-auto py-0">
             <Table>
               <TableHeader>
@@ -602,7 +657,7 @@ export default function ProjectDetailPage() {
                 {activities.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">
-                      {canEdit ? (
+                      {canEdit && scheduleEditing ? (
                         <Input
                           value={a.name}
                           aria-label="Tevékenység neve"
@@ -611,11 +666,11 @@ export default function ProjectDetailPage() {
                           className="min-w-[140px]"
                         />
                       ) : (
-                        a.name
+                        <span className="text-sm">{a.name}</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {canEdit ? (
+                      {canEdit && scheduleEditing ? (
                         <Select
                           value={a.responsible_role}
                           onValueChange={(v) => commitActivityRole(a.id, v as string)}
@@ -636,28 +691,34 @@ export default function ProjectDetailPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={a.duration_days}
-                        disabled={!canEdit}
-                        aria-label="Futási idő napokban"
-                        onChange={(e) => updateLocalActivity(a.id, { duration_days: Number(e.target.value) })}
-                        onBlur={(e) => commitActivityField(a.id, "duration_days", Number(e.target.value))}
-                        className="w-16"
-                      />
+                      {canEdit && scheduleEditing ? (
+                        <Input
+                          type="number"
+                          min={1}
+                          value={a.duration_days}
+                          aria-label="Futási idő napokban"
+                          onChange={(e) => updateLocalActivity(a.id, { duration_days: Number(e.target.value) })}
+                          onBlur={(e) => commitActivityField(a.id, "duration_days", Number(e.target.value))}
+                          className="w-16"
+                        />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">{a.duration_days}</span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={a.prep_days}
-                        disabled={!canEdit}
-                        aria-label="Előkészítési idő napokban"
-                        onChange={(e) => updateLocalActivity(a.id, { prep_days: Number(e.target.value) })}
-                        onBlur={(e) => commitActivityField(a.id, "prep_days", Number(e.target.value))}
-                        className="w-16"
-                      />
+                      {canEdit && scheduleEditing ? (
+                        <Input
+                          type="number"
+                          min={1}
+                          value={a.prep_days}
+                          aria-label="Előkészítési idő napokban"
+                          onChange={(e) => updateLocalActivity(a.id, { prep_days: Number(e.target.value) })}
+                          onBlur={(e) => commitActivityField(a.id, "prep_days", Number(e.target.value))}
+                          className="w-16"
+                        />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">{a.prep_days}</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {a.prep_date ? new Date(a.prep_date).toLocaleDateString("hu-HU") : "—"}
@@ -673,7 +734,7 @@ export default function ProjectDetailPage() {
                         {a.prerequisite_ids.map((pid) => (
                           <Badge key={pid} variant="secondary" className="gap-1">
                             {activityNameById[pid] || `#${pid}`}
-                            {canEdit && (
+                            {canEdit && scheduleEditing && (
                               <button
                                 type="button"
                                 onClick={() => removePrerequisite(a.id, pid)}
@@ -685,7 +746,7 @@ export default function ProjectDetailPage() {
                             )}
                           </Badge>
                         ))}
-                        {canEdit && (
+                        {canEdit && scheduleEditing && (
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={<Button variant="outline" size="icon-xs" aria-label="Előfeltétel hozzáadása" />}
@@ -709,6 +770,7 @@ export default function ProjectDetailPage() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {canEdit && scheduleEditing ? (
                       <Select value={a.status} onValueChange={(v) => updateStatus(a.id, v as string)}>
                         <SelectTrigger size="sm" className={ACTIVITY_STATUS_COLOR[a.status]}>
                           <SelectValue />
@@ -719,6 +781,11 @@ export default function ProjectDetailPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      ) : (
+                        <span className={`text-xs font-medium ${ACTIVITY_STATUS_COLOR[a.status]}`}>
+                          {ACTIVITY_STATUS_OPTIONS.find(([v]) => v === a.status)?.[1] ?? a.status}
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

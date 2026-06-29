@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
