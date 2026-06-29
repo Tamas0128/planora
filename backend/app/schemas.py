@@ -135,8 +135,10 @@ class ActivityResponse(BaseModel):
 
 
 class ActivityUpdate(BaseModel):
+    name: Optional[str] = None
     duration_days: Optional[int] = None
     prep_days: Optional[int] = None
+    responsible_role: Optional[UserRole] = None
     status: Optional[ActivityStatus] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None

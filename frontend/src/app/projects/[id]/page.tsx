@@ -85,6 +85,14 @@ const ACTIVITY_STATUS_OPTIONS: [string, string][] = [
   ["blocked", "Blokkolt"],
 ];
 
+const ROLE_OPTIONS: [string, string][] = [
+  ["project_manager", "Projektmenedzser"],
+  ["management", "Menedzsment"],
+  ["procurement", "Beszerzés"],
+  ["billing", "Számlázás"],
+  ["admin", "Admin"],
+];
+
 const ACTIVITY_STATUS_COLOR: Record<string, string> = {
   pending: "text-slate-600",
   in_progress: "text-amber-600",
@@ -266,6 +274,31 @@ export default function ProjectDetailPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
       loadActivities();
+    }
+  }
+
+  async function commitActivityName(activityId: number, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast.error("A tevékenység neve nem lehet üres.");
+      loadActivities();
+      return;
+    }
+    try {
+      await api.updateActivity(id, activityId, { name: trimmed });
+      loadActivities();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+      loadActivities();
+    }
+  }
+
+  async function commitActivityRole(activityId: number, role: string) {
+    try {
+      await api.updateActivity(id, activityId, { responsible_role: role });
+      loadActivities();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
     }
   }
 
@@ -557,30 +590,65 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="schedule" className="mt-4">
-          <Card className="py-0">
+          <Card className="overflow-x-auto py-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tevékenység</TableHead>
-                  <TableHead>Futási idő (nap)</TableHead>
-                  <TableHead>Előkészítési idő (nap)</TableHead>
-                  <TableHead>Előkészítés dátuma</TableHead>
-                  <TableHead>Kezdés</TableHead>
-                  <TableHead>Befejezés</TableHead>
-                  <TableHead>Előfeltételek</TableHead>
-                  <TableHead>Státusz</TableHead>
+                  <TableHead className="min-w-[160px]">Tevékenység</TableHead>
+                  <TableHead className="min-w-[120px]">Felelős</TableHead>
+                  <TableHead className="min-w-[90px]">Futási idő (nap)</TableHead>
+                  <TableHead className="min-w-[90px]">Előkészítési idő (nap)</TableHead>
+                  <TableHead className="min-w-[110px]">Előkészítés dátuma</TableHead>
+                  <TableHead className="min-w-[100px]">Kezdés</TableHead>
+                  <TableHead className="min-w-[100px]">Befejezés</TableHead>
+                  <TableHead className="min-w-[160px]">Előfeltételek</TableHead>
+                  <TableHead className="min-w-[130px]">Státusz</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {activities.map((a) => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {canEdit ? (
+                        <Input
+                          value={a.name}
+                          aria-label="Tevékenység neve"
+                          onChange={(e) => updateLocalActivity(a.id, { name: e.target.value })}
+                          onBlur={(e) => commitActivityName(a.id, e.target.value)}
+                          className="min-w-[140px]"
+                        />
+                      ) : (
+                        a.name
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {canEdit ? (
+                        <Select
+                          value={a.responsible_role}
+                          onValueChange={(v) => commitActivityRole(a.id, v as string)}
+                        >
+                          <SelectTrigger size="sm" className="min-w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ROLE_OPTIONS.map(([value, label]) => (
+                              <SelectItem key={value} value={value}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {ROLE_LABELS[a.responsible_role] || a.responsible_role}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Input
                         type="number"
                         min={1}
                         value={a.duration_days}
                         disabled={!canEdit}
+                        aria-label="Futási idő napokban"
                         onChange={(e) => updateLocalActivity(a.id, { duration_days: Number(e.target.value) })}
                         onBlur={(e) => commitActivityField(a.id, "duration_days", Number(e.target.value))}
                         className="w-16"
@@ -592,6 +660,7 @@ export default function ProjectDetailPage() {
                         min={1}
                         value={a.prep_days}
                         disabled={!canEdit}
+                        aria-label="Előkészítési idő napokban"
                         onChange={(e) => updateLocalActivity(a.id, { prep_days: Number(e.target.value) })}
                         onBlur={(e) => commitActivityField(a.id, "prep_days", Number(e.target.value))}
                         className="w-16"
@@ -615,8 +684,8 @@ export default function ProjectDetailPage() {
                               <button
                                 type="button"
                                 onClick={() => removePrerequisite(a.id, pid)}
+                                aria-label="Előfeltétel eltávolítása"
                                 className="text-muted-foreground hover:text-destructive"
-                                title="Eltávolítás"
                               >
                                 <X className="size-3" />
                               </button>
@@ -626,7 +695,7 @@ export default function ProjectDetailPage() {
                         {canEdit && (
                           <DropdownMenu>
                             <DropdownMenuTrigger
-                              render={<Button variant="outline" size="icon-xs" title="Előfeltétel hozzáadása" />}
+                              render={<Button variant="outline" size="icon-xs" aria-label="Előfeltétel hozzáadása" />}
                             >
                               <Plus />
                             </DropdownMenuTrigger>
