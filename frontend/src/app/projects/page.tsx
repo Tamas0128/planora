@@ -45,13 +45,23 @@ function ProjectCardComponent({ project }: { project: ProjectCard }) {
   return (
     <Link href={`/projects/${project.id}`} className="block">
       <Card className="p-4 transition hover:shadow-md hover:ring-green-300">
-        <h3 className="font-semibold text-foreground">{project.name}</h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-foreground">{project.name}</h3>
+          <Badge
+            variant="secondary"
+            className="shrink-0 text-[10px]"
+            style={{ borderLeft: `3px solid var(--status-${project.status})` }}
+          >
+            {STATUS_LABELS[project.status]}
+          </Badge>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">{project.settlement}</p>
         <div className="mt-3 space-y-1 text-xs text-muted-foreground">
           <p>Ügyfél: {project.client_name}</p>
           <p>Típus: {BUILDING_LABELS[project.building_type] || project.building_type}</p>
           <p>{project.floor_area_sqm} m²</p>
           {project.project_manager_name && <p>PM: {project.project_manager_name}</p>}
+          {project.site_manager_name && <p>Építésvezető: {project.site_manager_name}</p>}
         </div>
         <div className="mt-3 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
@@ -79,7 +89,7 @@ export default function ProjectsPage() {
   const [board, setBoard] = useState<Record<string, ProjectCard[]>>({});
   const [showNew, setShowNew] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     name: "",
     project_code: "",
     settlement: "",
@@ -91,7 +101,7 @@ export default function ProjectsPage() {
     floor_area_sqm: 145,
     delivery_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     building_type: "light_steel",
-  });
+  }));
 
   function load() {
     api.kanban().then(setBoard).catch(console.error);

@@ -9,9 +9,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import app.api.auth as auth_module
 import app.main as main_module
 from app.database import Base, get_db
 from app.main import app
+
+# Tests make many login calls across the suite; disable the per-IP rate limit.
+auth_module._MAX_ATTEMPTS = 10_000
 
 test_engine = create_engine(
     "sqlite:///:memory:",

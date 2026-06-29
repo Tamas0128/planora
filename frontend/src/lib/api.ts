@@ -270,6 +270,8 @@ export const api = {
 
   auditLogs: (projectId?: number) =>
     request<AuditLogEntry[]>(`/audit-logs${projectId ? `?project_id=${projectId}` : ""}`),
+
+  slippingProjects: () => request<ProjectCard[]>("/dashboard/slipping-projects"),
 };
 
 export const STATUS_LABELS: Record<string, string> = {

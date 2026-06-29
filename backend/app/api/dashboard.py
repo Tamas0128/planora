@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_roles
-from app.models import Activity, ActivityStatus, AuditLog, Project, User, UserRole
-from app.schemas import AuditLogResponse, DashboardStats
+from app.models import Activity, ActivityStatus, AuditLog, Project, ProjectStatus, User, UserRole
+from app.schemas import AuditLogResponse, DashboardStats, ProjectCard
 
 router = APIRouter(tags=["dashboard"])
 
@@ -58,6 +58,26 @@ def dashboard_stats(
         slipping_projects=slipping,
         total_projects=projects_q.count(),
     )
+
+
+@router.get("/dashboard/slipping-projects", response_model=list[ProjectCard])
+def slipping_projects(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    today = date.today()
+    q = db.query(Project).options(
+        joinedload(Project.project_manager), joinedload(Project.site_manager)
+    ).filter(
+        Project.delivery_date < today,
+        Project.status != ProjectStatus.TURNKEY,
+    )
+    if user.role == UserRole.PROJECT_MANAGER:
+        q = q.filter(Project.project_manager_id == user.id)
+    projects = q.order_by(Project.delivery_date).all()
+
+    from app.api.projects import _project_to_card
+    return [_project_to_card(p) for p in projects]
 
 
 @router.get("/audit-logs", response_model=list[AuditLogResponse])

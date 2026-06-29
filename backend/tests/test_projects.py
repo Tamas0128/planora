@@ -48,7 +48,7 @@ def test_update_project_writes_audit_log(client, admin_headers):
     matching = [l for l in logs if l["field_name"] == "subcontractors"]
     assert len(matching) == 1
     assert matching[0]["new_value"] == "ACME Kft."
-    assert matching[0]["user_name"] == "Rendsszergazda"
+    assert matching[0]["user_name"] == "Rendszergazda"
     assert matching[0]["project_name"] == project["name"]
 
 

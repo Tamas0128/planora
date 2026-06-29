@@ -17,6 +17,13 @@ vi.mock("next/link", () => ({
 vi.mock("@/lib/api", () => ({
   api: { me: vi.fn() },
   clearToken: vi.fn(),
+  ROLE_LABELS: {
+    admin: "Admin",
+    project_manager: "Projektmenedzser",
+    management: "Menedzsment",
+    procurement: "Beszerzés",
+    billing: "Számlázás",
+  },
 }));
 
 import AppLayout from "./AppLayout";
