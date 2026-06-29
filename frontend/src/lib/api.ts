@@ -110,17 +110,25 @@ export function getRefreshToken(): string | null {
 }
 
 let meCache: Promise<User> | null = null;
+let cachedUser: User | null = null;
+
+/** Synchronously returns the last resolved /auth/me result, or null if not yet loaded. */
+export function getCachedUser(): User | null {
+  return cachedUser;
+}
 
 export function setTokens(accessToken: string, refreshToken: string) {
   sessionStorage.setItem("planora_token", accessToken);
   sessionStorage.setItem("planora_refresh_token", refreshToken);
   meCache = null;
+  cachedUser = null;
 }
 
 export function clearToken() {
   sessionStorage.removeItem("planora_token");
   sessionStorage.removeItem("planora_refresh_token");
   meCache = null;
+  cachedUser = null;
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -191,10 +199,9 @@ export const api = {
   // one in-flight/just-resolved request instead of firing /auth/me per page.
   me: () => {
     if (!meCache) {
-      meCache = request<User>("/auth/me").catch((err) => {
-        meCache = null;
-        throw err;
-      });
+      meCache = request<User>("/auth/me")
+        .then((user) => { cachedUser = user; return user; })
+        .catch((err) => { meCache = null; cachedUser = null; throw err; });
     }
     return meCache;
   },

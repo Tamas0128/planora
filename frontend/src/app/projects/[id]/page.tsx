@@ -9,6 +9,7 @@ import {
   Activity,
   api,
   BUILDING_LABELS,
+  getCachedUser,
   ProjectDetail,
   ProjectDocument,
   ROLE_LABELS,
@@ -114,7 +115,9 @@ export default function ProjectDetailPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [me, setMe] = useState<User | null>(null);
+  // Initialise synchronously from cache so canEdit is true on first render
+  // when AppLayout already resolved /auth/me (avoids a flash of read-only UI).
+  const [me, setMe] = useState<User | null>(() => getCachedUser());
   const [tab, setTab] = useState<"info" | "schedule" | "documents">("info");
   const [editing, setEditing] = useState(false);
   const [scheduleEditing, setScheduleEditing] = useState(false);
@@ -346,11 +349,10 @@ export default function ProjectDetailPage() {
                 type="date"
                 value={deliveryDate}
                 onChange={(e) => setDeliveryDate(e.target.value)}
-                onBlur={async (e) => {
-                  const val = e.target.value;
-                  if (!val || val === project.delivery_date) return;
+                onBlur={async () => {
+                  if (!deliveryDate || deliveryDate === project.delivery_date) return;
                   try {
-                    await api.updateProject(id, { delivery_date: val });
+                    await api.updateProject(id, { delivery_date: deliveryDate });
                     loadProject();
                     loadActivities();
                     toast.success("Határidő frissítve, ütemterv újraszámítva");
@@ -625,9 +627,9 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="schedule" className="mt-4">
-          {canEdit && (
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm text-slate-500">{activities.length} tevékenység</p>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm text-slate-500">{activities.length} tevékenység</p>
+            {canEdit && (
               <Button
                 size="sm"
                 variant={scheduleEditing ? "default" : "outline"}
@@ -636,8 +638,8 @@ export default function ProjectDetailPage() {
                 <Pencil className="size-3.5" />
                 {scheduleEditing ? "Szerkesztés kész" : "Szerkesztés"}
               </Button>
-            </div>
-          )}
+            )}
+          </div>
           <Card className="overflow-x-auto py-0">
             <Table>
               <TableHeader>
