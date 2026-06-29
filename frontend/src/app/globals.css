@@ -5,46 +5,46 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: var(--color-white);
+  --background: var(--color-slate-50);
   --foreground: var(--color-slate-900);
   --card: var(--color-white);
   --card-foreground: var(--color-slate-900);
   --popover: var(--color-white);
   --popover-foreground: var(--color-slate-900);
 
-  --primary: var(--color-green-700);
+  --primary: var(--color-blue-600);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-emerald-50);
-  --secondary-foreground: var(--color-emerald-700);
+  --secondary: var(--color-blue-50);
+  --secondary-foreground: var(--color-blue-700);
   --muted: var(--color-slate-100);
   --muted-foreground: var(--color-slate-500);
-  --accent: var(--color-green-50);
-  --accent-foreground: var(--color-green-700);
-  --destructive: var(--color-orange-600);
+  --accent: var(--color-blue-50);
+  --accent-foreground: var(--color-blue-700);
+  --destructive: var(--color-red-600);
 
   --border: var(--color-slate-200);
   --input: var(--color-slate-200);
-  --ring: var(--color-green-500);
+  --ring: var(--color-blue-500);
 
-  --chart-1: var(--color-green-600);
-  --chart-2: var(--color-emerald-500);
-  --chart-3: var(--color-sky-500);
+  --chart-1: var(--color-blue-600);
+  --chart-2: var(--color-sky-500);
+  --chart-3: var(--color-indigo-500);
   --chart-4: var(--color-amber-500);
   --chart-5: var(--color-teal-500);
 
   --radius: 0.75rem;
 
-  /* Rich dark-green sidebar instead of flat gray, with a vivid active pill */
-  --sidebar: var(--color-green-950);
-  --sidebar-foreground: var(--color-green-100);
-  --sidebar-primary: var(--color-green-600);
+  /* Dark slate sidebar – matches MeisterTask's near-black sidebar */
+  --sidebar: var(--color-slate-950);
+  --sidebar-foreground: var(--color-slate-300);
+  --sidebar-primary: var(--color-blue-600);
   --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: color-mix(in oklch, var(--color-green-900), var(--color-emerald-900) 35%);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-green-900);
-  --sidebar-ring: var(--color-green-400);
+  --sidebar-accent: var(--color-slate-800);
+  --sidebar-accent-foreground: var(--color-slate-100);
+  --sidebar-border: var(--color-slate-800);
+  --sidebar-ring: var(--color-blue-400);
 
-  /* Punchier versions of the 5 kanban statuses (see STATUS_COLORS in lib/api.ts) */
+  /* Vivid kanban status colors */
   --status-planning: var(--color-sky-500);
   --status-foundation: var(--color-amber-500);
   --status-structure: var(--color-orange-500);
@@ -107,7 +107,7 @@
   --card-foreground: var(--color-slate-50);
   --popover: var(--color-slate-900);
   --popover-foreground: var(--color-slate-50);
-  --primary: var(--color-green-500);
+  --primary: var(--color-blue-500);
   --primary-foreground: var(--color-white);
   --secondary: var(--color-slate-800);
   --secondary-foreground: var(--color-slate-50);
@@ -115,23 +115,23 @@
   --muted-foreground: var(--color-slate-400);
   --accent: var(--color-slate-800);
   --accent-foreground: var(--color-slate-50);
-  --destructive: var(--color-orange-500);
+  --destructive: var(--color-red-500);
   --border: color-mix(in oklch, white 10%, transparent);
   --input: color-mix(in oklch, white 15%, transparent);
-  --ring: var(--color-green-400);
-  --chart-1: var(--color-green-400);
-  --chart-2: var(--color-emerald-400);
-  --chart-3: var(--color-sky-400);
+  --ring: var(--color-blue-400);
+  --chart-1: var(--color-blue-400);
+  --chart-2: var(--color-sky-400);
+  --chart-3: var(--color-indigo-400);
   --chart-4: var(--color-amber-400);
   --chart-5: var(--color-teal-400);
-  --sidebar: var(--color-green-950);
-  --sidebar-foreground: var(--color-green-100);
-  --sidebar-primary: var(--color-green-500);
+  --sidebar: var(--color-slate-950);
+  --sidebar-foreground: var(--color-slate-300);
+  --sidebar-primary: var(--color-blue-500);
   --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-green-900);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-green-900);
-  --sidebar-ring: var(--color-green-400);
+  --sidebar-accent: var(--color-slate-800);
+  --sidebar-accent-foreground: var(--color-slate-100);
+  --sidebar-border: var(--color-slate-800);
+  --sidebar-ring: var(--color-blue-400);
 }
 
 @layer base {

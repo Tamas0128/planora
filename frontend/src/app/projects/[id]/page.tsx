@@ -326,8 +326,8 @@ export default function ProjectDetailPage() {
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">{project.name}</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
+        <p className="text-sm text-slate-500">
           {project.project_code} · {project.settlement}
         </p>
       </div>
@@ -344,10 +344,7 @@ export default function ProjectDetailPage() {
             <div>
               {canEdit && (
                 <div className="mb-4 flex gap-2">
-                  <Button
-                    onClick={startEdit}
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
-                  >
+                  <Button onClick={startEdit}>
                     Szerkesztés
                   </Button>
                   <AlertDialog>
@@ -573,11 +570,7 @@ export default function ProjectDetailPage() {
                 </div>
 
                 <div className="flex gap-2 border-t pt-4">
-                  <Button
-                    type="submit"
-                    disabled={saving}
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
-                  >
+                  <Button type="submit" disabled={saving}>
                     {saving ? "Mentés..." : "Mentés"}
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setEditing(false)}>

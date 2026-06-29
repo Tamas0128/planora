@@ -106,7 +106,7 @@ export default function UsersPage() {
         </div>
         <Button
           onClick={() => setShowNew(true)}
-          className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
+          className=""
         >
           <Plus /> Új felhasználó
         </Button>
@@ -175,7 +175,7 @@ export default function UsersPage() {
               <Button
                 type="submit"
                 disabled={creating}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
+                className=""
               >
                 {creating ? "Mentés..." : "Létrehozás"}
               </Button>

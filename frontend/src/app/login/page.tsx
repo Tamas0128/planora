@@ -32,19 +32,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-950 via-green-900 to-emerald-900 p-4">
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-md">
-            <Building2 className="size-6" />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4">
+      <Card className="w-full max-w-sm shadow-2xl">
+        <CardHeader className="items-center pb-2 text-center">
+          <div className="mb-3 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-lg">
+            <Building2 className="size-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">PLANora</h1>
-          <p className="text-sm text-muted-foreground">Építőipari projektütemező</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">PLANora</h1>
+          <p className="text-sm text-slate-500">Építőipari projektütemező</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 ring-1 ring-red-200">
                 {error}
               </div>
             )}
@@ -65,11 +65,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
-            >
+            <Button type="submit" disabled={loading} className="w-full">
               {loading && <Loader2 className="animate-spin" />}
               {loading ? "Bejelentkezés..." : "Bejelentkezés"}
             </Button>

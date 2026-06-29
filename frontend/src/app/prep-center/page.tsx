@@ -44,11 +44,6 @@ function PrepCenterContent() {
             size="sm"
             variant={filter === f.key ? "default" : "outline"}
             onClick={() => setFilter(f.key)}
-            className={
-              filter === f.key
-                ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
-                : ""
-            }
           >
             {f.label}
           </Button>
@@ -72,10 +67,10 @@ function PrepCenterContent() {
             {items.map((item) => (
               <TableRow
                 key={`${item.project_id}-${item.activity_id}`}
-                className={item.is_overdue ? "border-l-2 border-l-orange-500 bg-orange-50/50" : ""}
+                className={item.is_overdue ? "border-l-4 border-l-red-500 bg-red-50/40" : ""}
               >
                 <TableCell>
-                  <Link href={`/projects/${item.project_id}`} className="font-medium text-green-600 hover:underline">
+                  <Link href={`/projects/${item.project_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
                     {item.project_name}
                   </Link>
                 </TableCell>
@@ -117,8 +112,8 @@ export default function PrepCenterPage() {
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Előkészítési központ</h1>
-        <p className="text-muted-foreground">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
+        <h1 className="text-2xl font-bold text-slate-900">Előkészítési központ</h1>
+        <p className="text-sm text-slate-500">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Betöltés...</p>}>
         <PrepCenterContent />

@@ -76,16 +76,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-r-0">
         <SidebarHeader>
-          <div className="flex items-center gap-2 px-1 py-2">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-sm">
-              <Building2 className="size-4" />
+          <div className="flex items-center gap-2.5 px-1 py-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md">
+              <Building2 className="size-4.5" />
             </div>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <span className="text-base font-bold tracking-tight text-white">PLANora</span>
-              <span className="text-xs text-green-300">Projektütemező</span>
+              <span className="text-[15px] font-bold tracking-tight text-white">PLANora</span>
+              <span className="text-[11px] text-slate-400">Projektütemező</span>
             </div>
           </div>
         </SidebarHeader>
+
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -98,7 +99,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                       isActive={active}
                       tooltip={item.label}
                       render={<Link href={item.href} />}
-                      className="data-active:bg-gradient-to-r data-active:from-green-600 data-active:to-emerald-600 data-active:text-white data-active:shadow-sm"
+                      className="data-active:bg-blue-600 data-active:text-white data-active:shadow-sm"
                     >
                       <Icon />
                       <span>{item.label}</span>
@@ -109,19 +110,20 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
+
         {user && (
           <SidebarFooter>
             <div className="flex items-center gap-2 rounded-lg px-1 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
               <Avatar size="sm">
-                <AvatarFallback className="bg-green-800 text-xs font-semibold text-green-100">
+                <AvatarFallback className="bg-blue-700 text-xs font-semibold text-white">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
-                <span className="truncate text-sm font-medium text-white">{user.full_name}</span>
+                <span className="truncate text-sm font-medium text-slate-100">{user.full_name}</span>
                 <Badge
                   variant="secondary"
-                  className="w-fit bg-green-900 text-[10px] text-green-200"
+                  className="w-fit bg-slate-800 text-[10px] text-slate-300"
                 >
                   {ROLE_LABELS[user.role] || user.role}
                 </Badge>
@@ -131,7 +133,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 size="icon-sm"
                 onClick={logout}
                 title="Kijelentkezés"
-                className="shrink-0 text-green-200 hover:bg-green-900 hover:text-white group-data-[collapsible=icon]:hidden"
+                className="shrink-0 text-slate-400 hover:bg-slate-800 hover:text-white group-data-[collapsible=icon]:hidden"
               >
                 <LogOut />
               </Button>
@@ -139,11 +141,35 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </SidebarFooter>
         )}
       </Sidebar>
+
       <SidebarInset>
-        <header className="flex h-12 items-center gap-2 border-b px-4 md:hidden">
-          <SidebarTrigger />
-          <span className="font-semibold">PLANora</span>
+        {/* Persistent top header – visible on all screen sizes */}
+        <header className="sticky top-0 z-20 flex h-13 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur-sm">
+          <SidebarTrigger className="text-slate-500 hover:text-slate-800" />
+          <div className="h-5 w-px bg-slate-200" />
+          <span className="text-sm font-semibold text-slate-700 md:hidden">PLANora</span>
+          <div className="flex-1" />
+          {user && (
+            <div className="flex items-center gap-2.5">
+              <span className="hidden text-sm text-slate-500 sm:block">{user.full_name}</span>
+              <Avatar size="sm">
+                <AvatarFallback className="bg-blue-600 text-xs font-bold text-white">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={logout}
+                title="Kijelentkezés"
+                className="text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </div>
+          )}
         </header>
+
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
