@@ -1,22 +1,26 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   AlarmClock,
+  BarChart2,
   Building2,
   CalendarDays,
   CheckSquare,
-  ClipboardList,
+  FileText,
+  FolderOpen,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
-  ShieldCheck,
+  Settings,
   Users,
 } from "lucide-react";
 import { api, clearToken, ROLE_LABELS, User } from "@/lib/api";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -32,19 +36,37 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/projects", label: "Projektek", icon: ClipboardList },
-  { href: "/calendar", label: "Naptár", icon: CalendarDays },
-  { href: "/prep-center", label: "Előkészítési központ", icon: AlarmClock },
-  { href: "/my-tasks", label: "Saját feladatok", icon: CheckSquare },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+  roles?: string[];
+};
+
+const NAV_PRIMARY: NavItem[] = [
+  { href: "/dashboard",   label: "Dashboard",   icon: LayoutDashboard },
+  { href: "/projects",    label: "Projektek",   icon: FolderOpen },
+  { href: "/kanban",      label: "Kanban",      icon: LayoutGrid,    exact: true },
+  { href: "/calendar",    label: "Ütemterv",    icon: CalendarDays },
+  { href: "/my-tasks",    label: "Feladataim",  icon: CheckSquare },
+  { href: "/prep-center", label: "Előkészítés", icon: AlarmClock },
 ];
 
-const ADMIN_NAV = [{ href: "/users", label: "Felhasználók", icon: Users }];
+const NAV_SECONDARY: NavItem[] = [
+  { href: "/users",     label: "Erőforrások",  icon: Users,     roles: ["admin"] },
+  { href: "#dokumentumok", label: "Dokumentumok", icon: FileText },
+  { href: "/audit-log", label: "Riportok",     icon: BarChart2, roles: ["admin", "management"] },
+  { href: "#beallitasok", label: "Beállítások",  icon: Settings },
+];
 
-const MANAGEMENT_NAV = [{ href: "/audit-log", label: "Audit napló", icon: ShieldCheck }];
+interface AppLayoutProps {
+  children: ReactNode;
+  header?: ReactNode;
+  mainClassName?: string;
+}
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default function AppLayout({ children, header, mainClassName }: AppLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -58,52 +80,89 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     router.push("/login");
   }
 
-  const navItems = [
-    ...NAV,
-    ...(user?.role === "admin" ? ADMIN_NAV : []),
-    ...(user?.role === "admin" || user?.role === "management" ? MANAGEMENT_NAV : []),
-  ];
-
   const initials = user?.full_name
-    ? user.full_name
-        .split(" ")
-        .filter(Boolean)
-        .map((part) => part[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
+    ? user.full_name.split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase()
     : "?";
+
+  function isActive(item: Pick<NavItem, "href" | "exact">) {
+    if (item.href.startsWith("#")) return false;
+    if (item.exact) return pathname === item.href;
+    return pathname.startsWith(item.href);
+  }
+
+  const visibleSecondary = NAV_SECONDARY.filter((item) => {
+    if (!item.roles) return true;
+    return item.roles.includes(user?.role ?? "");
+  });
 
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-r-0">
+
+        {/* ── Logo ── */}
         <SidebarHeader>
           <div className="flex items-center gap-2.5 px-2 py-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-green-700/60 ring-1 ring-green-600/40">
-              <Building2 className="size-4 text-green-100" />
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/20">
+              <Building2 className="size-4 text-white/90" />
             </div>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <span className="text-[15px] font-bold tracking-tight text-white">PLANora</span>
-              <span className="text-[10px] text-green-400/80">Projektütemező</span>
+            <div className="group-data-[collapsible=icon]:hidden">
+              <Image
+                src="/planora-logo.png"
+                alt="PLANora Projekt"
+                width={112}
+                height={37}
+                priority
+                style={{
+                  filter: "invert(1) saturate(0) brightness(2)",
+                  mixBlendMode: "screen",
+                }}
+              />
             </div>
           </div>
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
+          {/* Primary nav */}
+          <SidebarGroup className="pt-1">
             <SidebarMenu>
-              {navItems.map((item) => {
+              {NAV_PRIMARY.map((item) => {
                 const Icon = item.icon;
-                const active = pathname.startsWith(item.href);
+                const active = isActive(item);
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton
                       isActive={active}
                       tooltip={item.label}
                       render={<Link href={item.href} />}
-                      className="data-active:bg-green-700 data-active:text-white data-active:shadow-sm"
+                      className="h-9 text-white/65 hover:bg-white/10 hover:text-white data-active:bg-white/15 data-active:text-white"
                     >
-                      <Icon />
+                      <Icon className="size-4" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+
+          {/* Divider */}
+          <div className="mx-3 my-1 h-px bg-white/10 group-data-[collapsible=icon]:mx-1.5" />
+
+          {/* Secondary nav */}
+          <SidebarGroup>
+            <SidebarMenu>
+              {visibleSecondary.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item);
+                return (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                      isActive={active}
+                      tooltip={item.label}
+                      render={<Link href={item.href} />}
+                      className="h-9 text-white/65 hover:bg-white/10 hover:text-white data-active:bg-white/15 data-active:text-white"
+                    >
+                      <Icon className="size-4" />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -113,31 +172,27 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </SidebarGroup>
         </SidebarContent>
 
+        {/* ── User profile ── */}
         {user && (
           <SidebarFooter>
-            <div className="flex items-center gap-2 rounded-lg px-1 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <div className="flex items-center gap-2 rounded-lg px-1 py-2 transition-colors hover:bg-white/8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
               <Avatar size="sm">
-                <AvatarFallback className="bg-green-700 text-xs font-semibold text-white">
+                <AvatarFallback className="bg-green-600 text-xs font-semibold text-white">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
-                <span className="truncate text-sm font-medium text-slate-100">{user.full_name}</span>
-                <Badge
-                  variant="secondary"
-                  className="w-fit bg-slate-800 text-[10px] text-slate-300"
-                >
-                  {ROLE_LABELS[user.role] || user.role}
-                </Badge>
+              <div className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
+                <span className="truncate text-[13px] font-medium text-white/90">{user.full_name}</span>
+                <span className="text-[11px] text-white/50">{ROLE_LABELS[user.role] || user.role}</span>
               </div>
               <Button
                 variant="ghost"
                 size="icon-sm"
                 onClick={logout}
                 title="Kijelentkezés"
-                className="shrink-0 text-slate-400 hover:bg-slate-800 hover:text-white group-data-[collapsible=icon]:hidden"
+                className="shrink-0 text-white/40 hover:bg-white/10 hover:text-white group-data-[collapsible=icon]:hidden"
               >
-                <LogOut />
+                <LogOut className="size-3.5" />
               </Button>
             </div>
           </SidebarFooter>
@@ -145,34 +200,33 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </Sidebar>
 
       <SidebarInset>
-        {/* Persistent top header – visible on all screen sizes */}
-        <header className="sticky top-0 z-20 flex h-13 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur-sm">
-          <SidebarTrigger className="text-slate-500 hover:text-slate-800" />
-          <div className="h-5 w-px bg-slate-200" />
-          <span className="text-sm font-bold tracking-tight text-slate-700 md:hidden">PLANora</span>
-          <div className="flex-1" />
-          {user && (
-            <div className="flex items-center gap-2.5">
-              <span className="hidden text-sm text-slate-500 sm:block">{user.full_name}</span>
-              <Avatar size="sm">
-                <AvatarFallback className="bg-green-700 text-xs font-bold text-white">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={logout}
-                title="Kijelentkezés"
-                className="text-slate-400 hover:bg-slate-100 hover:text-slate-800"
-              >
-                <LogOut className="size-4" />
-              </Button>
-            </div>
-          )}
-        </header>
+        {/* Header – custom or default */}
+        {header ?? (
+          <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-100 bg-white px-4">
+            <SidebarTrigger className="text-slate-400 hover:text-slate-700" />
+            <div className="h-5 w-px bg-slate-100" />
+            <span className="text-sm font-semibold text-slate-700 md:hidden">PLANora</span>
+            <div className="flex-1" />
+            {user && (
+              <div className="flex items-center gap-2.5">
+                <span className="hidden text-sm text-slate-500 sm:block">{user.full_name}</span>
+                <Avatar size="sm">
+                  <AvatarFallback className="bg-green-700 text-xs font-bold text-white">{initials}</AvatarFallback>
+                </Avatar>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={logout}
+                  className="text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <LogOut className="size-4" />
+                </Button>
+              </div>
+            )}
+          </header>
+        )}
 
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className={mainClassName ?? "flex-1 overflow-auto p-6"}>{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
