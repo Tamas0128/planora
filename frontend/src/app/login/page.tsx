@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { Building2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { api, setTokens } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -35,11 +36,14 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4">
       <Card className="w-full max-w-sm shadow-2xl">
         <CardHeader className="items-center pb-2 text-center">
-          <div className="mb-3 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-lg">
-            <Building2 className="size-7" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">PLANora</h1>
-          <p className="text-sm text-slate-500">Építőipari projektütemező</p>
+          <Image
+            src="/planora-logo.png"
+            alt="PLANora Projekt"
+            width={220}
+            height={73}
+            priority
+            className="mb-2"
+          />
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
