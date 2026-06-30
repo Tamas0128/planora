@@ -1,0 +1,29 @@
+{
+	# Caddy internal CA – generates a locally-trusted cert for localhost.
+	# To make browsers trust it (one-time, needs admin):
+	#   docker exec planora-https-local-1 caddy trust
+	# Or manually import the CA:
+	#   docker exec planora-https-local-1 cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
+	#   certutil -addstore -enterprise Root caddy-root.crt
+}
+
+https://localhost:443 {
+	tls internal
+
+	# Security headers
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	# Everything goes through the frontend (Next.js proxies /api/* → backend internally)
+	reverse_proxy frontend:3000 {
+		header_up X-Forwarded-Proto https
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+# HTTP redirect nem lehetséges (port 80 a Docker host foglalja)
+# Közvetlenül használd: https://localhost

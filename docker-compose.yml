@@ -43,7 +43,7 @@ services:
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       S3_BUCKET: planora-docs
-      CORS_ORIGINS: http://localhost:3001,http://localhost:3000,http://localhost,http://localhost:8080,https://localhost:8443
+      CORS_ORIGINS: http://localhost:3001,http://localhost:3000,http://localhost,http://localhost:8080,https://localhost:8443,https://localhost
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_USE_TLS: "false"
@@ -107,8 +107,22 @@ services:
       - "8080:80"
       - "8443:443"
 
+  https-local:
+    image: caddy:2-alpine
+    ports:
+      - "4443:443"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   minio_data:
   postgres_backups:
   minio_backups:
+  caddy_data:
+  caddy_config:
