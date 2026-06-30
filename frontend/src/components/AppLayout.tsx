@@ -110,7 +110,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                       isActive={active}
                       tooltip={item.label}
                       render={<Link href={item.href} />}
-                      className="data-active:bg-blue-600 data-active:text-white data-active:shadow-sm"
+                      className="data-active:bg-green-700 data-active:text-white data-active:shadow-sm"
                     >
                       <Icon />
                       <span>{item.label}</span>
@@ -126,7 +126,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <SidebarFooter>
             <div className="flex items-center gap-2 rounded-lg px-1 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
               <Avatar size="sm">
-                <AvatarFallback className="bg-blue-700 text-xs font-semibold text-white">
+                <AvatarFallback className="bg-green-700 text-xs font-semibold text-white">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -170,7 +170,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-2.5">
               <span className="hidden text-sm text-slate-500 sm:block">{user.full_name}</span>
               <Avatar size="sm">
-                <AvatarFallback className="bg-blue-600 text-xs font-bold text-white">
+                <AvatarFallback className="bg-green-700 text-xs font-bold text-white">
                   {initials}
                 </AvatarFallback>
               </Avatar>

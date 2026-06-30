@@ -34,15 +34,15 @@
 
   --radius: 0.75rem;
 
-  /* Dark slate sidebar – matches MeisterTask's near-black sidebar */
-  --sidebar: var(--color-slate-950);
-  --sidebar-foreground: var(--color-slate-300);
-  --sidebar-primary: var(--color-blue-600);
+  /* Dark forest-green sidebar – matches PLANora logo palette */
+  --sidebar: oklch(0.115 0.038 148);
+  --sidebar-foreground: oklch(0.78 0.04 148);
+  --sidebar-primary: oklch(0.48 0.13 148);
   --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-slate-800);
-  --sidebar-accent-foreground: var(--color-slate-100);
-  --sidebar-border: var(--color-slate-800);
-  --sidebar-ring: var(--color-blue-400);
+  --sidebar-accent: oklch(0.17 0.04 148);
+  --sidebar-accent-foreground: oklch(0.92 0.02 148);
+  --sidebar-border: oklch(0.19 0.04 148);
+  --sidebar-ring: oklch(0.55 0.14 148);
 
   /* Vivid kanban status colors */
   --status-planning: var(--color-sky-500);
@@ -124,14 +124,14 @@
   --chart-3: var(--color-indigo-400);
   --chart-4: var(--color-amber-400);
   --chart-5: var(--color-teal-400);
-  --sidebar: var(--color-slate-950);
-  --sidebar-foreground: var(--color-slate-300);
-  --sidebar-primary: var(--color-blue-500);
+  --sidebar: oklch(0.115 0.038 148);
+  --sidebar-foreground: oklch(0.78 0.04 148);
+  --sidebar-primary: oklch(0.48 0.13 148);
   --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-slate-800);
-  --sidebar-accent-foreground: var(--color-slate-100);
-  --sidebar-border: var(--color-slate-800);
-  --sidebar-ring: var(--color-blue-400);
+  --sidebar-accent: oklch(0.17 0.04 148);
+  --sidebar-accent-foreground: oklch(0.92 0.02 148);
+  --sidebar-border: oklch(0.19 0.04 148);
+  --sidebar-ring: oklch(0.55 0.14 148);
 }
 
 @layer base {
