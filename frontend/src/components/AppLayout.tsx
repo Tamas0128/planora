@@ -6,6 +6,7 @@ import { ReactNode, useEffect, useState } from "react";
 import {
   AlarmClock,
   Building2,
+  CalendarDays,
   CheckSquare,
   ClipboardList,
   LayoutDashboard,
@@ -34,6 +35,7 @@ import {
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projektek", icon: ClipboardList },
+  { href: "/calendar", label: "Naptár", icon: CalendarDays },
   { href: "/prep-center", label: "Előkészítési központ", icon: AlarmClock },
   { href: "/my-tasks", label: "Saját feladatok", icon: CheckSquare },
 ];

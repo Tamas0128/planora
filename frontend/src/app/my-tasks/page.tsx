@@ -6,7 +6,6 @@ import { CheckSquare, ClipboardList } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { api, PrepTask, ROLE_LABELS } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -18,11 +17,53 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: "bg-slate-100 text-slate-600",
-  in_progress: "bg-amber-100 text-amber-700",
-  done: "bg-emerald-100 text-emerald-700",
-  blocked: "bg-red-100 text-red-700",
+  pending: "bg-slate-100 text-slate-600 border-slate-200",
+  in_progress: "bg-amber-100 text-amber-700 border-amber-200",
+  done: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  blocked: "bg-red-100 text-red-700 border-red-200",
 };
+
+function TaskRow({ item }: { item: PrepTask }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors",
+        item.is_overdue ? "border-l-[3px] border-l-red-500" : "border-l-[3px] border-l-blue-400",
+      )}
+    >
+      <div className={cn("size-1.5 shrink-0 rounded-full", item.is_overdue ? "bg-red-500" : "bg-blue-400")} />
+      <div className="min-w-0 flex-1">
+        <Link
+          href={`/projects/${item.project_id}`}
+          className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+        >
+          {item.project_name}
+        </Link>
+        <p className="truncate text-xs text-slate-500">{item.activity_name}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Badge
+          variant="outline"
+          className={cn("text-[10px] font-medium", STATUS_COLOR[item.status] ?? "bg-slate-100 text-slate-600")}
+        >
+          {STATUS_LABEL[item.status] ?? item.status}
+        </Badge>
+        {item.prep_date && (
+          <span className={cn("hidden text-xs sm:block", item.is_overdue ? "font-medium text-red-600" : "text-slate-400")}>
+            {new Date(item.prep_date).toLocaleDateString("hu-HU")}
+          </span>
+        )}
+        {item.days_until !== undefined && item.days_until !== null && (
+          <span className={cn("hidden text-xs sm:block", item.is_overdue ? "text-red-500" : "text-slate-400")}>
+            {item.is_overdue
+              ? `${Math.abs(item.days_until)}n lejárt`
+              : `${item.days_until}n múlva`}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function MyTasksPage() {
   const [items, setItems] = useState<PrepTask[]>([]);
@@ -41,7 +82,7 @@ export default function MyTasksPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Saját feladatok</h1>
           <p className="text-sm text-slate-500">
-            A szerepkörödhöz rendelt nyitott tevékenységek a projektekből
+            A szerepkörödhöz rendelt nyitott tevékenységek
           </p>
         </div>
         <Link href="/projects" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}>
@@ -51,16 +92,16 @@ export default function MyTasksPage() {
       </div>
 
       {loading ? (
-        <div className="grid gap-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-1/3 animate-pulse rounded bg-slate-200" />
-                  <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200" />
-                </div>
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0">
+              <div className="size-1.5 rounded-full bg-slate-200" />
+              <div className="flex-1 space-y-1">
+                <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200" />
+                <div className="h-2.5 w-1/2 animate-pulse rounded bg-slate-100" />
               </div>
-            </Card>
+              <div className="h-4 w-16 animate-pulse rounded bg-slate-100" />
+            </div>
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -69,7 +110,7 @@ export default function MyTasksPage() {
           <p className="text-lg font-semibold text-slate-600">Nincs nyitott feladat</p>
           <p className="mt-2 max-w-sm text-sm text-slate-400">
             A feladatok automatikusan keletkeznek a projekt ütemtervéből, a szerepkörödhöz
-            rendelt tevékenységekből. Hozz létre projektet, hogy megjelenjenek itt.
+            rendelt tevékenységekből.
           </p>
           <Link
             href="/projects"
@@ -80,52 +121,39 @@ export default function MyTasksPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-3">
-          {items.map((item) => (
-            <Card
-              key={`${item.project_id}-${item.activity_id}`}
-              className={`border p-4 shadow-sm transition hover:shadow-md ${
-                item.is_overdue
-                  ? "border-l-4 border-l-red-500 bg-red-50/30"
-                  : "border-l-4 border-l-blue-400"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <Link
-                    href={`/projects/${item.project_id}`}
-                    className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    {item.project_name}
-                  </Link>
-                  <p className="mt-1 text-sm font-medium text-slate-800">{item.activity_name}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{item.client_name}</p>
-                </div>
-                <div className="shrink-0 space-y-1.5 text-right">
-                  <Badge className={cn("text-[10px]", STATUS_COLOR[item.status] ?? "bg-slate-100 text-slate-600")}>
-                    {STATUS_LABEL[item.status] ?? item.status}
-                  </Badge>
-                  <div>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {ROLE_LABELS[item.responsible_role] ?? item.responsible_role}
-                    </Badge>
-                  </div>
-                  {item.prep_date && (
-                    <p className={`text-xs font-medium ${item.is_overdue ? "text-red-600" : "text-slate-500"}`}>
-                      Előkész.: {new Date(item.prep_date).toLocaleDateString("hu-HU")}
-                    </p>
-                  )}
-                  {item.days_until !== undefined && item.days_until !== null && (
-                    <p className={`text-xs ${item.is_overdue ? "text-red-500" : "text-slate-400"}`}>
-                      {item.is_overdue
-                        ? `${Math.abs(item.days_until)} napja lejárt`
-                        : `${item.days_until} nap múlva`}
-                    </p>
-                  )}
-                </div>
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          {/* Overdue group */}
+          {items.filter((i) => i.is_overdue).length > 0 && (
+            <>
+              <div className="border-b border-slate-100 bg-red-50/50 px-4 py-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-red-600">
+                  Lejárt ({items.filter((i) => i.is_overdue).length})
+                </p>
               </div>
-            </Card>
-          ))}
+              {items.filter((i) => i.is_overdue).map((item) => (
+                <div key={`${item.project_id}-${item.activity_id}`} className="border-b border-slate-100 last:border-0">
+                  <TaskRow item={item} />
+                </div>
+              ))}
+            </>
+          )}
+          {/* Active group */}
+          {items.filter((i) => !i.is_overdue).length > 0 && (
+            <>
+              {items.filter((i) => i.is_overdue).length > 0 && (
+                <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Aktív ({items.filter((i) => !i.is_overdue).length})
+                  </p>
+                </div>
+              )}
+              {items.filter((i) => !i.is_overdue).map((item) => (
+                <div key={`${item.project_id}-${item.activity_id}`} className="border-b border-slate-100 last:border-0">
+                  <TaskRow item={item} />
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </AppLayout>

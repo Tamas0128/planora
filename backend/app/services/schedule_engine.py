@@ -135,6 +135,85 @@ def create_project_activities(db: Session, project: Project) -> list[Activity]:
     return activities
 
 
+def cascade_from_activity(db: Session, project: Project, changed_activity: Activity) -> None:
+    """After manually setting start_date on changed_activity, recompute its end_date/prep_date
+    and forward-propagate only to transitively dependent activities.
+    """
+    from datetime import timedelta
+
+    all_activities = (
+        db.query(Activity)
+        .filter(Activity.project_id == project.id)
+        .all()
+    )
+    all_deps = (
+        db.query(ActivityDependency)
+        .filter(ActivityDependency.activity_id.in_([a.id for a in all_activities]))
+        .all()
+    )
+    successors: dict[int, set[int]] = {a.id: set() for a in all_activities}
+    predecessors: dict[int, set[int]] = {a.id: set() for a in all_activities}
+    for dep in all_deps:
+        successors[dep.prerequisite_id].add(dep.activity_id)
+        predecessors[dep.activity_id].add(dep.prerequisite_id)
+
+    # BFS: find all activities reachable from changed_activity via successor edges
+    affected: set[int] = set()
+    bfs_queue = list(successors.get(changed_activity.id, set()))
+    while bfs_queue:
+        node = bfs_queue.pop()
+        if node in affected:
+            continue
+        affected.add(node)
+        bfs_queue.extend(successors.get(node, set()))
+
+    # Recompute changed_activity's own end_date and prep_date
+    if changed_activity.start_date:
+        changed_activity.end_date = add_workdays(changed_activity.start_date, changed_activity.duration_days - 1)
+        changed_activity.prep_date = subtract_workdays(changed_activity.start_date, changed_activity.prep_days)
+
+    activity_map = {a.id: a for a in all_activities}
+    end_date_map: dict[int, object] = {a.id: a.end_date for a in all_activities}
+    end_date_map[changed_activity.id] = changed_activity.end_date
+
+    # Topological sort of affected nodes (Kahn's algorithm)
+    in_degree: dict[int, int] = {aid: 0 for aid in affected}
+    for aid in affected:
+        for pred_id in predecessors.get(aid, set()):
+            if pred_id in affected:
+                in_degree[aid] += 1
+
+    topo_queue = [aid for aid in affected if in_degree[aid] == 0]
+    topo_order: list[int] = []
+    while topo_queue:
+        node = topo_queue.pop(0)
+        topo_order.append(node)
+        for succ_id in successors.get(node, set()):
+            if succ_id in affected:
+                in_degree[succ_id] -= 1
+                if in_degree[succ_id] == 0:
+                    topo_queue.append(succ_id)
+
+    # Propagate forward: only push start dates forward, never pull them back
+    for act_id in topo_order:
+        act = activity_map[act_id]
+        pred_ends = [end_date_map[pid] for pid in predecessors.get(act_id, set()) if end_date_map.get(pid)]
+        if not pred_ends:
+            end_date_map[act_id] = act.end_date
+            continue
+        latest_pred_end = max(pred_ends)  # type: ignore[type-var]
+        candidate_start = latest_pred_end + timedelta(days=1)  # type: ignore[operator]
+        while not is_workday(candidate_start):  # type: ignore[arg-type]
+            candidate_start += timedelta(days=1)
+        if act.start_date is None or candidate_start > act.start_date:
+            act.start_date = candidate_start
+            act.end_date = add_workdays(candidate_start, act.duration_days - 1)
+            act.prep_date = subtract_workdays(candidate_start, act.prep_days)
+        end_date_map[act_id] = act.end_date
+
+    db.flush()
+
+
 def recalculate_schedule(db: Session, project: Project) -> None:
     # Load activities in ascending sort_order (0 = first in sequence, last = final)
     activities = (

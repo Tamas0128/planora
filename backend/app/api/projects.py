@@ -25,7 +25,7 @@ from app.schemas import (
     ProjectUpdate,
 )
 from app.services.audit import log_change
-from app.services.schedule_engine import create_project_activities, recalculate_schedule
+from app.services.schedule_engine import cascade_from_activity, create_project_activities, recalculate_schedule
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -302,7 +302,9 @@ def update_activity(
             )
             setattr(activity, field, value)
     db.flush()
-    if "duration_days" in updates or "prep_days" in updates:
+    if "start_date" in updates:
+        cascade_from_activity(db, project, activity)
+    elif "duration_days" in updates or "prep_days" in updates:
         recalculate_schedule(db, project)
     else:
         done = db.query(Activity).filter(

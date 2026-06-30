@@ -725,8 +725,31 @@ export default function ProjectDetailPage() {
                     <TableCell className="text-muted-foreground">
                       {a.prep_date ? new Date(a.prep_date).toLocaleDateString("hu-HU") : "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {a.start_date ? new Date(a.start_date).toLocaleDateString("hu-HU") : "—"}
+                    <TableCell>
+                      {canEdit && scheduleEditing ? (
+                        <input
+                          type="date"
+                          value={a.start_date?.slice(0, 10) ?? ""}
+                          aria-label="Kezdési dátum"
+                          onChange={(e) => updateLocalActivity(a.id, { start_date: e.target.value })}
+                          onBlur={async (e) => {
+                            const val = e.target.value;
+                            if (!val) return;
+                            try {
+                              await api.updateActivity(id, a.id, { start_date: val });
+                              loadActivities();
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+                              loadActivities();
+                            }
+                          }}
+                          className="rounded border border-slate-200 bg-transparent px-1 py-0.5 text-xs focus:border-blue-500 focus:outline-none"
+                        />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {a.start_date ? new Date(a.start_date).toLocaleDateString("hu-HU") : "—"}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {a.end_date ? new Date(a.end_date).toLocaleDateString("hu-HU") : "—"}
@@ -800,12 +823,7 @@ export default function ProjectDetailPage() {
           <Card className="py-0">
             <div className="flex items-center justify-between border-b p-4">
               <h3 className="font-semibold">Dokumentumok</h3>
-              <label
-                className={cn(
-                  buttonVariants(),
-                  "cursor-pointer bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500"
-                )}
-              >
+              <label className={cn(buttonVariants(), "cursor-pointer")}>
                 <Upload />
                 {uploading ? "Feltöltés..." : "Feltöltés"}
                 <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
