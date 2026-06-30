@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
@@ -79,21 +78,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-r-0">
         <SidebarHeader>
-          <div className="flex items-center gap-2 px-1 py-3">
-            {/* Collapsed icon-only mode */}
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md group-data-[collapsible=icon]:flex hidden">
-              <Building2 className="size-4.5" />
+          <div className="flex items-center gap-2.5 px-2 py-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-green-700/60 ring-1 ring-green-600/40">
+              <Building2 className="size-4 text-green-100" />
             </div>
-            {/* Expanded: full logo on white bg */}
-            <div className="group-data-[collapsible=icon]:hidden">
-              <Image
-                src="/planora-logo.png"
-                alt="PLANora Projekt"
-                width={152}
-                height={50}
-                priority
-                className="rounded-lg bg-white px-2 py-1.5"
-              />
+            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+              <span className="text-[15px] font-bold tracking-tight text-white">PLANora</span>
+              <span className="text-[10px] text-green-400/80">Projektütemező</span>
             </div>
           </div>
         </SidebarHeader>
@@ -158,13 +149,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-20 flex h-13 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur-sm">
           <SidebarTrigger className="text-slate-500 hover:text-slate-800" />
           <div className="h-5 w-px bg-slate-200" />
-          <Image
-            src="/planora-logo.png"
-            alt="PLANora"
-            width={110}
-            height={36}
-            className="md:hidden"
-          />
+          <span className="text-sm font-bold tracking-tight text-slate-700 md:hidden">PLANora</span>
           <div className="flex-1" />
           {user && (
             <div className="flex items-center gap-2.5">

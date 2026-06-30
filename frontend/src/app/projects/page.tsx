@@ -3,15 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { LayoutList, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
-import {
-  api,
-  BUILDING_LABELS,
-  ProjectCard,
-  STATUS_LABELS,
-} from "@/lib/api";
+import { api, BUILDING_LABELS, ProjectCard, STATUS_LABELS } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,23 +28,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 const COLUMN_ORDER = ["planning", "foundation", "structure", "exterior_done", "turnkey"];
 
-const COLUMN_HEADER: Record<string, string> = {
-  planning: "bg-sky-500",
-  foundation: "bg-amber-500",
-  structure: "bg-orange-500",
-  exterior_done: "bg-teal-500",
-  turnkey: "bg-emerald-500",
-};
-
-const PROGRESS_COLOR: Record<string, string> = {
-  planning: "[&>div]:bg-sky-500",
-  foundation: "[&>div]:bg-amber-500",
-  structure: "[&>div]:bg-orange-500",
-  exterior_done: "[&>div]:bg-teal-500",
-  turnkey: "[&>div]:bg-emerald-500",
+const COLUMN_CFG: Record<string, { pill: string; bar: string }> = {
+  planning:      { pill: "bg-sky-500",     bar: "[&>div]:bg-sky-400" },
+  foundation:    { pill: "bg-amber-500",   bar: "[&>div]:bg-amber-400" },
+  structure:     { pill: "bg-orange-500",  bar: "[&>div]:bg-orange-400" },
+  exterior_done: { pill: "bg-teal-500",    bar: "[&>div]:bg-teal-400" },
+  turnkey:       { pill: "bg-emerald-500", bar: "[&>div]:bg-emerald-400" },
 };
 
 const BUILDING_OPTIONS: [string, string][] = [
@@ -59,32 +47,36 @@ const BUILDING_OPTIONS: [string, string][] = [
   ["other", "Egyéb"],
 ];
 
-function ProjectCardComponent({ project }: { project: ProjectCard }) {
+function KanbanCard({ project, status }: { project: ProjectCard; status: string }) {
+  const isLate = new Date(project.delivery_date) < new Date();
+  const cfg = COLUMN_CFG[status] ?? COLUMN_CFG.planning;
   return (
     <Link href={`/projects/${project.id}`} className="block">
-      <Card className="group cursor-pointer border border-slate-200 p-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold leading-tight text-slate-900">{project.name}</h3>
-        </div>
-        <p className="mt-1 text-xs font-medium text-slate-500">{project.settlement}</p>
-        <div className="mt-3 space-y-0.5 text-xs text-slate-500">
-          <p>{project.client_name}</p>
-          <p>{BUILDING_LABELS[project.building_type] || project.building_type} · {project.floor_area_sqm} m²</p>
+      <Card className={cn(
+        "cursor-pointer p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+        isLate && "border-l-[3px] border-l-red-400",
+      )}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          {project.project_code}
+        </p>
+        <h3 className="mt-0.5 text-sm font-semibold leading-tight text-slate-900">{project.name}</h3>
+        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+          {project.settlement} · {project.client_name}
+        </p>
+        <div className="mt-1.5 text-[11px] text-slate-400 space-y-0.5">
           {project.project_manager_name && <p>PM: {project.project_manager_name}</p>}
-          {project.site_manager_name && <p>Épv.: {project.site_manager_name}</p>}
+          <p>{BUILDING_LABELS[project.building_type]} · {project.floor_area_sqm} m²</p>
         </div>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <span className="text-xs text-slate-400">
-            {new Date(project.delivery_date).toLocaleDateString("hu-HU")}
-          </span>
-          <Badge className="bg-slate-100 text-slate-600 text-[10px]">
-            {project.completion_percent}%
-          </Badge>
+        <div className="mt-2.5">
+          <div className="mb-1 flex items-center justify-between">
+            <span className={cn("text-[10px] font-semibold", isLate ? "text-red-500" : "text-slate-400")}>
+              {new Date(project.delivery_date).toLocaleDateString("hu-HU")}
+              {isLate && " · Késik"}
+            </span>
+            <span className="text-[10px] font-bold text-slate-600">{project.completion_percent}%</span>
+          </div>
+          <Progress value={project.completion_percent} className={cn("h-1.5", cfg.bar)} />
         </div>
-        <Progress
-          value={project.completion_percent}
-          className={`mt-2 h-1.5 ${PROGRESS_COLOR[project.status] || ""}`}
-        />
       </Card>
     </Link>
   );
@@ -92,20 +84,21 @@ function ProjectCardComponent({ project }: { project: ProjectCard }) {
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const [board, setBoard] = useState<Record<string, ProjectCard[]>>({});
+  const [board, setBoard]     = useState<Record<string, ProjectCard[]>>({});
+  const [search, setSearch]   = useState("");
   const [showNew, setShowNew] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(() => ({
-    name: "",
-    project_code: "",
-    settlement: "",
-    address: "",
-    lot_number: "",
-    client_name: "",
-    client_phone: "",
-    client_email: "",
+    name:          "",
+    project_code:  "",
+    settlement:    "",
+    address:       "",
+    lot_number:    "",
+    client_name:   "",
+    client_phone:  "",
+    client_email:  "",
     floor_area_sqm: 145,
-    delivery_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    delivery_date: new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0],
     building_type: "light_steel",
   }));
 
@@ -113,9 +106,7 @@ export default function ProjectsPage() {
     api.kanban().then(setBoard).catch(console.error);
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   async function createProject(e: React.FormEvent) {
     e.preventDefault();
@@ -123,9 +114,9 @@ export default function ProjectsPage() {
     try {
       const payload: Record<string, unknown> = { ...form };
       payload.floor_area_sqm = Number(form.floor_area_sqm);
-      if (!payload.lot_number) payload.lot_number = null;
-      if (!payload.client_phone) payload.client_phone = null;
-      if (!payload.client_email) payload.client_email = null;
+      if (!payload.lot_number)    payload.lot_number    = null;
+      if (!payload.client_phone)  payload.client_phone  = null;
+      if (!payload.client_email)  payload.client_email  = null;
       const created = await api.createProject(payload);
       setShowNew(false);
       toast.success("Projekt létrehozva");
@@ -137,18 +128,69 @@ export default function ProjectsPage() {
     }
   }
 
+  const totalProjects = Object.values(board).reduce((s, col) => s + col.length, 0);
+
   return (
     <AppLayout>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Projektek</h1>
-          <p className="text-sm text-slate-500">Kanban board — projekt státuszok</p>
+      {/* ── Fejléc ── */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-slate-900">Kanban tábla</h1>
+          <p className="text-xs text-slate-500">{totalProjects} projekt összesen</p>
         </div>
-        <Button onClick={() => setShowNew(true)}>
-          <Plus /> Új projekt
+        {/* Kereső */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Keresés…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
+          />
+        </div>
+        <Button size="sm" onClick={() => setShowNew(true)} className="gap-1.5 bg-green-700 hover:bg-green-800">
+          <Plus className="size-3.5" />
+          Új projekt
         </Button>
       </div>
 
+      {/* ── Kanban board ── */}
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {COLUMN_ORDER.map((status) => {
+          const cards = (board[status] ?? []).filter((p) =>
+            !search ||
+            p.name.toLowerCase().includes(search.toLowerCase()) ||
+            p.client_name.toLowerCase().includes(search.toLowerCase()) ||
+            p.settlement.toLowerCase().includes(search.toLowerCase()),
+          );
+          const cfg = COLUMN_CFG[status];
+          return (
+            <div key={status} className="flex min-w-[260px] flex-1 flex-col">
+              {/* Oszlopfejléc */}
+              <div className="mb-3 flex items-center gap-2">
+                <span className={cn("rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white flex-1 text-center", cfg.pill)}>
+                  {STATUS_LABELS[status]}
+                </span>
+                <span className="text-xs font-bold text-slate-500">{cards.length}</span>
+              </div>
+              {/* Kártyák */}
+              <div className="space-y-2.5">
+                {cards.map((p) => (
+                  <KanbanCard key={p.id} project={p} status={status} />
+                ))}
+                {cards.length === 0 && (
+                  <div className="rounded-xl border-2 border-dashed border-slate-200 py-8 text-center text-xs text-slate-400">
+                    Nincs projekt
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Új projekt dialog ── */}
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent className="sm:max-w-2xl">
           <form onSubmit={createProject}>
@@ -161,14 +203,14 @@ export default function ProjectsPage() {
             <div className="grid gap-3 py-2 sm:grid-cols-2">
               {(
                 [
-                  ["name", "Projekt neve", true],
+                  ["name",         "Projekt neve",      true],
                   ["project_code", "Projekt azonosító", true],
-                  ["settlement", "Település", true],
-                  ["address", "Cím", true],
-                  ["lot_number", "Helyrajzi szám", false],
-                  ["client_name", "Ügyfél neve", true],
-                  ["client_phone", "Ügyfél telefon", false],
-                  ["client_email", "Ügyfél e-mail", false],
+                  ["settlement",   "Település",         true],
+                  ["address",      "Cím",               true],
+                  ["lot_number",   "Helyrajzi szám",    false],
+                  ["client_name",  "Ügyfél neve",       true],
+                  ["client_phone", "Ügyfél telefon",    false],
+                  ["client_email", "Ügyfél e-mail",     false],
                 ] as const
               ).map(([key, label, required]) => (
                 <div key={key} className="space-y-1.5">
@@ -207,9 +249,7 @@ export default function ProjectsPage() {
                   value={form.building_type}
                   onValueChange={(v) => setForm({ ...form, building_type: v ?? "light_steel" })}
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {BUILDING_OPTIONS.map(([value, label]) => (
                       <SelectItem key={value} value={value}>{label}</SelectItem>
@@ -219,35 +259,13 @@ export default function ProjectsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={creating}>
+              <Button type="submit" disabled={creating} className="bg-green-700 hover:bg-green-800">
                 {creating ? "Mentés..." : "Létrehozás"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Kanban board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {COLUMN_ORDER.map((status) => (
-          <div key={status} className="flex min-w-[272px] flex-1 flex-col">
-            {/* MeisterTask-style bold colored pill header */}
-            <div
-              className={`mb-3 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white ${COLUMN_HEADER[status]}`}
-            >
-              <span>{STATUS_LABELS[status]}</span>
-              <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-bold">
-                {(board[status] || []).length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {(board[status] || []).map((p) => (
-                <ProjectCardComponent key={p.id} project={p} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
     </AppLayout>
   );
 }
