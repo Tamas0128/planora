@@ -26,6 +26,9 @@ def dashboard_stats(
     if user.role == UserRole.PROJECT_MANAGER:
         projects_q = projects_q.filter(Project.project_manager_id == user.id)
         activities_q = activities_q.filter(Project.project_manager_id == user.id)
+    elif user.role == UserRole.SITE_MANAGER:
+        projects_q = projects_q.filter(Project.site_manager_id == user.id)
+        activities_q = activities_q.filter(Project.site_manager_id == user.id)
 
     overdue = activities_q.filter(
         Activity.prep_date < today,
@@ -74,6 +77,8 @@ def slipping_projects(
     )
     if user.role == UserRole.PROJECT_MANAGER:
         q = q.filter(Project.project_manager_id == user.id)
+    elif user.role == UserRole.SITE_MANAGER:
+        q = q.filter(Project.site_manager_id == user.id)
     projects = q.order_by(Project.delivery_date).all()
 
     from app.api.projects import _project_to_card

@@ -50,13 +50,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const ROLE_OPTIONS: [string, string][] = [
-  ["project_manager", "Projektmenedzser"],
-  ["management", "Menedzsment"],
-  ["procurement", "Beszerzés"],
-  ["billing", "Számlázás"],
-  ["admin", "Admin"],
-];
+const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
 
 export default function ActivityTemplatesPage() {
   const [templates, setTemplates] = useState<ActivityTemplate[]>([]);

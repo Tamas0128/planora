@@ -1,11 +1,14 @@
 import time
+import uuid
 from collections import defaultdict
 from threading import Lock
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.api.documents import ensure_bucket, get_public_s3_client, get_s3_client
+from app.config import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -24,6 +27,9 @@ from app.schemas import (
     UserResponse,
     UserUpdate,
 )
+
+AVATAR_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+AVATAR_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -139,3 +145,89 @@ def update_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+def _can_manage_avatar(user: User, target_id: int) -> bool:
+    return user.role == UserRole.ADMIN or user.id == target_id
+
+
+@router.post("/users/{user_id}/avatar", response_model=UserResponse)
+async def upload_avatar(
+    user_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not _can_manage_avatar(user, user_id):
+        raise HTTPException(status_code=403, detail="Access denied")
+    target = db.query(User).get(user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    ext = "." + file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else ""
+    if ext not in AVATAR_ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"File type not allowed: {ext}")
+    content = await file.read()
+    if len(content) > AVATAR_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 5 MB)")
+
+    ensure_bucket()
+    client = get_s3_client()
+    old_key = target.avatar_key
+    key = f"avatars/{user_id}/{uuid.uuid4()}{ext}"
+    client.put_object(
+        Bucket=settings.s3_bucket,
+        Key=key,
+        Body=content,
+        ContentType=file.content_type or "application/octet-stream",
+    )
+    target.avatar_key = key
+    db.commit()
+    db.refresh(target)
+    if old_key:
+        try:
+            client.delete_object(Bucket=settings.s3_bucket, Key=old_key)
+        except Exception:
+            pass
+    return target
+
+
+@router.get("/users/{user_id}/avatar-url")
+def get_avatar_url(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    target = db.query(User).get(user_id)
+    if not target or not target.avatar_key:
+        raise HTTPException(status_code=404, detail="No avatar")
+    client = get_public_s3_client()
+    url = client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.s3_bucket, "Key": target.avatar_key},
+        ExpiresIn=3600,
+    )
+    return {"url": url}
+
+
+@router.delete("/users/{user_id}/avatar", response_model=UserResponse)
+def delete_avatar(
+    user_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not _can_manage_avatar(user, user_id):
+        raise HTTPException(status_code=403, detail="Access denied")
+    target = db.query(User).get(user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.avatar_key:
+        client = get_s3_client()
+        try:
+            client.delete_object(Bucket=settings.s3_bucket, Key=target.avatar_key)
+        except Exception:
+            pass
+        target.avatar_key = None
+        db.commit()
+        db.refresh(target)
+    return target

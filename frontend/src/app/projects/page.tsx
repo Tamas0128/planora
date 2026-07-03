@@ -6,6 +6,7 @@ import {
   Calendar,
   ChevronRight,
   Download,
+  Image as ImageIcon,
   Plus,
   Search,
 } from "lucide-react";
@@ -17,6 +18,30 @@ import { clampPercent, DEFAULT_CFG, isLate, pmInitials, STATUS_CFG, STATUS_ORDER
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+
+function ProjectThumbnailPreview({ projectId, hasThumbnail }: { projectId: number; hasThumbnail: boolean }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hasThumbnail) {
+      api.thumbnailUrl(projectId).then((r) => setUrl(r.url)).catch(() => setUrl(null));
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync reset, no async step needed
+      setUrl(null);
+    }
+  }, [projectId, hasThumbnail]);
+
+  return (
+    <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-100 bg-slate-50">
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL, not a static/local asset
+        <img src={url} alt="" className="size-full object-cover" />
+      ) : (
+        <ImageIcon className="size-3.5 text-slate-300" />
+      )}
+    </div>
+  );
+}
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -192,8 +217,13 @@ export default function ProjectsPage() {
                     </span>
                   </td>
                   <td className="px-3 py-1.5">
-                    <p className="text-[12px] font-semibold text-slate-900">{p.name}</p>
-                    <p className="text-[10px] text-slate-400">{p.project_code}</p>
+                    <div className="flex items-center gap-2.5">
+                      <ProjectThumbnailPreview projectId={p.id} hasThumbnail={p.has_thumbnail} />
+                      <div>
+                        <p className="text-[12px] font-semibold text-slate-900">{p.name}</p>
+                        <p className="text-[10px] text-slate-400">{p.project_code}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-1.5">
                     <p className="text-[12px] text-slate-700">{p.client_name}</p>

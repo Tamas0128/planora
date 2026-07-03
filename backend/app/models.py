@@ -24,6 +24,8 @@ class UserRole(str, enum.Enum):
     MANAGEMENT = "management"
     PROCUREMENT = "procurement"
     BILLING = "billing"
+    SITE_MANAGER = "site_manager"
+    SUBCONTRACTOR = "subcontractor"
 
 
 class ProjectStatus(str, enum.Enum):
@@ -74,11 +76,16 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.PROJECT_MANAGER)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    avatar_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     managed_projects: Mapped[list["Project"]] = relationship(
         back_populates="project_manager", foreign_keys="Project.project_manager_id"
     )
+
+    @property
+    def has_avatar(self) -> bool:
+        return self.avatar_key is not None
 
 
 class Project(Base):
@@ -119,6 +126,7 @@ class Project(Base):
         ForeignKey("users.id"), nullable=True
     )
     subcontractors: Mapped[str | None] = mapped_column(Text, nullable=True)
+    thumbnail_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -138,6 +146,10 @@ class Project(Base):
         back_populates="project", cascade="all, delete-orphan"
     )
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="project")
+
+    @property
+    def has_thumbnail(self) -> bool:
+        return self.thumbnail_key is not None
 
 
 class ActivityTemplate(Base):

@@ -1,8 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Calendar, Download, Pencil, Plus, Upload, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Calendar, Download, Image as ImageIcon, Pencil, Plus, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import {
@@ -87,13 +87,7 @@ const ACTIVITY_STATUS_OPTIONS: [string, string][] = [
   ["blocked", "Blokkolt"],
 ];
 
-const ROLE_OPTIONS: [string, string][] = [
-  ["project_manager", "Projektmenedzser"],
-  ["management", "Menedzsment"],
-  ["procurement", "Beszerzés"],
-  ["billing", "Számlázás"],
-  ["admin", "Admin"],
-];
+const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
 
 const ACTIVITY_STATUS_COLOR: Record<string, string> = {
   pending: "text-slate-600",
@@ -106,6 +100,72 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ProjectThumbnail({
+  projectId, hasThumbnail, canEdit, onUploaded,
+}: {
+  projectId: number; hasThumbnail: boolean; canEdit: boolean; onUploaded: () => void;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (hasThumbnail) {
+      api.thumbnailUrl(projectId).then((r) => setUrl(r.url)).catch(() => setUrl(null));
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync reset, no async step needed
+      setUrl(null);
+    }
+  }, [projectId, hasThumbnail]);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      await api.uploadThumbnail(projectId, file);
+      onUploaded();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a feltöltés során");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="relative shrink-0">
+      {canEdit && (
+        <input
+          ref={inputRef}
+          type="file"
+          aria-label="Bélyegkép feltöltése"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={handleFile}
+        />
+      )}
+      <button
+        type="button"
+        disabled={!canEdit || uploading}
+        onClick={() => inputRef.current?.click()}
+        title={canEdit ? "Bélyegkép módosítása" : undefined}
+        className={cn(
+          "flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50",
+          canEdit && "cursor-pointer hover:border-blue-400",
+        )}
+      >
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL, not a static/local asset
+          <img src={url} alt="" className="size-full object-cover" />
+        ) : (
+          <ImageIcon className="size-5 text-slate-300" />
+        )}
+      </button>
+    </div>
+  );
 }
 
 export default function ProjectDetailPage() {
@@ -147,7 +207,7 @@ export default function ProjectDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const canEdit = me?.role === "admin" || me?.role === "management" || me?.role === "project_manager";
+  const canEdit = me?.role === "admin" || me?.role === "management" || me?.role === "project_manager" || me?.role === "site_manager";
 
   async function updateStatus(activityId: number, status: string) {
     await api.updateActivity(id, activityId, { status });
@@ -351,11 +411,19 @@ export default function ProjectDetailPage() {
   return (
     <AppLayout>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">{project.name}</h1>
-          <p className="text-xs text-slate-500">
-            {project.project_code} · {project.settlement}
-          </p>
+        <div className="flex items-center gap-3">
+          <ProjectThumbnail
+            projectId={id}
+            hasThumbnail={project.has_thumbnail}
+            canEdit={canEdit}
+            onUploaded={loadProject}
+          />
+          <div>
+            <h1 className="text-lg font-bold text-slate-900">{project.name}</h1>
+            <p className="text-xs text-slate-500">
+              {project.project_code} · {project.settlement}
+            </p>
+          </div>
         </div>
         {/* Inline delivery date */}
         <Card className="flex items-center gap-3 px-3 py-2 shadow-sm">

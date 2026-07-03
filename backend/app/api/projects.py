@@ -46,6 +46,7 @@ def _project_to_card(project: Project) -> ProjectCard:
         completion_percent=project.completion_percent,
         project_manager_name=project.project_manager.full_name if project.project_manager else None,
         site_manager_name=project.site_manager.full_name if project.site_manager else None,
+        has_thumbnail=project.has_thumbnail,
     )
 
 
@@ -54,6 +55,8 @@ def _can_view_project(user: User, project: Project) -> bool:
         return True
     if user.role == UserRole.PROJECT_MANAGER:
         return project.project_manager_id == user.id
+    if user.role == UserRole.SITE_MANAGER:
+        return project.site_manager_id == user.id
     return True
 
 
@@ -62,6 +65,8 @@ def _can_edit_project(user: User, project: Project) -> bool:
         return True
     if user.role == UserRole.PROJECT_MANAGER:
         return project.project_manager_id == user.id
+    if user.role == UserRole.SITE_MANAGER:
+        return project.site_manager_id == user.id
     return False
 
 
@@ -75,6 +80,8 @@ def list_projects(
     )
     if user.role == UserRole.PROJECT_MANAGER:
         q = q.filter(Project.project_manager_id == user.id)
+    elif user.role == UserRole.SITE_MANAGER:
+        q = q.filter(Project.site_manager_id == user.id)
     projects = q.order_by(Project.delivery_date).all()
     return [_project_to_card(p) for p in projects]
 
@@ -89,6 +96,8 @@ def kanban_board(
     )
     if user.role == UserRole.PROJECT_MANAGER:
         q = q.filter(Project.project_manager_id == user.id)
+    elif user.role == UserRole.SITE_MANAGER:
+        q = q.filter(Project.site_manager_id == user.id)
     projects = q.all()
     board = {s.value: [] for s in ProjectStatus}
     for p in projects:
@@ -100,13 +109,15 @@ def kanban_board(
 def create_project(
     body: ProjectCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER)),
+    user: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER, UserRole.SITE_MANAGER)),
 ):
     if db.query(Project).filter(Project.project_code == body.project_code).first():
         raise HTTPException(status_code=400, detail="Project code already exists")
     project = Project(**body.model_dump())
     if user.role == UserRole.PROJECT_MANAGER and not project.project_manager_id:
         project.project_manager_id = user.id
+    elif user.role == UserRole.SITE_MANAGER and not project.site_manager_id:
+        project.site_manager_id = user.id
     db.add(project)
     db.flush()
     create_project_activities(db, project)
@@ -155,6 +166,7 @@ def _get_project_detail(db: Session, project_id: int) -> ProjectDetail:
         completion_percent=project.completion_percent,
         project_manager_name=project.project_manager.full_name if project.project_manager else None,
         site_manager_name=project.site_manager.full_name if project.site_manager else None,
+        has_thumbnail=project.has_thumbnail,
         address=project.address,
         lot_number=project.lot_number,
         client_phone=project.client_phone,

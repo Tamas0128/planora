@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Calendar,
   ChevronDown,
+  Image as ImageIcon,
   MapPin,
   Package,
   Plus,
@@ -19,6 +20,31 @@ import { clampPercent, DEFAULT_CFG, isLate, pmInitials, STATUS_CFG, STATUS_ORDER
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+
+function CardThumbnail({ projectId, hasThumbnail }: { projectId: number; hasThumbnail: boolean }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hasThumbnail) {
+      api.thumbnailUrl(projectId).then((r) => setUrl(r.url)).catch(() => setUrl(null));
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync reset, no async step needed
+      setUrl(null);
+    }
+  }, [projectId, hasThumbnail]);
+
+  if (!hasThumbnail) return null;
+  return (
+    <div className="size-8 shrink-0 overflow-hidden rounded-md border border-slate-100 bg-slate-50">
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL, not a static/local asset
+        <img src={url} alt="" className="size-full object-cover" />
+      ) : (
+        <ImageIcon className="size-3.5 text-slate-300" />
+      )}
+    </div>
+  );
+}
 
 function KanbanCard({
   project, status, selected, onClick,
@@ -43,9 +69,14 @@ function KanbanCard({
         selected ? "border-slate-200 ring-2 ring-blue-500/25 shadow-md" : "border-slate-100/80",
       )}
     >
-      <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">{project.project_code}</p>
-      <h4 className="text-[13px] font-semibold leading-snug text-slate-900">{project.name}</h4>
-      <p className="mt-0.5 truncate text-[11px] text-slate-500">{project.settlement} · {project.client_name}</p>
+      <div className="flex items-start gap-2">
+        <CardThumbnail projectId={project.id} hasThumbnail={project.has_thumbnail} />
+        <div className="min-w-0 flex-1">
+          <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">{project.project_code}</p>
+          <h4 className="text-[13px] font-semibold leading-snug text-slate-900">{project.name}</h4>
+          <p className="mt-0.5 truncate text-[11px] text-slate-500">{project.settlement} · {project.client_name}</p>
+        </div>
+      </div>
       {late && (
         <span className="mt-1.5 inline-block rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">Késik</span>
       )}

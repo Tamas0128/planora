@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlarmClock,
@@ -18,7 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import { api, clearToken, ROLE_LABELS, User } from "@/lib/api";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -67,10 +67,37 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.me().then(setUser).catch(() => router.push("/login"));
   }, [router]);
+
+  useEffect(() => {
+    if (user?.has_avatar) {
+      api.avatarUrl(user.id).then((r) => setAvatarUrl(r.url)).catch(() => setAvatarUrl(null));
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync reset, no async step needed
+      setAvatarUrl(null);
+    }
+  }, [user?.id, user?.has_avatar]);
+
+  async function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    setAvatarUploading(true);
+    try {
+      const updated = await api.uploadAvatar(user.id, file);
+      setUser(updated);
+    } catch {
+      // silently ignore — sidebar has no toast surface
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   function logout() {
     clearToken();
@@ -183,11 +210,28 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
         {user && (
           <SidebarFooter>
             <div className="flex items-center gap-2 rounded-lg px-1 py-1.5 transition-colors hover:bg-white/8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-              <Avatar size="sm">
-                <AvatarFallback className="bg-green-600 text-xs font-semibold text-white">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                aria-label="Profilkép feltöltése"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleAvatarFile}
+              />
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                title="Profilkép módosítása"
+                className="shrink-0 rounded-full disabled:opacity-50"
+                disabled={avatarUploading}
+              >
+                <Avatar size="sm">
+                  {avatarUrl && <AvatarImage src={avatarUrl} alt={user.full_name} />}
+                  <AvatarFallback className="bg-green-600 text-xs font-semibold text-white">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
               <div className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-[13px] font-medium text-white/90">{user.full_name}</span>
                 <span className="text-[11px] text-white/50">{ROLE_LABELS[user.role] || user.role}</span>

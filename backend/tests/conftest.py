@@ -78,6 +78,13 @@ def fake_s3(monkeypatch):
 @pytest.fixture
 def client(fresh_db, fake_s3, monkeypatch):
     monkeypatch.setattr(main_module, "SessionLocal", TestingSessionLocal)
+    # Tests hardcode the seeded admin password as "admin123" (see
+    # admin_headers below); ADMIN_PASSWORD leaking in from the host's
+    # docker-compose environment (real-deployment value, whatever it
+    # currently is) would otherwise seed a different password and break
+    # every fixture that logs in as admin — same class of leak as the
+    # SMTP_HOST one, fixed the same way: don't depend on the compose file.
+    monkeypatch.setattr("app.main.settings.admin_password", "admin123")
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c

@@ -25,6 +25,8 @@ def _require_project_access(project_id: int, user: User, db, *, edit: bool = Fal
         return project
     if edit and user.role == UserRole.PROJECT_MANAGER and project.project_manager_id != user.id:
         raise HTTPException(status_code=403, detail="Access denied")
+    if edit and user.role == UserRole.SITE_MANAGER and project.site_manager_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
     return project
 
 router = APIRouter(prefix="/projects", tags=["documents"])
@@ -205,3 +207,79 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
     return doc
+
+
+THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+THUMBNAIL_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+@router.post("/{project_id}/thumbnail")
+async def upload_thumbnail(
+    project_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = _require_project_access(project_id, user, db, edit=True)
+
+    ext = "." + file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else ""
+    if ext not in THUMBNAIL_ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"File type not allowed: {ext}")
+    content = await file.read()
+    if len(content) > THUMBNAIL_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 5 MB)")
+
+    ensure_bucket()
+    client = get_s3_client()
+    old_key = project.thumbnail_key
+    key = f"thumbnails/{project_id}/{uuid.uuid4()}{ext}"
+    client.put_object(
+        Bucket=settings.s3_bucket,
+        Key=key,
+        Body=content,
+        ContentType=file.content_type or "application/octet-stream",
+    )
+    project.thumbnail_key = key
+    db.commit()
+    if old_key:
+        try:
+            client.delete_object(Bucket=settings.s3_bucket, Key=old_key)
+        except Exception:
+            pass
+    return {"ok": True}
+
+
+@router.get("/{project_id}/thumbnail-url")
+def get_thumbnail_url(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = _require_project_access(project_id, user, db)
+    if not project.thumbnail_key:
+        raise HTTPException(status_code=404, detail="No thumbnail")
+    client = get_public_s3_client()
+    url = client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.s3_bucket, "Key": project.thumbnail_key},
+        ExpiresIn=3600,
+    )
+    return {"url": url}
+
+
+@router.delete("/{project_id}/thumbnail")
+def delete_thumbnail(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = _require_project_access(project_id, user, db, edit=True)
+    if project.thumbnail_key:
+        client = get_s3_client()
+        try:
+            client.delete_object(Bucket=settings.s3_bucket, Key=project.thumbnail_key)
+        except Exception:
+            pass
+        project.thumbnail_key = None
+        db.commit()
+    return {"ok": True}

@@ -7,6 +7,7 @@ export interface User {
   full_name: string;
   role: string;
   is_active: boolean;
+  has_avatar: boolean;
 }
 
 export interface ProjectCard {
@@ -22,6 +23,7 @@ export interface ProjectCard {
   completion_percent: number;
   project_manager_name?: string;
   site_manager_name?: string;
+  has_thumbnail: boolean;
 }
 
 export interface ProjectDetail extends ProjectCard {
@@ -337,6 +339,28 @@ export const api = {
       `/activity-templates/${templateId}/dependencies/${prerequisiteTemplateId}`,
       { method: "DELETE" }
     ),
+
+  uploadAvatar: (userId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<User>(`/auth/users/${userId}/avatar`, { method: "POST", body: formData });
+  },
+
+  avatarUrl: (userId: number) => request<{ url: string }>(`/auth/users/${userId}/avatar-url`),
+
+  deleteAvatar: (userId: number) =>
+    request<User>(`/auth/users/${userId}/avatar`, { method: "DELETE" }),
+
+  uploadThumbnail: (projectId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<{ ok: boolean }>(`/projects/${projectId}/thumbnail`, { method: "POST", body: formData });
+  },
+
+  thumbnailUrl: (projectId: number) => request<{ url: string }>(`/projects/${projectId}/thumbnail-url`),
+
+  deleteThumbnail: (projectId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/thumbnail`, { method: "DELETE" }),
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -368,4 +392,6 @@ export const ROLE_LABELS: Record<string, string> = {
   management: "Menedzsment",
   procurement: "Beszerzés",
   billing: "Számlázás",
+  site_manager: "Építésvezető",
+  subcontractor: "Alvállalkozó",
 };

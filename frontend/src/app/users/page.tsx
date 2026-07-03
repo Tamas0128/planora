@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
-import { api, User } from "@/lib/api";
+import { api, ROLE_LABELS, User } from "@/lib/api";
+import { pmInitials } from "@/lib/project-utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,13 +35,64 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const ROLE_OPTIONS: [string, string][] = [
-  ["admin", "Admin"],
-  ["project_manager", "Projektmenedzser"],
-  ["management", "Menedzsment"],
-  ["procurement", "Beszerzés"],
-  ["billing", "Számlázás"],
-];
+const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
+
+function UserAvatarCell({ user, onUploaded }: { user: User; onUploaded: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user.has_avatar) {
+      api.avatarUrl(user.id).then((r) => setUrl(r.url)).catch(() => setUrl(null));
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync reset, no async step needed
+      setUrl(null);
+    }
+  }, [user.id, user.has_avatar]);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      await api.uploadAvatar(user.id, file);
+      onUploaded();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a feltöltés során");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        aria-label={`${user.full_name} profilkép feltöltése`}
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={handleFile}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        title="Profilkép módosítása"
+        className="rounded-full disabled:opacity-50"
+      >
+        <Avatar size="sm">
+          {url && <AvatarImage src={url} alt={user.full_name} />}
+          <AvatarFallback className="bg-blue-600 text-[10px] font-semibold text-white">
+            {pmInitials(user.full_name)}
+          </AvatarFallback>
+        </Avatar>
+      </button>
+    </>
+  );
+}
 
 export default function UsersPage() {
   const [me, setMe] = useState<User | null>(null);
@@ -188,6 +241,7 @@ export default function UsersPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10"></TableHead>
               <TableHead>Felhasználónév</TableHead>
               <TableHead>Teljes név</TableHead>
               <TableHead>E-mail</TableHead>
@@ -199,6 +253,9 @@ export default function UsersPage() {
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
+                <TableCell>
+                  <UserAvatarCell user={user} onUploaded={load} />
+                </TableCell>
                 <TableCell className="font-medium">{user.username}</TableCell>
                 <TableCell>{user.full_name}</TableCell>
                 <TableCell className="text-muted-foreground">{user.email}</TableCell>
@@ -230,7 +287,7 @@ export default function UsersPage() {
             ))}
             {users.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nincs felhasználó
                 </TableCell>
               </TableRow>

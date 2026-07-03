@@ -43,6 +43,7 @@ class UserResponse(BaseModel):
     full_name: str
     role: UserRole
     is_active: bool
+    has_avatar: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -99,6 +100,7 @@ class ProjectCard(BaseModel):
     completion_percent: float
     project_manager_name: Optional[str] = None
     site_manager_name: Optional[str] = None
+    has_thumbnail: bool = False
 
     model_config = {"from_attributes": True}
 

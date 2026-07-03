@@ -18,6 +18,8 @@ def scoped_activity_query(db: Session, user: User):
     )
     if user.role == UserRole.PROJECT_MANAGER:
         q = q.filter(Project.project_manager_id == user.id)
-    elif user.role in (UserRole.PROCUREMENT, UserRole.BILLING):
+    elif user.role == UserRole.SITE_MANAGER:
+        q = q.filter(Project.site_manager_id == user.id)
+    elif user.role in (UserRole.PROCUREMENT, UserRole.BILLING, UserRole.SUBCONTRACTOR):
         q = q.filter(Activity.responsible_role == user.role)
     return q

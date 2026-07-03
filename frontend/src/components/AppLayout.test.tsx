@@ -42,6 +42,7 @@ describe("AppLayout role-based navigation", () => {
       full_name: "Admin",
       role: "admin",
       is_active: true,
+      has_avatar: false,
     });
 
     render(
@@ -62,6 +63,7 @@ describe("AppLayout role-based navigation", () => {
       full_name: "PM",
       role: "project_manager",
       is_active: true,
+      has_avatar: false,
     });
 
     render(
