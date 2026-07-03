@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Ban,
   Calendar,
   CheckSquare,
@@ -79,6 +82,55 @@ function matchesRange(item: PrepTask, from: string, to: string): boolean {
   if (from && d < from) return false;
   if (to && d > to) return false;
   return true;
+}
+
+type SortKey = "activity_name" | "project_name" | "date" | "responsible_role";
+
+const SORT_COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "activity_name", label: "Tevékenység" },
+  { key: "project_name", label: "Projekt" },
+  { key: "date", label: "Dátum" },
+  { key: "responsible_role", label: "Felelős" },
+];
+
+function sortValue(item: PrepTask, key: SortKey): string {
+  switch (key) {
+    case "activity_name": return item.activity_name;
+    case "project_name": return item.project_name;
+    case "date": return taskDate(item) ?? "";
+    case "responsible_role": return ROLE_LABELS[item.responsible_role] ?? item.responsible_role;
+  }
+}
+
+function sortItems(items: PrepTask[], key: SortKey, dir: "asc" | "desc"): PrepTask[] {
+  const sorted = [...items].sort((a, b) => sortValue(a, key).localeCompare(sortValue(b, key), "hu"));
+  return dir === "asc" ? sorted : sorted.reverse();
+}
+
+function SortableHead({
+  label, sortKeyName, sortKey, sortDir, onClick,
+}: {
+  label: string; sortKeyName: SortKey; sortKey: SortKey; sortDir: "asc" | "desc"; onClick: () => void;
+}) {
+  const active = sortKey === sortKeyName;
+  return (
+    <TableHead
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+      className="cursor-pointer select-none hover:text-slate-700"
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active ? (
+          sortDir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
+        ) : (
+          <ArrowUpDown className="size-3 text-slate-300" />
+        )}
+      </span>
+    </TableHead>
+  );
 }
 
 function TaskTableRow({ item, selected, onClick }: { item: PrepTask; selected: boolean; onClick: () => void }) {
@@ -239,6 +291,11 @@ export default function MyTasksPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [nameFilter, setNameFilter] = useState("");
+  const [projectFilter, setProjectFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   function load() {
     return api.myTasks()
@@ -275,6 +332,30 @@ export default function MyTasksPage() {
     resetPaging();
   }
 
+  function changeNameFilter(v: string) {
+    setNameFilter(v);
+    resetPaging();
+  }
+
+  function changeProjectFilter(v: string) {
+    setProjectFilter(v);
+    resetPaging();
+  }
+
+  function changeRoleFilter(v: string) {
+    setRoleFilter(v);
+    resetPaging();
+  }
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
   function toggleCollapsed(key: string) {
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -285,7 +366,14 @@ export default function MyTasksPage() {
   }
 
   const filteredItems = items.filter(
-    (i) => matchesRange(i, dateFrom, dateTo) && (statusFilter === "all" || i.status === statusFilter),
+    (i) =>
+      matchesRange(i, dateFrom, dateTo) &&
+      (statusFilter === "all" || i.status === statusFilter) &&
+      (roleFilter === "all" || i.responsible_role === roleFilter) &&
+      (!nameFilter || i.activity_name.toLowerCase().includes(nameFilter.toLowerCase())) &&
+      (!projectFilter ||
+        i.project_name.toLowerCase().includes(projectFilter.toLowerCase()) ||
+        i.client_name.toLowerCase().includes(projectFilter.toLowerCase())),
   );
   const selected = items.find((i) => taskKey(i) === selectedKey) ?? null;
 
@@ -348,6 +436,36 @@ export default function MyTasksPage() {
               </Button>
             ))}
           </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Tevékenység</span>
+            <Input
+              type="text"
+              value={nameFilter}
+              onChange={(e) => changeNameFilter(e.target.value)}
+              placeholder="Keresés…"
+              className="h-7 w-[160px] text-[12px]"
+            />
+            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projekt</span>
+            <Input
+              type="text"
+              value={projectFilter}
+              onChange={(e) => changeProjectFilter(e.target.value)}
+              placeholder="Keresés…"
+              className="h-7 w-[160px] text-[12px]"
+            />
+            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős</span>
+            <Select value={roleFilter} onValueChange={(v) => v && changeRoleFilter(v)}>
+              <SelectTrigger size="sm" className="h-7 w-[160px] text-[12px]">
+                <SelectValue>{(v: string) => (v === "all" ? "Összes" : ROLE_LABELS[v] ?? v)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Összes</SelectItem>
+                {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
 
@@ -388,7 +506,13 @@ export default function MyTasksPage() {
                 size="sm"
                 variant="outline"
                 className="mt-4"
-                onClick={() => { clearDateRange(); changeStatusFilter("all"); }}
+                onClick={() => {
+                  clearDateRange();
+                  changeStatusFilter("all");
+                  changeNameFilter("");
+                  changeProjectFilter("");
+                  changeRoleFilter("all");
+                }}
               >
                 Szűrők törlése
               </Button>
@@ -420,14 +544,20 @@ export default function MyTasksPage() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Tevékenység</TableHead>
-                              <TableHead>Projekt</TableHead>
-                              <TableHead>Dátum</TableHead>
-                              <TableHead>Felelős</TableHead>
+                              {SORT_COLUMNS.map((col) => (
+                                <SortableHead
+                                  key={col.key}
+                                  label={col.label}
+                                  sortKeyName={col.key}
+                                  sortKey={sortKey}
+                                  sortDir={sortDir}
+                                  onClick={() => toggleSort(col.key)}
+                                />
+                              ))}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {groupItems.slice(0, visible).map((item) => (
+                            {sortItems(groupItems, sortKey, sortDir).slice(0, visible).map((item) => (
                               <TaskTableRow
                                 key={taskKey(item)}
                                 item={item}
