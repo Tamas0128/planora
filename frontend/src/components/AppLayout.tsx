@@ -8,7 +8,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   AlarmClock,
   BarChart2,
-  Building2,
   CalendarDays,
   CheckSquare,
   FolderOpen,
@@ -99,9 +98,19 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
 
         {/* ── Logo ── */}
         <SidebarHeader>
-          <div className="flex items-center gap-2.5 px-2 py-2">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/20">
-              <Building2 className="size-4 text-white/90" />
+          <div className="flex items-center px-2 py-2 group-data-[collapsible=icon]:justify-center">
+            <div className="hidden group-data-[collapsible=icon]:block">
+              <Image
+                src="/planora-icon.png"
+                alt="PLANora"
+                width={32}
+                height={31}
+                priority
+                style={{
+                  filter: "invert(1) saturate(0) brightness(2)",
+                  mixBlendMode: "screen",
+                }}
+              />
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
               <Image
