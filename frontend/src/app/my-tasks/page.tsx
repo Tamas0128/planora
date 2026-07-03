@@ -2,13 +2,25 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Calendar, CheckSquare, ClipboardList, User as UserIcon, X } from "lucide-react";
+import {
+  Ban,
+  Calendar,
+  CheckSquare,
+  ChevronDown,
+  Circle,
+  ClipboardList,
+  Clock,
+  User as UserIcon,
+  X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { api, PrepTask, ROLE_LABELS } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Várakozik",
@@ -23,6 +35,25 @@ const STATUS_COLOR: Record<string, string> = {
   done: "bg-emerald-100 text-emerald-700 border-emerald-200",
   blocked: "bg-red-100 text-red-700 border-red-200",
 };
+
+const ROLE_COLOR: Record<string, string> = {
+  project_manager: "bg-blue-600",
+  management: "bg-purple-600",
+  procurement: "bg-amber-600",
+  billing: "bg-emerald-600",
+  admin: "bg-slate-600",
+};
+
+function roleInitials(role: string): string {
+  const label = ROLE_LABELS[role] ?? role;
+  return label.slice(0, 2).toUpperCase();
+}
+
+const STATUS_GROUPS: { key: string; label: string; icon: LucideIcon; iconColor: string }[] = [
+  { key: "pending", label: "Várakozik", icon: Circle, iconColor: "text-slate-400" },
+  { key: "in_progress", label: "Folyamatban", icon: Clock, iconColor: "text-amber-500" },
+  { key: "blocked", label: "Blokkolt", icon: Ban, iconColor: "text-red-500" },
+];
 
 function taskKey(item: PrepTask) {
   return `${item.project_id}-${item.activity_id}`;
@@ -55,51 +86,55 @@ function matchesPeriod(item: PrepTask, period: string): boolean {
   return true;
 }
 
-function TaskRow({ item, selected, onClick }: { item: PrepTask; selected: boolean; onClick: () => void }) {
+function TaskTableRow({ item, selected, onClick }: { item: PrepTask; selected: boolean; onClick: () => void }) {
+  const date = item.prep_date ?? item.start_date;
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <TableRow
       onClick={onClick}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
       className={cn(
-        "flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-slate-50",
-        item.is_overdue ? "border-l-[3px] border-l-red-500" : "border-l-[3px] border-l-blue-400",
+        "cursor-pointer",
+        item.is_overdue && "bg-red-50/30",
         selected && "bg-blue-50/60 hover:bg-blue-50/60",
       )}
     >
-      <div className={cn("size-1.5 shrink-0 rounded-full", item.is_overdue ? "bg-red-500" : "bg-blue-400")} />
-      <div className="min-w-0 flex-1">
+      <TableCell className="font-medium">
+        <span className="text-[13px] text-slate-900">{item.activity_name}</span>
+      </TableCell>
+      <TableCell>
         <Link
           href={`/projects/${item.project_id}`}
           onClick={(e) => e.stopPropagation()}
-          className="text-[13px] font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+          className="text-[13px] font-medium text-blue-600 hover:text-blue-800 hover:underline"
         >
           {item.project_name}
         </Link>
-        <p className="truncate text-[11px] text-slate-500">{item.activity_name}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Badge
-          variant="outline"
-          className={cn("text-[10px] font-medium", STATUS_COLOR[item.status] ?? "bg-slate-100 text-slate-600")}
-        >
-          {STATUS_LABEL[item.status] ?? item.status}
-        </Badge>
-        {item.prep_date && (
-          <span className={cn("hidden text-[11px] sm:block", item.is_overdue ? "font-medium text-red-600" : "text-slate-400")}>
-            {new Date(item.prep_date).toLocaleDateString("hu-HU")}
-          </span>
+        <p className="text-[11px] text-slate-400">{item.client_name}</p>
+      </TableCell>
+      <TableCell>
+        {date ? (
+          <div className="flex items-center gap-1.5">
+            <span className={cn("text-[12px]", item.is_overdue ? "font-semibold text-red-600" : "text-slate-600")}>
+              {new Date(date).toLocaleDateString("hu-HU")}
+            </span>
+            {item.days_until !== undefined && item.days_until !== null && (
+              <Badge variant="outline" className={cn("text-[10px]", item.is_overdue ? "border-red-200 bg-red-50 text-red-600" : "border-slate-200 text-slate-400")}>
+                {item.is_overdue ? `${Math.abs(item.days_until)}n lejárt` : `${item.days_until}n múlva`}
+              </Badge>
+            )}
+          </div>
+        ) : (
+          <span className="text-[12px] text-slate-300">—</span>
         )}
-        {item.days_until !== undefined && item.days_until !== null && (
-          <span className={cn("hidden text-[11px] sm:block", item.is_overdue ? "text-red-500" : "text-slate-400")}>
-            {item.is_overdue
-              ? `${Math.abs(item.days_until)}n lejárt`
-              : `${item.days_until}n múlva`}
-          </span>
-        )}
-      </div>
-    </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1.5">
+          <div className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white", ROLE_COLOR[item.responsible_role] ?? "bg-slate-500")}>
+            {roleInitials(item.responsible_role)}
+          </div>
+          <span className="text-[12px] text-slate-500">{ROLE_LABELS[item.responsible_role] ?? item.responsible_role}</span>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -201,13 +236,13 @@ function TaskDetailPanel({
   );
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 
 export default function MyTasksPage() {
   const [items, setItems] = useState<PrepTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [overdueVisible, setOverdueVisible] = useState(PAGE_SIZE);
-  const [activeVisible, setActiveVisible] = useState(PAGE_SIZE);
+  const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -222,23 +257,32 @@ export default function MyTasksPage() {
     load().finally(() => setLoading(false));
   }, []);
 
+  function resetPaging() {
+    setVisibleCounts({});
+  }
+
   function changePeriodFilter(key: string) {
     setPeriodFilter(key);
-    setOverdueVisible(PAGE_SIZE);
-    setActiveVisible(PAGE_SIZE);
+    resetPaging();
   }
 
   function changeStatusFilter(key: string) {
     setStatusFilter(key);
-    setOverdueVisible(PAGE_SIZE);
-    setActiveVisible(PAGE_SIZE);
+    resetPaging();
+  }
+
+  function toggleCollapsed(key: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
   const filteredItems = items.filter(
     (i) => matchesPeriod(i, periodFilter) && (statusFilter === "all" || i.status === statusFilter),
   );
-  const overdueItems = filteredItems.filter((i) => i.is_overdue);
-  const activeItems = filteredItems.filter((i) => !i.is_overdue);
   const selected = items.find((i) => taskKey(i) === selectedKey) ?? null;
 
   async function handleStatusChange(item: PrepTask, status: string) {
@@ -339,61 +383,65 @@ export default function MyTasksPage() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              {/* Overdue group */}
-              {overdueItems.length > 0 && (
-                <>
-                  <div className="border-b border-slate-100 bg-red-50/50 px-3 py-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
-                      Lejárt ({overdueItems.length})
-                    </p>
+            <div className="space-y-3">
+              {STATUS_GROUPS.map((group) => {
+                const groupItems = filteredItems.filter((i) => i.status === group.key);
+                if (groupItems.length === 0) return null;
+                const isCollapsed = collapsed.has(group.key);
+                const visible = visibleCounts[group.key] ?? PAGE_SIZE;
+                const Icon = group.icon;
+                return (
+                  <div key={group.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <button
+                      onClick={() => toggleCollapsed(group.key)}
+                      className="flex w-full items-center gap-2 border-b border-slate-100 bg-slate-50/60 px-3 py-2 text-left hover:bg-slate-100/60"
+                    >
+                      <Icon className={cn("size-3.5 shrink-0", group.iconColor)} />
+                      <span className="text-[12px] font-semibold text-slate-700">{group.label}</span>
+                      <span className="rounded-full bg-slate-200/80 px-1.5 text-[10px] font-bold text-slate-500">
+                        {groupItems.length}
+                      </span>
+                      <div className="flex-1" />
+                      <ChevronDown className={cn("size-3.5 text-slate-400 transition-transform", isCollapsed && "-rotate-90")} />
+                    </button>
+                    {!isCollapsed && (
+                      <>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Tevékenység</TableHead>
+                              <TableHead>Projekt</TableHead>
+                              <TableHead>Dátum</TableHead>
+                              <TableHead>Felelős</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {groupItems.slice(0, visible).map((item) => (
+                              <TaskTableRow
+                                key={taskKey(item)}
+                                item={item}
+                                selected={selectedKey === taskKey(item)}
+                                onClick={() => setSelectedKey(selectedKey === taskKey(item) ? null : taskKey(item))}
+                              />
+                            ))}
+                          </TableBody>
+                        </Table>
+                        {visible < groupItems.length && (
+                          <div className="border-t border-slate-100 px-3 py-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setVisibleCounts((prev) => ({ ...prev, [group.key]: visible + PAGE_SIZE }))}
+                            >
+                              {groupItems.length - visible} további megjelenítése
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                  {overdueItems.slice(0, overdueVisible).map((item) => (
-                    <div key={taskKey(item)} className="border-b border-slate-100 last:border-0">
-                      <TaskRow
-                        item={item}
-                        selected={selectedKey === taskKey(item)}
-                        onClick={() => setSelectedKey(selectedKey === taskKey(item) ? null : taskKey(item))}
-                      />
-                    </div>
-                  ))}
-                  {overdueVisible < overdueItems.length && (
-                    <div className="border-b border-slate-100 px-3 py-1.5">
-                      <Button size="sm" variant="outline" onClick={() => setOverdueVisible((v) => v + PAGE_SIZE)}>
-                        {overdueItems.length - overdueVisible} további megjelenítése
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-              {/* Active group */}
-              {activeItems.length > 0 && (
-                <>
-                  {overdueItems.length > 0 && (
-                    <div className="border-b border-slate-100 bg-slate-50/50 px-3 py-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Aktív ({activeItems.length})
-                      </p>
-                    </div>
-                  )}
-                  {activeItems.slice(0, activeVisible).map((item) => (
-                    <div key={taskKey(item)} className="border-b border-slate-100 last:border-0">
-                      <TaskRow
-                        item={item}
-                        selected={selectedKey === taskKey(item)}
-                        onClick={() => setSelectedKey(selectedKey === taskKey(item) ? null : taskKey(item))}
-                      />
-                    </div>
-                  ))}
-                  {activeVisible < activeItems.length && (
-                    <div className="px-3 py-1.5">
-                      <Button size="sm" variant="outline" onClick={() => setActiveVisible((v) => v + PAGE_SIZE)}>
-                        {activeItems.length - activeVisible} további megjelenítése
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
+                );
+              })}
             </div>
           )}
         </div>
