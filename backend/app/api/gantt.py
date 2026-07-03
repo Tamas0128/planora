@@ -41,6 +41,16 @@ STATUS_LABELS_HU = {
 _ACTIVITY_PALETTE = [*plt.get_cmap("tab20").colors, *plt.get_cmap("tab20b").colors]
 
 
+def _dates_on_top(ax):
+    """Date ticks on top instead of the matplotlib default (bottom) — the
+    legend already lives below the axes (bbox_to_anchor y<0), and rotated
+    bottom tick labels used to land right on top of it."""
+    ax.xaxis.set_ticks_position("top")
+    ax.xaxis.set_label_position("top")
+    ax.tick_params(axis="x", labelbottom=False, labeltop=True)
+    plt.setp(ax.get_xticklabels(), rotation=30, ha="left", rotation_mode="anchor")
+
+
 def _real_activities(db: Session, project_ids: list[int]) -> dict[int, list[Activity]]:
     """Only actually-scheduled real activities — no prep tasks, no disabled ones."""
     activities = (
@@ -100,10 +110,10 @@ def project_gantt(
     ax.set_yticklabels([a.name for a in ordered], fontsize=8)
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y.%m.%d"))
-    fig.autofmt_xdate()
+    _dates_on_top(ax)
     ax.axvline(mdates.date2num(date.today()), color="#2563eb", linestyle="--", linewidth=1)
     ax.axvline(mdates.date2num(project.delivery_date), color="#dc2626", linestyle="--", linewidth=1)
-    ax.set_title(f"{project.name} ({project.project_code}) – ütemterv", fontsize=11, fontweight="bold")
+    ax.set_title(f"{project.name} ({project.project_code}) – ütemterv", fontsize=11, fontweight="bold", pad=28)
     ax.set_ylim(-1, len(ordered))
     handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in STATUS_COLORS.values()]
     ax.legend(
@@ -158,9 +168,9 @@ def multi_project_gantt(
     ax.set_yticklabels([f"{p.name} ({p.project_code})" for p in ordered], fontsize=8)
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y.%m.%d"))
-    fig.autofmt_xdate()
+    _dates_on_top(ax)
     ax.axvline(mdates.date2num(date.today()), color="#2563eb", linestyle="--", linewidth=1)
-    ax.set_title("Projektek ütemterve", fontsize=11, fontweight="bold")
+    ax.set_title("Projektek ütemterve", fontsize=11, fontweight="bold", pad=28)
     ax.set_ylim(-1, len(ordered))
     ax.grid(axis="x", linestyle=":", alpha=0.4)
 

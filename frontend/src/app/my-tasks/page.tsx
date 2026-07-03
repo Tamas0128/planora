@@ -11,7 +11,6 @@ import {
   ClipboardList,
   Clock,
   User as UserIcon,
-  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
@@ -19,7 +18,9 @@ import { api, PrepTask, ROLE_LABELS } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -59,14 +60,6 @@ function taskKey(item: PrepTask) {
   return `${item.project_id}-${item.activity_id}`;
 }
 
-const PERIOD_FILTERS = [
-  { key: "all", label: "Összes" },
-  { key: "overdue", label: "Lejárt" },
-  { key: "today", label: "Mai" },
-  { key: "7d", label: "7 napon belül" },
-  { key: "14d", label: "14 napon belül" },
-];
-
 const STATUS_FILTERS = [
   { key: "all", label: "Összes" },
   { key: "pending", label: "Várakozik" },
@@ -74,15 +67,17 @@ const STATUS_FILTERS = [
   { key: "blocked", label: "Blokkolt" },
 ];
 
-function matchesPeriod(item: PrepTask, period: string): boolean {
-  if (period === "all") return true;
-  if (period === "overdue") return item.is_overdue;
-  if (item.is_overdue) return false;
-  const d = item.days_until;
-  if (d === undefined || d === null) return false;
-  if (period === "today") return d === 0;
-  if (period === "7d") return d >= 0 && d <= 7;
-  if (period === "14d") return d >= 0 && d <= 14;
+function taskDate(item: PrepTask): string | undefined {
+  return item.prep_date ?? item.start_date;
+}
+
+function matchesRange(item: PrepTask, from: string, to: string): boolean {
+  if (!from && !to) return true;
+  const date = taskDate(item);
+  if (!date) return false;
+  const d = date.slice(0, 10);
+  if (from && d < from) return false;
+  if (to && d > to) return false;
   return true;
 }
 
@@ -141,98 +136,95 @@ function TaskTableRow({ item, selected, onClick }: { item: PrepTask; selected: b
 function TaskDetailPanel({
   item, onClose, onStatusChange,
 }: {
-  item: PrepTask; onClose: () => void; onStatusChange: (status: string) => void;
+  item: PrepTask | null; onClose: () => void; onStatusChange: (status: string) => void;
 }) {
   return (
-    <aside className="flex w-72 shrink-0 flex-col overflow-hidden border-l border-slate-100 bg-white">
-      <div className="flex shrink-0 items-start justify-between border-b border-slate-100 p-3">
-        <div className="min-w-0 flex-1 pr-2">
-          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className={cn("text-[10px] font-medium", STATUS_COLOR[item.status] ?? "bg-slate-100 text-slate-600")}
-            >
-              {STATUS_LABEL[item.status] ?? item.status}
-            </Badge>
-            {item.is_overdue && (
-              <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">Lejárt</span>
-            )}
-          </div>
-          <h2 className="text-[14px] font-bold leading-snug text-slate-900">{item.activity_name}</h2>
-          <p className="mt-0.5 text-[11px] text-slate-400">{item.project_name}</p>
-        </div>
-        <button
-          onClick={onClose}
-          aria-label="Bezárás"
-          className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
-        >
-          <X className="size-3.5" />
-        </button>
-      </div>
-
-      <div className="flex-1 space-y-3.5 overflow-y-auto p-3">
-        <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ügyfél</p>
-          <p className="text-[13px] font-medium text-slate-800">{item.client_name}</p>
-        </div>
-
-        <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős</p>
-          <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
-            <UserIcon className="size-3.5 shrink-0 text-slate-400" />
-            <span>{ROLE_LABELS[item.responsible_role] ?? item.responsible_role}</span>
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Dátumok</p>
-          <div className="space-y-1.5">
-            {item.start_date && (
-              <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
-                <Calendar className="size-3.5 shrink-0 text-slate-400" />
-                <span className="text-slate-400">Kezdés:</span>
-                <span>{new Date(item.start_date).toLocaleDateString("hu-HU")}</span>
+    <Sheet open={!!item} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="flex w-80 flex-col gap-0 p-0">
+        {item && (
+          <>
+            <SheetHeader className="shrink-0 gap-1 border-b border-slate-100 p-3 pr-10">
+              <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+                <Badge
+                  variant="outline"
+                  className={cn("text-[10px] font-medium", STATUS_COLOR[item.status] ?? "bg-slate-100 text-slate-600")}
+                >
+                  {STATUS_LABEL[item.status] ?? item.status}
+                </Badge>
+                {item.is_overdue && (
+                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">Lejárt</span>
+                )}
               </div>
-            )}
-            {item.prep_date && (
-              <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
-                <Calendar className="size-3.5 shrink-0 text-slate-400" />
-                <span className="text-slate-400">Előkészítés:</span>
-                <span className={cn(item.is_overdue && "font-semibold text-red-500")}>
-                  {new Date(item.prep_date).toLocaleDateString("hu-HU")}
-                </span>
+              <SheetTitle className="text-[14px] font-bold leading-snug text-slate-900">{item.activity_name}</SheetTitle>
+              <SheetDescription className="text-[11px] text-slate-400">{item.project_name}</SheetDescription>
+            </SheetHeader>
+
+            <div className="flex-1 space-y-3.5 overflow-y-auto p-3">
+              <div>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ügyfél</p>
+                <p className="text-[13px] font-medium text-slate-800">{item.client_name}</p>
               </div>
-            )}
-            {!item.start_date && !item.prep_date && (
-              <p className="text-[13px] text-slate-400">Nincs megadva</p>
-            )}
-          </div>
-        </div>
 
-        <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Státusz</p>
-          <Select value={item.status} onValueChange={(v) => v && onStatusChange(v)}>
-            <SelectTrigger size="sm" className="w-full">
-              <SelectValue>{(v: string) => STATUS_LABEL[v] ?? v}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+              <div>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős</p>
+                <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
+                  <UserIcon className="size-3.5 shrink-0 text-slate-400" />
+                  <span>{ROLE_LABELS[item.responsible_role] ?? item.responsible_role}</span>
+                </div>
+              </div>
 
-      <div className="shrink-0 border-t border-slate-100 p-3">
-        <Link
-          href={`/projects/${item.project_id}`}
-          className="block w-full rounded-lg bg-blue-600 py-2 text-center text-[13px] font-semibold text-white hover:bg-blue-700"
-        >
-          Projekt megnyitása
-        </Link>
-      </div>
-    </aside>
+              <div>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Dátumok</p>
+                <div className="space-y-1.5">
+                  {item.start_date && (
+                    <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
+                      <Calendar className="size-3.5 shrink-0 text-slate-400" />
+                      <span className="text-slate-400">Kezdés:</span>
+                      <span>{new Date(item.start_date).toLocaleDateString("hu-HU")}</span>
+                    </div>
+                  )}
+                  {item.prep_date && (
+                    <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
+                      <Calendar className="size-3.5 shrink-0 text-slate-400" />
+                      <span className="text-slate-400">Előkészítés:</span>
+                      <span className={cn(item.is_overdue && "font-semibold text-red-500")}>
+                        {new Date(item.prep_date).toLocaleDateString("hu-HU")}
+                      </span>
+                    </div>
+                  )}
+                  {!item.start_date && !item.prep_date && (
+                    <p className="text-[13px] text-slate-400">Nincs megadva</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Státusz</p>
+                <Select value={item.status} onValueChange={(v) => v && onStatusChange(v)}>
+                  <SelectTrigger size="sm" className="w-full">
+                    <SelectValue>{(v: string) => STATUS_LABEL[v] ?? v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUS_LABEL).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="shrink-0 border-t border-slate-100 p-3">
+              <Link
+                href={`/projects/${item.project_id}`}
+                className="block w-full rounded-lg bg-blue-600 py-2 text-center text-[13px] font-semibold text-white hover:bg-blue-700"
+              >
+                Projekt megnyitása
+              </Link>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -244,7 +236,8 @@ export default function MyTasksPage() {
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [periodFilter, setPeriodFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
   function load() {
@@ -261,8 +254,19 @@ export default function MyTasksPage() {
     setVisibleCounts({});
   }
 
-  function changePeriodFilter(key: string) {
-    setPeriodFilter(key);
+  function changeDateFrom(v: string) {
+    setDateFrom(v);
+    resetPaging();
+  }
+
+  function changeDateTo(v: string) {
+    setDateTo(v);
+    resetPaging();
+  }
+
+  function clearDateRange() {
+    setDateFrom("");
+    setDateTo("");
     resetPaging();
   }
 
@@ -281,7 +285,7 @@ export default function MyTasksPage() {
   }
 
   const filteredItems = items.filter(
-    (i) => matchesPeriod(i, periodFilter) && (statusFilter === "all" || i.status === statusFilter),
+    (i) => matchesRange(i, dateFrom, dateTo) && (statusFilter === "all" || i.status === statusFilter),
   );
   const selected = items.find((i) => taskKey(i) === selectedKey) ?? null;
 
@@ -291,54 +295,61 @@ export default function MyTasksPage() {
   }
 
   return (
-    <AppLayout mainClassName="flex flex-1 overflow-hidden p-0">
-      <div className="flex h-full overflow-hidden">
-        <div className="min-w-0 flex-1 overflow-y-auto p-4">
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">Saját feladatok</h1>
-              <p className="text-xs text-slate-500">
-                A szerepkörödhöz rendelt nyitott tevékenységek
-              </p>
-            </div>
-            <Link href="/projects" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}>
-              <ClipboardList className="size-3.5" />
-              Projektek
-            </Link>
-          </div>
+    <AppLayout>
+      <div className="mb-3 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-bold text-slate-900">Saját feladatok</h1>
+          <p className="text-xs text-slate-500">
+            A szerepkörödhöz rendelt nyitott tevékenységek
+          </p>
+        </div>
+        <Link href="/projects" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}>
+          <ClipboardList className="size-3.5" />
+          Projektek
+        </Link>
+      </div>
 
-          {!loading && items.length > 0 && (
-            <div className="mb-3 space-y-1.5">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Időszak</span>
-                {PERIOD_FILTERS.map((f) => (
-                  <Button
-                    key={f.key}
-                    size="sm"
-                    variant={periodFilter === f.key ? "default" : "outline"}
-                    className="h-6 px-2 text-[11px]"
-                    onClick={() => changePeriodFilter(f.key)}
-                  >
-                    {f.label}
-                  </Button>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Állapot</span>
-                {STATUS_FILTERS.map((f) => (
-                  <Button
-                    key={f.key}
-                    size="sm"
-                    variant={statusFilter === f.key ? "default" : "outline"}
-                    className="h-6 px-2 text-[11px]"
-                    onClick={() => changeStatusFilter(f.key)}
-                  >
-                    {f.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
+      {!loading && items.length > 0 && (
+        <div className="mb-3 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Időszak</span>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => changeDateFrom(e.target.value)}
+              className="h-7 w-[150px] text-[12px]"
+              aria-label="Tól"
+            />
+            <span className="text-[12px] text-slate-400">–</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => changeDateTo(e.target.value)}
+              className="h-7 w-[150px] text-[12px]"
+              aria-label="Ig"
+            />
+            {(dateFrom || dateTo) && (
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={clearDateRange}>
+                Törlés
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Állapot</span>
+            {STATUS_FILTERS.map((f) => (
+              <Button
+                key={f.key}
+                size="sm"
+                variant={statusFilter === f.key ? "default" : "outline"}
+                className="h-6 px-2 text-[11px]"
+                onClick={() => changeStatusFilter(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
 
           {loading ? (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -377,7 +388,7 @@ export default function MyTasksPage() {
                 size="sm"
                 variant="outline"
                 className="mt-4"
-                onClick={() => { changePeriodFilter("all"); changeStatusFilter("all"); }}
+                onClick={() => { clearDateRange(); changeStatusFilter("all"); }}
               >
                 Szűrők törlése
               </Button>
@@ -444,16 +455,12 @@ export default function MyTasksPage() {
               })}
             </div>
           )}
-        </div>
 
-        {selected && (
-          <TaskDetailPanel
-            item={selected}
-            onClose={() => setSelectedKey(null)}
-            onStatusChange={(status) => handleStatusChange(selected, status)}
-          />
-        )}
-      </div>
+      <TaskDetailPanel
+        item={selected}
+        onClose={() => setSelectedKey(null)}
+        onStatusChange={(status) => selected && handleStatusChange(selected, status)}
+      />
     </AppLayout>
   );
 }
