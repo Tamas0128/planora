@@ -50,7 +50,18 @@ export interface Activity {
   end_date?: string;
   prep_date?: string;
   status: string;
+  is_active: boolean;
   prerequisite_ids: number[];
+}
+
+export interface ActivityTemplate {
+  id: number;
+  name: string;
+  duration_days: number;
+  sort_order: number;
+  default_prep_days: number;
+  responsible_role: string;
+  prerequisite_template_ids: number[];
 }
 
 export interface PrepTask {
@@ -279,6 +290,29 @@ export const api = {
     request<AuditLogEntry[]>(`/audit-logs${projectId ? `?project_id=${projectId}` : ""}`),
 
   slippingProjects: () => request<ProjectCard[]>("/dashboard/slipping-projects"),
+
+  activityTemplates: () => request<ActivityTemplate[]>("/activity-templates"),
+
+  createActivityTemplate: (data: Record<string, unknown>) =>
+    request<ActivityTemplate>("/activity-templates", { method: "POST", body: JSON.stringify(data) }),
+
+  updateActivityTemplate: (id: number, data: Record<string, unknown>) =>
+    request<ActivityTemplate>(`/activity-templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteActivityTemplate: (id: number) =>
+    request<{ ok: boolean }>(`/activity-templates/${id}`, { method: "DELETE" }),
+
+  addTemplateDependency: (templateId: number, prerequisiteTemplateId: number) =>
+    request<{ ok: boolean }>(`/activity-templates/${templateId}/dependencies`, {
+      method: "POST",
+      body: JSON.stringify({ prerequisite_template_id: prerequisiteTemplateId }),
+    }),
+
+  removeTemplateDependency: (templateId: number, prerequisiteTemplateId: number) =>
+    request<{ ok: boolean }>(
+      `/activity-templates/${templateId}/dependencies/${prerequisiteTemplateId}`,
+      { method: "DELETE" }
+    ),
 };
 
 export const STATUS_LABELS: Record<string, string> = {

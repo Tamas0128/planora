@@ -6,7 +6,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, dashboard, documents, notifications, projects, tasks
+from app.api import activity_templates, auth, dashboard, documents, notifications, projects, tasks
 from app.config import settings
 from app.core.security import hash_password
 from app.database import SessionLocal
@@ -95,6 +95,7 @@ app.include_router(tasks.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
+app.include_router(activity_templates.router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -3,11 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bell,
   Calendar,
   ChevronDown,
-  Filter,
-  HelpCircle,
   MapPin,
   Package,
   Plus,
@@ -40,30 +37,30 @@ function KanbanCard({
       onClick={onClick}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
       className={cn(
-        "cursor-pointer rounded-xl border border-l-[3px] bg-white p-3.5 shadow-sm transition-all duration-150",
-        "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/50",
+        "cursor-pointer rounded-lg border border-l-[3px] bg-white p-2.5 shadow-sm transition-all duration-150",
+        "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50",
         cfg.leftBorder,
-        selected ? "border-slate-200 ring-2 ring-green-500/25 shadow-md" : "border-slate-100/80",
+        selected ? "border-slate-200 ring-2 ring-blue-500/25 shadow-md" : "border-slate-100/80",
       )}
     >
       <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">{project.project_code}</p>
       <h4 className="text-[13px] font-semibold leading-snug text-slate-900">{project.name}</h4>
       <p className="mt-0.5 truncate text-[11px] text-slate-500">{project.settlement} · {project.client_name}</p>
       {late && (
-        <span className="mt-2 inline-block rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">Késik</span>
+        <span className="mt-1.5 inline-block rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">Késik</span>
       )}
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-2 flex items-center justify-between">
         <div className={cn("flex items-center gap-1 text-[11px]", late ? "text-red-400" : "text-slate-400")}>
           <Calendar className="size-3 shrink-0" />
           <span>{new Date(project.delivery_date).toLocaleDateString("hu-HU")}</span>
         </div>
         {project.project_manager_name && (
-          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-600 text-[9px] font-bold text-white ring-2 ring-white">
+          <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white ring-2 ring-white">
             {initials}
           </div>
         )}
       </div>
-      <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-100">
         <div className={cn("h-full rounded-full", cfg.progressBar)} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -77,8 +74,8 @@ function RightPanel({ project, onClose, onOpen }: { project: ProjectCard; onClos
   const pct = clampPercent(project.completion_percent);
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col overflow-hidden border-l border-slate-100 bg-white">
-      <div className="flex shrink-0 items-start justify-between border-b border-slate-100 p-4">
+    <aside className="flex w-72 shrink-0 flex-col overflow-hidden border-l border-slate-100 bg-white">
+      <div className="flex shrink-0 items-start justify-between border-b border-slate-100 p-3">
         <div className="min-w-0 flex-1 pr-2">
           <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
             <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", cfg.badge)}>
@@ -98,7 +95,7 @@ function RightPanel({ project, onClose, onOpen }: { project: ProjectCard; onClos
         </button>
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto p-4">
+      <div className="flex-1 space-y-3.5 overflow-y-auto p-3">
         <div>
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ügyfél</p>
           <p className="text-[13px] font-medium text-slate-800">{project.client_name}</p>
@@ -111,7 +108,7 @@ function RightPanel({ project, onClose, onOpen }: { project: ProjectCard; onClos
           <div>
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projektvezető</p>
             <div className="flex items-center gap-2">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-green-600 text-[10px] font-bold text-white">{initials}</div>
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">{initials}</div>
               <span className="text-[13px] font-medium text-slate-800">{project.project_manager_name}</span>
             </div>
           </div>
@@ -146,8 +143,8 @@ function RightPanel({ project, onClose, onOpen }: { project: ProjectCard; onClos
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-slate-100 p-4">
-        <button onClick={onOpen} className="w-full rounded-lg bg-green-700 py-2.5 text-[13px] font-semibold text-white hover:bg-green-800">
+      <div className="shrink-0 border-t border-slate-100 p-3">
+        <button onClick={onOpen} className="w-full rounded-lg bg-blue-600 py-2 text-[13px] font-semibold text-white hover:bg-blue-700">
           Projekt megnyitása
         </button>
       </div>
@@ -173,10 +170,10 @@ export default function KanbanPage() {
   const q = search.toLowerCase();
 
   const pageHeader = (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-slate-100 bg-white px-4">
+    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-slate-100 bg-white px-4">
       <SidebarTrigger className="text-slate-400 hover:text-slate-700" />
       <div className="h-5 w-px bg-slate-100" />
-      <h1 className="text-[17px] font-bold tracking-tight text-slate-900">Kanban tábla</h1>
+      <h1 className="text-[14px] font-bold tracking-tight text-slate-900">Kanban tábla</h1>
       <button className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-600 hover:bg-slate-50">
         Minden projekt <ChevronDown className="size-3.5 text-slate-400" />
       </button>
@@ -188,21 +185,12 @@ export default function KanbanPage() {
           placeholder="Keresés…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-8 w-52 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-green-500 focus:bg-white focus:outline-none"
+          className="h-8 w-52 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none"
         />
       </div>
-      <button className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-600 hover:bg-slate-50">
-        <Filter className="size-3.5 text-slate-400" /> Szűrő
-      </button>
-      <Button size="sm" onClick={() => setShowNew(true)} className="h-8 gap-1.5 bg-green-700 text-[13px] font-semibold hover:bg-green-800">
+      <Button size="sm" onClick={() => setShowNew(true)} className="h-8 gap-1.5 text-[13px] font-semibold">
         <Plus className="size-3.5" /> Új projekt
       </Button>
-      <button aria-label="Értesítések" className="flex size-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-700">
-        <Bell className="size-4" />
-      </button>
-      <button aria-label="Súgó" className="flex size-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-700">
-        <HelpCircle className="size-4" />
-      </button>
     </header>
   );
 
@@ -216,7 +204,7 @@ export default function KanbanPage() {
               <span className="text-[13px] text-slate-400">Betöltés…</span>
             </div>
           ) : (
-            <div className="flex min-w-max gap-5 p-6">
+            <div className="flex min-w-max gap-4 p-4">
               {STATUS_ORDER.map((status) => {
                 const cards = (board[status] ?? []).filter((p) =>
                   !q ||
@@ -225,15 +213,15 @@ export default function KanbanPage() {
                   p.settlement.toLowerCase().includes(q),
                 );
                 return (
-                  <div key={status} className="flex w-[268px] shrink-0 flex-col">
-                    <div className="mb-3 flex items-center gap-2">
-                      <h3 className="flex-1 text-[13px] font-semibold text-slate-700">{STATUS_LABELS[status]}</h3>
+                  <div key={status} className="flex w-[240px] shrink-0 flex-col">
+                    <div className="mb-2 flex items-center gap-2">
+                      <h3 className="flex-1 text-[12px] font-semibold text-slate-700">{STATUS_LABELS[status]}</h3>
                       <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-50 px-1.5 text-[11px] font-bold text-emerald-700">
                         {cards.length}
                       </span>
                     </div>
-                    <div className="mb-3.5 h-px bg-slate-200/70" />
-                    <div className="flex flex-col gap-2.5">
+                    <div className="mb-2.5 h-px bg-slate-200/70" />
+                    <div className="flex flex-col gap-2">
                       {cards.map((p) => (
                         <KanbanCard
                           key={p.id}

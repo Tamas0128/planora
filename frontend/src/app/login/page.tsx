@@ -33,14 +33,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 p-4">
       <Card className="w-full max-w-sm shadow-2xl">
         <CardHeader className="items-center pb-2 text-center">
           <Image
             src="/planora-logo.png"
             alt="PLANora Projekt"
-            width={220}
-            height={73}
+            width={288}
+            height={96}
             priority
             className="mb-2"
           />

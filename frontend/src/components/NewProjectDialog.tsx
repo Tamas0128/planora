@@ -126,7 +126,11 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Épülettípus</Label>
               <Select value={form.building_type} onValueChange={(v) => setForm({ ...form, building_type: v ?? "light_steel" })}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {(v: string) => BUILDING_OPTIONS.find(([val]) => val === v)?.[1] ?? v}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   {BUILDING_OPTIONS.map(([value, label]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>
@@ -136,7 +140,7 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={creating} className="bg-green-700 hover:bg-green-800">
+            <Button type="submit" disabled={creating}>
               {creating ? "Mentés..." : "Létrehozás"}
             </Button>
           </DialogFooter>

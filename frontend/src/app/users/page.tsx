@@ -99,10 +99,10 @@ export default function UsersPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Felhasználók</h1>
-          <p className="text-muted-foreground">Felhasználói fiókok és szerepkörök kezelése</p>
+          <h1 className="text-lg font-bold">Felhasználók</h1>
+          <p className="text-xs text-muted-foreground">Felhasználói fiókok és szerepkörök kezelése</p>
         </div>
         <Button
           onClick={() => setShowNew(true)}
@@ -161,7 +161,7 @@ export default function UsersPage() {
                 <Label>Szerepkör</Label>
                 <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as string })}>
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue>{(v: string) => ROLE_OPTIONS.find(([val]) => val === v)?.[1] ?? v}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {ROLE_OPTIONS.map(([value, label]) => (
@@ -205,7 +205,7 @@ export default function UsersPage() {
                 <TableCell>
                   <Select value={user.role} onValueChange={(v) => changeRole(user, v as string)}>
                     <SelectTrigger size="sm">
-                      <SelectValue />
+                      <SelectValue>{(v: string) => ROLE_OPTIONS.find(([val]) => val === v)?.[1] ?? v}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {ROLE_OPTIONS.map(([value, label]) => (

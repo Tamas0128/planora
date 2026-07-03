@@ -25,25 +25,36 @@ const FILTERS = [
   { key: "14d", label: "14 napon belül" },
 ];
 
+const PAGE_SIZE = 25;
+
 function PrepCenterContent() {
   const searchParams = useSearchParams();
   const initial = searchParams.get("filter") || "all";
   const [filter, setFilter] = useState(initial);
   const [items, setItems] = useState<PrepTask[]>([]);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     api.prepCenter(filter).then(setItems).catch(console.error);
   }, [filter]);
 
+  function changeFilter(key: string) {
+    setFilter(key);
+    setPage(1);
+  }
+
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const visibleItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-3 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Button
             key={f.key}
             size="sm"
             variant={filter === f.key ? "default" : "outline"}
-            onClick={() => setFilter(f.key)}
+            onClick={() => changeFilter(f.key)}
           >
             {f.label}
           </Button>
@@ -64,7 +75,7 @@ function PrepCenterContent() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <TableRow
                 key={`${item.project_id}-${item.activity_id}`}
                 className={item.is_overdue ? "border-l-4 border-l-red-500 bg-red-50/40" : ""}
@@ -104,6 +115,32 @@ function PrepCenterContent() {
           </TableBody>
         </Table>
       </Card>
+
+      {pageCount > 1 && (
+        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, items.length)} / {items.length}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Előző
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= pageCount}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Következő
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -111,9 +148,9 @@ function PrepCenterContent() {
 export default function PrepCenterPage() {
   return (
     <AppLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Előkészítési központ</h1>
-        <p className="text-sm text-slate-500">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
+      <div className="mb-3">
+        <h1 className="text-lg font-bold text-slate-900">Előkészítési központ</h1>
+        <p className="text-xs text-slate-500">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Betöltés...</p>}>
         <PrepCenterContent />

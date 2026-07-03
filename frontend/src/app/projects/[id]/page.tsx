@@ -307,6 +307,16 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function toggleActivityActive(a: Activity) {
+    try {
+      await api.updateActivity(id, a.id, { is_active: !a.is_active });
+      loadActivities();
+      loadProject();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
+  }
+
   async function handleDeleteProject() {
     if (!project) return;
     try {
@@ -330,15 +340,15 @@ export default function ProjectDetailPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-lg font-bold text-slate-900">{project.name}</h1>
+          <p className="text-xs text-slate-500">
             {project.project_code} · {project.settlement}
           </p>
         </div>
         {/* Inline delivery date */}
-        <Card className="flex items-center gap-4 px-5 py-3 shadow-sm">
+        <Card className="flex items-center gap-3 px-3 py-2 shadow-sm">
           <Calendar className="size-4 shrink-0 text-slate-400" />
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -387,7 +397,7 @@ export default function ProjectDetailPage() {
           {!editing && (
             <div>
               {canEdit && (
-                <div className="mb-4 flex gap-2">
+                <div className="mb-3 flex gap-2">
                   <Button onClick={startEdit}>
                     Szerkesztés
                   </Button>
@@ -418,10 +428,10 @@ export default function ProjectDetailPage() {
                   </AlertDialog>
                 </div>
               )}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Card className="p-5">
-                  <h3 className="mb-3 font-semibold">Projekt adatok</h3>
-                  <dl className="space-y-2 text-sm">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Card className="p-3">
+                  <h3 className="mb-2 text-[13px] font-semibold">Projekt adatok</h3>
+                  <dl className="space-y-1.5 text-xs">
                     <div className="flex justify-between"><dt className="text-muted-foreground">Státusz</dt><dd>{STATUS_LABELS[project.status]}</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">Cím</dt><dd>{project.address}</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">Helyrajzi szám</dt><dd>{project.lot_number || "—"}</dd></div>
@@ -431,24 +441,24 @@ export default function ProjectDetailPage() {
                     <div className="flex justify-between"><dt className="text-muted-foreground">Készültség</dt><dd>{project.completion_percent}%</dd></div>
                   </dl>
                 </Card>
-                <Card className="p-5">
-                  <h3 className="mb-3 font-semibold">Ügyfél</h3>
-                  <dl className="space-y-2 text-sm">
+                <Card className="p-3">
+                  <h3 className="mb-2 text-[13px] font-semibold">Ügyfél</h3>
+                  <dl className="space-y-1.5 text-xs">
                     <div className="flex justify-between"><dt className="text-muted-foreground">Név</dt><dd>{project.client_name}</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">Telefon</dt><dd>{project.client_phone || "—"}</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">E-mail</dt><dd>{project.client_email || "—"}</dd></div>
                   </dl>
                 </Card>
-                <Card className="p-5 md:col-span-2">
-                  <h3 className="mb-3 font-semibold">Résztvevők</h3>
-                  <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <Card className="p-3 md:col-span-2">
+                  <h3 className="mb-2 text-[13px] font-semibold">Résztvevők</h3>
+                  <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
                     <div><dt className="text-muted-foreground">Projektmenedzser</dt><dd>{project.project_manager_name || "—"}</dd></div>
                     <div><dt className="text-muted-foreground">Építésvezető</dt><dd>{project.site_manager_name || "—"}</dd></div>
                     <div><dt className="text-muted-foreground">Beszerzés</dt><dd>{project.procurement_name || "—"}</dd></div>
                     <div><dt className="text-muted-foreground">Számlázás</dt><dd>{project.billing_name || "—"}</dd></div>
                   </dl>
                   {project.subcontractors && (
-                    <div className="mt-3 text-sm">
+                    <div className="mt-2 text-xs">
                       <dt className="text-muted-foreground">Alvállalkozók</dt>
                       <dd className="mt-1 whitespace-pre-wrap">{project.subcontractors}</dd>
                     </div>
@@ -459,9 +469,9 @@ export default function ProjectDetailPage() {
           )}
 
           {editing && (
-            <Card className="p-6">
-              <form onSubmit={saveEdit} className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Card className="p-4">
+              <form onSubmit={saveEdit} className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="name">Projekt neve</Label>
                     <Input
@@ -530,7 +540,7 @@ export default function ProjectDetailPage() {
                       onValueChange={(v) => setForm({ ...form, building_type: v as string })}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue />
+                        <SelectValue>{(v: string) => BUILDING_LABELS[v] || v}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {BUILDING_OPTIONS.map(([value, label]) => (
@@ -566,7 +576,7 @@ export default function ProjectDetailPage() {
                       onValueChange={(v) => setForm({ ...form, status: v as string })}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue />
+                        <SelectValue>{(v: string) => STATUS_LABELS[v] || v}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {STATUS_OPTIONS.map(([value, label]) => (
@@ -577,9 +587,9 @@ export default function ProjectDetailPage() {
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <h3 className="mb-3 font-semibold">Résztvevők</h3>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="border-t pt-3">
+                  <h3 className="mb-2 text-[13px] font-semibold">Résztvevők</h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {ASSIGNMENT_FIELDS.map(([key, label]) => (
                       <div key={key} className="space-y-1.5">
                         <Label>{label}</Label>
@@ -588,7 +598,13 @@ export default function ProjectDetailPage() {
                           onValueChange={(v) => setForm({ ...form, [key]: v === "none" ? "" : (v as string) })}
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue />
+                            <SelectValue>
+                              {(v: string) => {
+                                if (v === "none") return "—";
+                                const u = users.find((usr) => String(usr.id) === v);
+                                return u ? `${u.full_name} (${ROLE_LABELS[u.role] || u.role})` : v;
+                              }}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">—</SelectItem>
@@ -602,7 +618,7 @@ export default function ProjectDetailPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 space-y-1.5">
+                  <div className="mt-3 space-y-1.5">
                     <Label htmlFor="subcontractors">Alvállalkozók</Label>
                     <Textarea
                       id="subcontractors"
@@ -613,7 +629,7 @@ export default function ProjectDetailPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 border-t pt-4">
+                <div className="flex gap-2 border-t pt-3">
                   <Button type="submit" disabled={saving}>
                     {saving ? "Mentés..." : "Mentés"}
                   </Button>
@@ -626,9 +642,9 @@ export default function ProjectDetailPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="schedule" className="mt-4">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm text-slate-500">{activities.length} tevékenység</p>
+        <TabsContent value="schedule" className="mt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs text-slate-500">{activities.length} tevékenység</p>
             {canEdit && (
               <Button
                 size="sm"
@@ -653,11 +669,12 @@ export default function ProjectDetailPage() {
                   <TableHead className="min-w-[100px]">Befejezés</TableHead>
                   <TableHead className="min-w-[160px]">Előfeltételek</TableHead>
                   <TableHead className="min-w-[130px]">Státusz</TableHead>
+                  <TableHead className="min-w-[90px]">Állapot</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {activities.map((a) => (
-                  <TableRow key={a.id}>
+                  <TableRow key={a.id} className={cn(!a.is_active && "bg-slate-50 opacity-50")}>
                     <TableCell className="font-medium">
                       {canEdit && scheduleEditing ? (
                         <Input
@@ -668,7 +685,7 @@ export default function ProjectDetailPage() {
                           className="min-w-[140px]"
                         />
                       ) : (
-                        <span className="text-sm">{a.name}</span>
+                        <span className="text-xs">{a.name}</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -678,7 +695,7 @@ export default function ProjectDetailPage() {
                           onValueChange={(v) => commitActivityRole(a.id, v as string)}
                         >
                           <SelectTrigger size="sm" className="min-w-[120px]">
-                            <SelectValue />
+                            <SelectValue>{(v: string) => ROLE_LABELS[v] || v}</SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {ROLE_OPTIONS.map(([value, label]) => (
@@ -687,7 +704,7 @@ export default function ProjectDetailPage() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {ROLE_LABELS[a.responsible_role] || a.responsible_role}
                         </span>
                       )}
@@ -704,7 +721,7 @@ export default function ProjectDetailPage() {
                           className="w-16"
                         />
                       ) : (
-                        <span className="text-sm text-muted-foreground">{a.duration_days}</span>
+                        <span className="text-xs text-muted-foreground">{a.duration_days}</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -719,7 +736,7 @@ export default function ProjectDetailPage() {
                           className="w-16"
                         />
                       ) : (
-                        <span className="text-sm text-muted-foreground">{a.prep_days}</span>
+                        <span className="text-xs text-muted-foreground">{a.prep_days}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
@@ -746,7 +763,7 @@ export default function ProjectDetailPage() {
                           className="rounded border border-slate-200 bg-transparent px-1 py-0.5 text-xs focus:border-blue-500 focus:outline-none"
                         />
                       ) : (
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {a.start_date ? new Date(a.start_date).toLocaleDateString("hu-HU") : "—"}
                         </span>
                       )}
@@ -759,7 +776,7 @@ export default function ProjectDetailPage() {
                         {a.prerequisite_ids.map((pid) => (
                           <Badge key={pid} variant="secondary" className="gap-1">
                             {activityNameById[pid] || `#${pid}`}
-                            {canEdit && scheduleEditing && (
+                            {canEdit && scheduleEditing && a.is_active && (
                               <button
                                 type="button"
                                 onClick={() => removePrerequisite(a.id, pid)}
@@ -771,7 +788,7 @@ export default function ProjectDetailPage() {
                             )}
                           </Badge>
                         ))}
-                        {canEdit && scheduleEditing && (
+                        {canEdit && scheduleEditing && a.is_active && (
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={<Button variant="outline" size="icon-xs" aria-label="Előfeltétel hozzáadása" />}
@@ -780,7 +797,7 @@ export default function ProjectDetailPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                               {activities
-                                .filter((other) => other.id !== a.id && !a.prerequisite_ids.includes(other.id))
+                                .filter((other) => other.id !== a.id && other.is_active && !a.prerequisite_ids.includes(other.id))
                                 .map((other) => (
                                   <DropdownMenuItem
                                     key={other.id}
@@ -798,7 +815,9 @@ export default function ProjectDetailPage() {
                       {canEdit && scheduleEditing ? (
                       <Select value={a.status} onValueChange={(v) => updateStatus(a.id, v as string)}>
                         <SelectTrigger size="sm" className={ACTIVITY_STATUS_COLOR[a.status]}>
-                          <SelectValue />
+                          <SelectValue>
+                            {(v: string) => ACTIVITY_STATUS_OPTIONS.find(([val]) => val === v)?.[1] ?? v}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {ACTIVITY_STATUS_OPTIONS.map(([value, label]) => (
@@ -812,6 +831,26 @@ export default function ProjectDetailPage() {
                         </span>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {a.is_active ? (
+                        canEdit && scheduleEditing ? (
+                          <Button variant="link" className="h-auto p-0 text-xs" onClick={() => toggleActivityActive(a)}>
+                            Letiltás
+                          </Button>
+                        ) : (
+                          <Badge className="bg-emerald-100 text-emerald-700">Aktív</Badge>
+                        )
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="secondary">Inaktív</Badge>
+                          {canEdit && scheduleEditing && (
+                            <Button variant="link" className="h-auto p-0 text-xs" onClick={() => toggleActivityActive(a)}>
+                              Aktiválás
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -819,10 +858,10 @@ export default function ProjectDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-4">
+        <TabsContent value="documents" className="mt-3">
           <Card className="py-0">
-            <div className="flex items-center justify-between border-b p-4">
-              <h3 className="font-semibold">Dokumentumok</h3>
+            <div className="flex items-center justify-between border-b p-3">
+              <h3 className="text-[13px] font-semibold">Dokumentumok</h3>
               <label className={cn(buttonVariants(), "cursor-pointer")}>
                 <Upload />
                 {uploading ? "Feltöltés..." : "Feltöltés"}

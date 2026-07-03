@@ -6,6 +6,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { api, PrepTask } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 const DAY_NAMES = ["Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat", "Vasárnap"];
@@ -13,6 +20,9 @@ const MONTH_NAMES = [
   "Január", "Február", "Március", "Április", "Május", "Június",
   "Július", "Augusztus", "Szeptember", "Október", "November", "December",
 ];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => CURRENT_YEAR - 2 + i);
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -71,12 +81,32 @@ export default function CalendarPage() {
 
   return (
     <AppLayout>
-      <div className="mb-5 flex items-center justify-between gap-4">
+      <div className="mb-3 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Naptár</h1>
-          <p className="text-sm text-slate-500">{MONTH_NAMES[month]} {year}</p>
+          <h1 className="text-lg font-bold text-slate-900">Naptár</h1>
+          <p className="text-xs text-slate-500">{year}. {MONTH_NAMES[month]}</p>
         </div>
         <div className="flex items-center gap-1.5">
+          <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue>{(v: string) => MONTH_NAMES[Number(v)]}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {MONTH_NAMES.map((name, i) => (
+                <SelectItem key={name} value={String(i)}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+            <SelectTrigger className="w-[90px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {YEAR_OPTIONS.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); }}>
             Ma
           </Button>
@@ -90,7 +120,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Legend */}
-      <div className="mb-4 flex items-center gap-5 text-xs text-slate-500">
+      <div className="mb-2.5 flex items-center gap-4 text-[11px] text-slate-500">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2.5 rounded-sm bg-amber-400" />
           Előkészítés
@@ -108,7 +138,7 @@ export default function CalendarPage() {
             <div
               key={day}
               className={cn(
-                "py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500",
+                "py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500",
                 i >= 5 && "text-slate-400",
               )}
             >
@@ -130,7 +160,7 @@ export default function CalendarPage() {
               <div
                 key={i}
                 className={cn(
-                  "min-h-[88px] border-b border-r border-slate-100 p-1.5",
+                  "min-h-[72px] border-b border-r border-slate-100 p-1",
                   dow === 6 && "border-r-0",
                   !cellDate && "bg-slate-50/60",
                   isWeekend && cellDate && "bg-slate-50/40",
@@ -138,10 +168,10 @@ export default function CalendarPage() {
               >
                 {cellDate && (
                   <>
-                    <div className="mb-1 flex justify-end">
+                    <div className="mb-0.5 flex justify-end">
                       <span
                         className={cn(
-                          "flex size-6 items-center justify-center rounded-full text-xs font-semibold leading-none",
+                          "flex size-5 items-center justify-center rounded-full text-[11px] font-semibold leading-none",
                           isToday
                             ? "bg-blue-600 text-white shadow-sm"
                             : "text-slate-600",

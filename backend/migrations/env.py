@@ -9,6 +9,7 @@ from app.models import (  # noqa: F401 — register all models on Base.metadata
     Activity,
     ActivityDependency,
     ActivityTemplate,
+    ActivityTemplateDependency,
     AuditLog,
     Document,
     Project,

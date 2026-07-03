@@ -153,13 +153,30 @@ class ActivityTemplate(Base):
     )
 
 
+class ActivityTemplateDependency(Base):
+    __tablename__ = "activity_template_dependencies"
+    __table_args__ = (
+        UniqueConstraint(
+            "template_id", "prerequisite_template_id", name="uq_template_prereq"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("activity_templates.id", ondelete="CASCADE"), index=True
+    )
+    prerequisite_template_id: Mapped[int] = mapped_column(
+        ForeignKey("activity_templates.id", ondelete="CASCADE"), index=True
+    )
+
+
 class Activity(Base):
     __tablename__ = "activities"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
     template_id: Mapped[int | None] = mapped_column(
-        ForeignKey("activity_templates.id"), nullable=True
+        ForeignKey("activity_templates.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(255))
     duration_days: Mapped[int] = mapped_column(Integer)
@@ -173,6 +190,7 @@ class Activity(Base):
     status: Mapped[ActivityStatus] = mapped_column(
         Enum(ActivityStatus), default=ActivityStatus.PENDING
     )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     project: Mapped["Project"] = relationship(back_populates="activities")
     template: Mapped["ActivityTemplate | None"] = relationship()

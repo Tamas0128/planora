@@ -21,7 +21,7 @@ def dashboard_stats(
     two_weeks = today + timedelta(days=14)
 
     projects_q = db.query(Project)
-    activities_q = db.query(Activity).join(Project)
+    activities_q = db.query(Activity).join(Project).filter(Activity.is_active.is_(True))
 
     if user.role == UserRole.PROJECT_MANAGER:
         projects_q = projects_q.filter(Project.project_manager_id == user.id)

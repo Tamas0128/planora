@@ -266,6 +266,7 @@ def list_activities(
                 end_date=a.end_date,
                 prep_date=a.prep_date,
                 status=a.status,
+                is_active=a.is_active,
                 prerequisite_ids=[d.prerequisite_id for d in deps],
             )
         )
@@ -291,6 +292,24 @@ def update_activity(
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     updates = body.model_dump(exclude_unset=True)
+
+    if updates.get("is_active") is False and activity.is_active:
+        blockers = (
+            db.query(Activity)
+            .join(ActivityDependency, ActivityDependency.activity_id == Activity.id)
+            .filter(
+                ActivityDependency.prerequisite_id == activity_id,
+                Activity.is_active.is_(True),
+            )
+            .all()
+        )
+        if blockers:
+            names = ", ".join(b.name for b in blockers)
+            raise HTTPException(
+                status_code=400,
+                detail=f"A tevékenység nem tiltható le, mert az alábbi aktív tevékenységek függenek tőle: {names}",
+            )
+
     for field, value in updates.items():
         old = getattr(activity, field)
         if old != value:
@@ -302,15 +321,25 @@ def update_activity(
             )
             setattr(activity, field, value)
     db.flush()
+
+    if updates.get("is_active") is False:
+        activity.start_date = None
+        activity.end_date = None
+        activity.prep_date = None
+        db.flush()
+
     if "start_date" in updates:
         cascade_from_activity(db, project, activity)
-    elif "duration_days" in updates or "prep_days" in updates:
+    elif "duration_days" in updates or "prep_days" in updates or "is_active" in updates:
         recalculate_schedule(db, project)
     else:
         done = db.query(Activity).filter(
-            Activity.project_id == project_id, Activity.status == ActivityStatus.DONE
+            Activity.project_id == project_id, Activity.status == ActivityStatus.DONE,
+            Activity.is_active.is_(True),
         ).count()
-        total = db.query(Activity).filter(Activity.project_id == project_id).count()
+        total = db.query(Activity).filter(
+            Activity.project_id == project_id, Activity.is_active.is_(True),
+        ).count()
         project.completion_percent = round((done / total) * 100, 1) if total else 0
     db.commit()
     deps = db.query(ActivityDependency).filter(ActivityDependency.activity_id == activity.id).all()
@@ -324,6 +353,7 @@ def update_activity(
         end_date=activity.end_date,
         prep_date=activity.prep_date,
         status=activity.status,
+        is_active=activity.is_active,
         prerequisite_ids=[d.prerequisite_id for d in deps],
     )
 

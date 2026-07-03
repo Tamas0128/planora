@@ -39,3 +39,20 @@ def test_my_tasks_scoped_to_own_projects_for_pm(client, admin_headers):
     headers = login(client, "pmtasks")
     resp = client.get("/api/tasks/my-tasks", headers=headers).json()
     assert all(item["project_id"] == own_project["id"] for item in resp)
+
+
+def test_disabled_activity_excluded_from_prep_center(client, admin_headers):
+    project = create_project(client, admin_headers)
+    activities = client.get(
+        f"/api/projects/{project['id']}/activities", headers=admin_headers
+    ).json()
+    before = client.get("/api/tasks/prep-center", headers=admin_headers).json()
+    assert len(before) == 24
+
+    client.patch(
+        f"/api/projects/{project['id']}/activities/{activities[0]['id']}",
+        json={"is_active": False},
+        headers=admin_headers,
+    )
+    after = client.get("/api/tasks/prep-center", headers=admin_headers).json()
+    assert len(after) == 23

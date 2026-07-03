@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Building2, Clock, Gauge, TrendingDown } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import {
   api,
@@ -39,32 +40,38 @@ function DonutChart({ segments, total }: { segments: { color: string; pct: numbe
     ? segments.map((s) => { const from = acc; acc += s.pct; return `${s.color} ${from}% ${acc}%`; }).join(", ")
     : "#e2e8f0 0% 100%";
   return (
-    <div className="relative mx-auto flex size-40 items-center justify-center">
-      <div className="size-40 rounded-full" style={{ background: `conic-gradient(${stops})` }} />
-      <div className="absolute flex size-24 flex-col items-center justify-center rounded-full bg-white shadow-sm">
-        <span className="text-2xl font-bold text-slate-800">{total}</span>
-        <span className="text-[10px] text-slate-500">projekt</span>
+    <div className="relative mx-auto flex size-28 items-center justify-center">
+      <div className="size-28 rounded-full" style={{ background: `conic-gradient(${stops})` }} />
+      <div className="absolute flex size-16 flex-col items-center justify-center rounded-full bg-white shadow-sm">
+        <span className="text-lg font-bold text-slate-800">{total}</span>
+        <span className="text-[9px] text-slate-500">projekt</span>
       </div>
     </div>
   );
 }
 
-/* ─── Stat kártya ────────────────────────────────────────────── */
+/* ─── Stat kártya (kompakt info-box) ─────────────────────────── */
 function StatCard({
-  label, value, sub, topColor, href,
+  label, value, sub, icon: Icon, iconBg, iconColor, href,
 }: {
-  label: string; value: string | number | null; sub?: string; topColor: string; href: string;
+  label: string; value: string | number | null; sub?: string;
+  icon: LucideIcon; iconBg: string; iconColor: string; href: string;
 }) {
   return (
     <Link href={href} className="block">
-      <Card className={cn("border-t-4 p-4 shadow-sm transition hover:shadow-md", topColor)}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        {value === null ? (
-          <div className="mt-1 h-8 w-1/2 animate-pulse rounded bg-slate-100" />
-        ) : (
-          <p className="mt-0.5 text-3xl font-bold text-slate-800">{value}</p>
-        )}
-        {sub && <p className="mt-0.5 text-[10px] text-slate-400">{sub}</p>}
+      <Card className="flex-row items-center gap-3 p-3 shadow-sm transition hover:shadow-md">
+        <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", iconBg)}>
+          <Icon className={cn("size-4.5", iconColor)} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+          {value === null ? (
+            <div className="mt-1 h-5 w-1/2 animate-pulse rounded bg-slate-100" />
+          ) : (
+            <p className="text-xl font-bold leading-tight text-slate-800">{value}</p>
+          )}
+        </div>
+        {sub && <p className="shrink-0 text-[10px] text-slate-400">{sub}</p>}
       </Card>
     </Link>
   );
@@ -133,43 +140,43 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       {/* ── Fejléc ── */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+      <div className="mb-4">
+        <h1 className="text-lg font-bold text-slate-900">Dashboard</h1>
         {me && (
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="text-xs text-slate-500">
             Üdvözlünk, <span className="font-semibold text-slate-700">{me.full_name}</span>!
           </p>
         )}
       </div>
 
       {/* ── 4 Stat kártya ── */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Aktív projekt"         value={stats?.total_projects ?? null}    sub="Összesen"             topColor="border-t-blue-500"   href="/projects" />
-        <StatCard label="Lejárt feladat"        value={stats?.overdue_tasks ?? null}     sub="Azonnali intézkedés"  topColor="border-t-red-500"    href="/prep-center?filter=overdue" />
-        <StatCard label="Csúszó projekt"        value={stats?.slipping_projects ?? null} sub="Határidőn túl"        topColor="border-t-amber-500"  href="/projects" />
-        <StatCard label="Átlag teljesítmény"    value={avgCompletion !== null ? `${avgCompletion}%` : null} sub="Összes projekt" topColor="border-t-green-600" href="/projects" />
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <StatCard label="Aktív projekt"      value={stats?.total_projects ?? null}    sub="Összesen"            icon={Building2}    iconBg="bg-blue-50"   iconColor="text-blue-600"   href="/projects" />
+        <StatCard label="Lejárt feladat"     value={stats?.overdue_tasks ?? null}     sub="Azonnal"             icon={Clock}        iconBg="bg-red-50"    iconColor="text-red-600"    href="/prep-center?filter=overdue" />
+        <StatCard label="Csúszó projekt"     value={stats?.slipping_projects ?? null} sub="Határidőn túl"       icon={TrendingDown} iconBg="bg-amber-50"  iconColor="text-amber-600"  href="/projects" />
+        <StatCard label="Átlag teljesítmény" value={avgCompletion !== null ? `${avgCompletion}%` : null} sub="Összesen" icon={Gauge} iconBg="bg-green-50" iconColor="text-green-600" href="/projects" />
       </div>
 
       {/* ── Középső sor ── */}
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-12">
 
         {/* Projekt áttekintő – donut + lista */}
         <Card className="overflow-hidden py-0 lg:col-span-4">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <h2 className="text-sm font-semibold text-slate-800">Projekt áttekintő</h2>
-            <Link href="/projects" className="flex items-center gap-0.5 text-xs text-green-700 hover:underline">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+            <h2 className="text-[13px] font-semibold text-slate-800">Projekt áttekintő</h2>
+            <Link href="/projects" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
               Összes <ArrowUpRight className="size-3" />
             </Link>
           </div>
-          <div className="p-4">
+          <div className="p-3">
             <DonutChart segments={donutSegments} total={total} />
-            <div className="mt-4 space-y-2">
+            <div className="mt-3 space-y-1.5">
               {STATUS_ORDER.map((key) => {
                 const count = kanban[key]?.length ?? 0;
                 const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
                 return (
-                  <div key={key} className="flex items-center gap-2 text-xs">
-                    <span className="size-2.5 shrink-0 rounded-full" style={{ background: STATUS_CFG[key].dot }} />
+                  <div key={key} className="flex items-center gap-2 text-[11px]">
+                    <span className="size-2 shrink-0 rounded-full" style={{ background: STATUS_CFG[key].dot }} />
                     <span className="flex-1 text-slate-600">{STATUS_CFG[key].label}</span>
                     <span className="font-semibold text-slate-700">{count}</span>
                     <span className="w-8 text-right text-slate-400">{pct}%</span>
@@ -182,22 +189,22 @@ export default function DashboardPage() {
 
         {/* Közelgő projektek */}
         <Card className="overflow-hidden py-0 lg:col-span-5">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <h2 className="text-sm font-semibold text-slate-800">Közelgő projektek</h2>
-            <Link href="/projects" className="flex items-center gap-0.5 text-xs text-green-700 hover:underline">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+            <h2 className="text-[13px] font-semibold text-slate-800">Közelgő projektek</h2>
+            <Link href="/projects" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
               Mind <ArrowUpRight className="size-3" />
             </Link>
           </div>
           <div className="divide-y divide-slate-50">
             {upcomingProjects.length === 0 ? (
-              <p className="py-8 text-center text-xs text-slate-400">Nincs projekt</p>
+              <p className="py-6 text-center text-xs text-slate-400">Nincs projekt</p>
             ) : (
               upcomingProjects.map((p) => {
                 const isLate = new Date(p.delivery_date) < new Date();
                 return (
-                  <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 transition-colors">
+                  <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 transition-colors">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-slate-800">{p.name}</p>
+                      <p className="truncate text-[11px] font-semibold text-slate-800">{p.name}</p>
                       <p className="truncate text-[10px] text-slate-400">{p.project_manager_name ?? "—"}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -220,14 +227,14 @@ export default function DashboardPage() {
 
         {/* Közelgő feladatok */}
         <Card className="overflow-hidden py-0 lg:col-span-3">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <h2 className="text-sm font-semibold text-slate-800">Közelgő feladatok</h2>
-            <Link href="/my-tasks" className="flex items-center gap-0.5 text-xs text-green-700 hover:underline">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+            <h2 className="text-[13px] font-semibold text-slate-800">Közelgő feladatok</h2>
+            <Link href="/my-tasks" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
               Mind <ArrowUpRight className="size-3" />
             </Link>
           </div>
           {overdueTasks.length > 0 && (
-            <div className="border-b border-red-100 bg-red-50/60 px-4 py-1">
+            <div className="border-b border-red-100 bg-red-50/60 px-3 py-1">
               <p className="text-[10px] font-bold uppercase tracking-wide text-red-500">Lejárt · {overdueTasks.length}</p>
             </div>
           )}
@@ -237,7 +244,7 @@ export default function DashboardPage() {
                 key={`${t.project_id}-${t.activity_id}`}
                 href={`/projects/${t.project_id}`}
                 className={cn(
-                  "flex items-start gap-2 px-3 py-2 hover:bg-slate-50 transition-colors",
+                  "flex items-start gap-2 px-2.5 py-1.5 hover:bg-slate-50 transition-colors",
                   t.is_overdue ? "border-l-[2px] border-l-red-400" : "border-l-[2px] border-l-slate-200",
                 )}
               >
@@ -258,32 +265,32 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Alsó sor ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
 
         {/* Ütemterv áttekintő – Gantt */}
         <Card className="overflow-hidden py-0 lg:col-span-7">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <h2 className="text-sm font-semibold text-slate-800">Ütemterv áttekintő</h2>
-            <span className="text-[11px] text-slate-400">következő 90 nap</span>
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+            <h2 className="text-[13px] font-semibold text-slate-800">Ütemterv áttekintő</h2>
+            <span className="text-[10px] text-slate-400">következő 90 nap</span>
           </div>
-          <div className="p-4">
+          <div className="p-3">
             {/* X-tengely jelölők */}
-            <div className="mb-2 ml-[140px] flex text-[9px] text-slate-400">
+            <div className="mb-1.5 ml-[124px] flex text-[9px] text-slate-400">
               <span className="flex-1 text-left">Ma</span>
               <span className="flex-1 text-center">+30 nap</span>
               <span className="flex-1 text-center">+60 nap</span>
               <span className="flex-1 text-right">+90 nap</span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {ganttProjects.length === 0 ? (
                 <p className="py-6 text-center text-xs text-slate-400">Nincs közelgő projekt</p>
               ) : (
                 ganttProjects.map((p) => (
                   <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 group">
-                    <span className="w-[136px] shrink-0 truncate text-[11px] text-slate-600 group-hover:text-slate-900">
+                    <span className="w-[120px] shrink-0 truncate text-[11px] text-slate-600 group-hover:text-slate-900">
                       {p.name}
                     </span>
-                    <div className="relative flex-1 h-5 rounded-full bg-slate-100">
+                    <div className="relative flex-1 h-4 rounded-full bg-slate-100">
                       <div
                         className={cn("h-full rounded-full transition-all", p.barColor)}
                         style={{ width: `${p.pct}%` }}
@@ -302,19 +309,19 @@ export default function DashboardPage() {
 
         {/* Legutóbbi tevékenységek */}
         <Card className="overflow-hidden py-0 lg:col-span-5">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <h2 className="text-sm font-semibold text-slate-800">Legutóbbi tevékenységek</h2>
-            <Link href="/audit-log" className="flex items-center gap-0.5 text-xs text-green-700 hover:underline">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+            <h2 className="text-[13px] font-semibold text-slate-800">Legutóbbi tevékenységek</h2>
+            <Link href="/audit-log" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
               Napló <ArrowUpRight className="size-3" />
             </Link>
           </div>
           <div className="divide-y divide-slate-50">
             {logs.length === 0 ? (
-              <p className="py-8 text-center text-xs text-slate-400">Nincs tevékenység</p>
+              <p className="py-6 text-center text-xs text-slate-400">Nincs tevékenység</p>
             ) : (
               logs.map((log) => (
-                <div key={log.id} className="flex items-start gap-2.5 px-4 py-2.5">
-                  <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-[10px] font-bold text-green-700">
+                <div key={log.id} className="flex items-start gap-2 px-3 py-1.5">
+                  <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-[9px] font-bold text-green-700">
                     {(log.user_name ?? "?")[0].toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">

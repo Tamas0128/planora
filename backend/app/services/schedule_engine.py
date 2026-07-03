@@ -2,7 +2,13 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.models import Activity, ActivityDependency, ActivityTemplate, Project
+from app.models import (
+    Activity,
+    ActivityDependency,
+    ActivityTemplate,
+    ActivityTemplateDependency,
+    Project,
+)
 
 
 DEFAULT_ACTIVITIES: list[dict] = [
@@ -72,21 +78,37 @@ def add_workdays(start: date, days: int) -> date:
 def seed_activity_templates(db: Session) -> None:
     if db.query(ActivityTemplate).count() > 0:
         return
-    for i, item in enumerate(DEFAULT_ACTIVITIES):
-        from app.models import UserRole
+    from app.models import UserRole
 
+    name_to_template: dict[str, ActivityTemplate] = {}
+    for i, item in enumerate(DEFAULT_ACTIVITIES):
         role = UserRole.PROJECT_MANAGER
         if item.get("role") == "procurement":
             role = UserRole.PROCUREMENT
-        db.add(
-            ActivityTemplate(
-                name=item["name"],
-                duration_days=item["duration_days"],
-                sort_order=i,
-                default_prep_days=14,
-                responsible_role=role,
-            )
+        tmpl = ActivityTemplate(
+            name=item["name"],
+            duration_days=item["duration_days"],
+            sort_order=i,
+            default_prep_days=14,
+            responsible_role=role,
         )
+        db.add(tmpl)
+        name_to_template[item["name"]] = tmpl
+    db.flush()
+
+    for item in DEFAULT_ACTIVITIES:
+        if "deps" not in item:
+            continue
+        tmpl = name_to_template[item["name"]]
+        for dep_name in item["deps"]:
+            prereq = name_to_template.get(dep_name)
+            if prereq:
+                db.add(
+                    ActivityTemplateDependency(
+                        template_id=tmpl.id,
+                        prerequisite_template_id=prereq.id,
+                    )
+                )
     db.commit()
 
 
@@ -101,6 +123,7 @@ def create_project_activities(db: Session, project: Project) -> list[Activity]:
         )
 
     activities: list[Activity] = []
+    template_id_to_activity: dict[int, Activity] = {}
     for tmpl in templates:
         activity = Activity(
             project_id=project.id,
@@ -113,24 +136,24 @@ def create_project_activities(db: Session, project: Project) -> list[Activity]:
         )
         db.add(activity)
         activities.append(activity)
+        template_id_to_activity[tmpl.id] = activity
     db.flush()
 
-    name_to_activity = {a.name: a for a in activities}
-    for item in DEFAULT_ACTIVITIES:
-        if "deps" not in item:
-            continue
-        activity = name_to_activity.get(item["name"])
-        if not activity:
-            continue
-        for dep_name in item["deps"]:
-            prereq = name_to_activity.get(dep_name)
-            if prereq:
-                db.add(
-                    ActivityDependency(
-                        activity_id=activity.id,
-                        prerequisite_id=prereq.id,
-                    )
+    template_deps = (
+        db.query(ActivityTemplateDependency)
+        .filter(ActivityTemplateDependency.template_id.in_(template_id_to_activity.keys()))
+        .all()
+    )
+    for dep in template_deps:
+        activity = template_id_to_activity.get(dep.template_id)
+        prereq = template_id_to_activity.get(dep.prerequisite_template_id)
+        if activity and prereq:
+            db.add(
+                ActivityDependency(
+                    activity_id=activity.id,
+                    prerequisite_id=prereq.id,
                 )
+            )
     db.flush()
     return activities
 
@@ -215,10 +238,12 @@ def cascade_from_activity(db: Session, project: Project, changed_activity: Activ
 
 
 def recalculate_schedule(db: Session, project: Project) -> None:
-    # Load activities in ascending sort_order (0 = first in sequence, last = final)
+    # Load activities in ascending sort_order (0 = first in sequence, last = final).
+    # Inactive activities are excluded entirely — treated as if they don't
+    # exist for date computation and completion_percent.
     activities = (
         db.query(Activity)
-        .filter(Activity.project_id == project.id)
+        .filter(Activity.project_id == project.id, Activity.is_active.is_(True))
         .order_by(Activity.sort_order)
         .all()
     )

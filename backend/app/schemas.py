@@ -129,6 +129,7 @@ class ActivityResponse(BaseModel):
     end_date: Optional[date] = None
     prep_date: Optional[date] = None
     status: ActivityStatus
+    is_active: bool = True
     prerequisite_ids: list[int] = []
 
     model_config = {"from_attributes": True}
@@ -142,10 +143,41 @@ class ActivityUpdate(BaseModel):
     status: Optional[ActivityStatus] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    is_active: Optional[bool] = None
 
 
 class DependencyCreate(BaseModel):
     prerequisite_id: int
+
+
+class ActivityTemplateResponse(BaseModel):
+    id: int
+    name: str
+    duration_days: int
+    sort_order: int
+    default_prep_days: int
+    responsible_role: UserRole
+    prerequisite_template_ids: list[int] = []
+
+    model_config = {"from_attributes": True}
+
+
+class ActivityTemplateCreate(BaseModel):
+    name: str
+    duration_days: int
+    default_prep_days: int = 14
+    responsible_role: UserRole = UserRole.PROJECT_MANAGER
+
+
+class ActivityTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    duration_days: Optional[int] = None
+    default_prep_days: Optional[int] = None
+    responsible_role: Optional[UserRole] = None
+
+
+class TemplateDependencyCreate(BaseModel):
+    prerequisite_template_id: int
 
 
 class PrepTaskItem(BaseModel):

@@ -48,14 +48,20 @@ export default function AuditLogPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Audit napló</h1>
-          <p className="text-muted-foreground">Módosítások nyomon követése</p>
+          <h1 className="text-lg font-bold">Audit napló</h1>
+          <p className="text-xs text-muted-foreground">Módosítások nyomon követése</p>
         </div>
         <Select value={projectId} onValueChange={(v) => setProjectId(v as string)}>
           <SelectTrigger className="w-56">
-            <SelectValue />
+            <SelectValue>
+              {(v: string) => {
+                if (v === "all") return "Összes projekt";
+                const p = projects.find((proj) => String(proj.id) === v);
+                return p ? p.name : v;
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Összes projekt</SelectItem>

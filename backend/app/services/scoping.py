@@ -11,7 +11,11 @@ def scoped_activity_query(db: Session, user: User):
     their role. Shared by the prep-center/my-tasks endpoints and the daily
     email digest so the scoping rules can't drift apart between them.
     """
-    q = db.query(Activity, Project).join(Project, Activity.project_id == Project.id)
+    q = (
+        db.query(Activity, Project)
+        .join(Project, Activity.project_id == Project.id)
+        .filter(Activity.is_active.is_(True))
+    )
     if user.role == UserRole.PROJECT_MANAGER:
         q = q.filter(Project.project_manager_id == user.id)
     elif user.role in (UserRole.PROCUREMENT, UserRole.BILLING):
