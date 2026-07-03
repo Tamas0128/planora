@@ -199,6 +199,30 @@ async function request<T>(
   return res.json();
 }
 
+/** Authenticated binary download (the endpoint needs a Bearer header, so a
+ * plain <a href> can't hit it directly) — fetches as a blob and triggers a
+ * save via a synthetic same-document anchor click, which — unlike
+ * window.open — isn't subject to popup blockers. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "Letöltés sikertelen");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<{ access_token: string; refresh_token: string }>("/auth/login/json", {

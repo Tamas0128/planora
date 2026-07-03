@@ -2,13 +2,14 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Calendar, Pencil, Plus, Upload, X } from "lucide-react";
+import { Calendar, Download, Pencil, Plus, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import {
   Activity,
   api,
   BUILDING_LABELS,
+  downloadFile,
   getCachedUser,
   ProjectDetail,
   ProjectDocument,
@@ -232,6 +233,15 @@ export default function ProjectDetailPage() {
     } catch (err) {
       tab.close();
       toast.error(err instanceof Error ? err.message : "Hiba a letöltés során");
+    }
+  }
+
+  async function handleGanttPdf() {
+    if (!project) return;
+    try {
+      await downloadFile(`/projects/${id}/gantt.pdf`, `${project.project_code}_gantt.pdf`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a Gantt-diagram létrehozása során");
     }
   }
 
@@ -645,16 +655,22 @@ export default function ProjectDetailPage() {
         <TabsContent value="schedule" className="mt-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs text-slate-500">{activities.length} tevékenység</p>
-            {canEdit && (
-              <Button
-                size="sm"
-                variant={scheduleEditing ? "default" : "outline"}
-                onClick={() => setScheduleEditing((v) => !v)}
-              >
-                <Pencil className="size-3.5" />
-                {scheduleEditing ? "Szerkesztés kész" : "Szerkesztés"}
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={handleGanttPdf}>
+                <Download className="size-3.5" />
+                Gantt PDF
               </Button>
-            )}
+              {canEdit && (
+                <Button
+                  size="sm"
+                  variant={scheduleEditing ? "default" : "outline"}
+                  onClick={() => setScheduleEditing((v) => !v)}
+                >
+                  <Pencil className="size-3.5" />
+                  {scheduleEditing ? "Szerkesztés kész" : "Szerkesztés"}
+                </Button>
+              )}
+            </div>
           </div>
           <Card className="overflow-x-auto py-0">
             <Table>

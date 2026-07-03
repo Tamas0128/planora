@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import {
   Calendar,
   ChevronRight,
+  Download,
   Plus,
   Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import { NewProjectDialog } from "@/components/NewProjectDialog";
-import { api, BUILDING_LABELS, ProjectCard, STATUS_LABELS } from "@/lib/api";
+import { api, BUILDING_LABELS, downloadFile, ProjectCard, STATUS_LABELS } from "@/lib/api";
 import { clampPercent, DEFAULT_CFG, isLate, pmInitials, STATUS_CFG, STATUS_ORDER } from "@/lib/project-utils";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -23,6 +24,8 @@ export default function ProjectsPage() {
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");
   const [showNew, setShowNew]   = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     api.projects()
@@ -43,6 +46,32 @@ export default function ProjectsPage() {
     ),
     [projects, q],
   );
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) =>
+      prev.size === filtered.length ? new Set() : new Set(filtered.map((p) => p.id)),
+    );
+  }
+
+  async function handleGanttExport() {
+    setExporting(true);
+    try {
+      await downloadFile(`/reports/multi-gantt.pdf?ids=${[...selected].join(",")}`, "projektek_gantt.pdf");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a Gantt-diagram létrehozása során");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const counts = useMemo(
     () => projects.reduce<Record<string, number>>((acc, p) => {
@@ -68,6 +97,18 @@ export default function ProjectsPage() {
           className="h-8 w-56 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none"
         />
       </div>
+      {selected.size > 0 && (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={exporting}
+          onClick={handleGanttExport}
+          className="h-8 gap-1.5 text-[13px] font-semibold"
+        >
+          <Download className="size-3.5" />
+          {exporting ? "Készül…" : `Gantt PDF (${selected.size})`}
+        </Button>
+      )}
       <Button size="sm" onClick={() => setShowNew(true)} className="h-8 gap-1.5 text-[13px] font-semibold">
         <Plus className="size-3.5" /> Új projekt
       </Button>
@@ -94,6 +135,15 @@ export default function ProjectsPage() {
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/60">
+              <th className="w-8 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  aria-label="Összes kijelölése"
+                  checked={filtered.length > 0 && selected.size === filtered.length}
+                  onChange={toggleSelectAll}
+                  className="size-3.5 cursor-pointer accent-blue-600"
+                />
+              </th>
               <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Státusz</th>
               <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projekt</th>
               <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ügyfél / helyszín</th>
@@ -106,12 +156,12 @@ export default function ProjectsPage() {
           <tbody className="divide-y divide-slate-50">
             {loading && (
               <tr>
-                <td colSpan={7} className="px-3 py-10 text-center text-xs text-slate-400">Betöltés…</td>
+                <td colSpan={8} className="px-3 py-10 text-center text-xs text-slate-400">Betöltés…</td>
               </tr>
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-10 text-center text-xs text-slate-400">
+                <td colSpan={8} className="px-3 py-10 text-center text-xs text-slate-400">
                   {search ? "Nincs találat" : "Még nincs projekt"}
                 </td>
               </tr>
@@ -127,6 +177,15 @@ export default function ProjectsPage() {
                   onClick={() => router.push(`/projects/${p.id}`)}
                   className="cursor-pointer transition-colors hover:bg-slate-50"
                 >
+                  <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      aria-label={`${p.name} kijelölése`}
+                      checked={selected.has(p.id)}
+                      onChange={() => toggleSelected(p.id)}
+                      className="size-3.5 cursor-pointer accent-blue-600"
+                    />
+                  </td>
                   <td className="px-3 py-1.5">
                     <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", cfg.badge)}>
                       {STATUS_LABELS[p.status]}

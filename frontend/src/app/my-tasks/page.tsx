@@ -28,6 +28,33 @@ function taskKey(item: PrepTask) {
   return `${item.project_id}-${item.activity_id}`;
 }
 
+const PERIOD_FILTERS = [
+  { key: "all", label: "Összes" },
+  { key: "overdue", label: "Lejárt" },
+  { key: "today", label: "Mai" },
+  { key: "7d", label: "7 napon belül" },
+  { key: "14d", label: "14 napon belül" },
+];
+
+const STATUS_FILTERS = [
+  { key: "all", label: "Összes" },
+  { key: "pending", label: "Várakozik" },
+  { key: "in_progress", label: "Folyamatban" },
+  { key: "blocked", label: "Blokkolt" },
+];
+
+function matchesPeriod(item: PrepTask, period: string): boolean {
+  if (period === "all") return true;
+  if (period === "overdue") return item.is_overdue;
+  if (item.is_overdue) return false;
+  const d = item.days_until;
+  if (d === undefined || d === null) return false;
+  if (period === "today") return d === 0;
+  if (period === "7d") return d >= 0 && d <= 7;
+  if (period === "14d") return d >= 0 && d <= 14;
+  return true;
+}
+
 function TaskRow({ item, selected, onClick }: { item: PrepTask; selected: boolean; onClick: () => void }) {
   return (
     <div
@@ -182,6 +209,8 @@ export default function MyTasksPage() {
   const [overdueVisible, setOverdueVisible] = useState(PAGE_SIZE);
   const [activeVisible, setActiveVisible] = useState(PAGE_SIZE);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [periodFilter, setPeriodFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   function load() {
     return api.myTasks()
@@ -193,8 +222,23 @@ export default function MyTasksPage() {
     load().finally(() => setLoading(false));
   }, []);
 
-  const overdueItems = items.filter((i) => i.is_overdue);
-  const activeItems = items.filter((i) => !i.is_overdue);
+  function changePeriodFilter(key: string) {
+    setPeriodFilter(key);
+    setOverdueVisible(PAGE_SIZE);
+    setActiveVisible(PAGE_SIZE);
+  }
+
+  function changeStatusFilter(key: string) {
+    setStatusFilter(key);
+    setOverdueVisible(PAGE_SIZE);
+    setActiveVisible(PAGE_SIZE);
+  }
+
+  const filteredItems = items.filter(
+    (i) => matchesPeriod(i, periodFilter) && (statusFilter === "all" || i.status === statusFilter),
+  );
+  const overdueItems = filteredItems.filter((i) => i.is_overdue);
+  const activeItems = filteredItems.filter((i) => !i.is_overdue);
   const selected = items.find((i) => taskKey(i) === selectedKey) ?? null;
 
   async function handleStatusChange(item: PrepTask, status: string) {
@@ -218,6 +262,39 @@ export default function MyTasksPage() {
               Projektek
             </Link>
           </div>
+
+          {!loading && items.length > 0 && (
+            <div className="mb-3 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Időszak</span>
+                {PERIOD_FILTERS.map((f) => (
+                  <Button
+                    key={f.key}
+                    size="sm"
+                    variant={periodFilter === f.key ? "default" : "outline"}
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => changePeriodFilter(f.key)}
+                  >
+                    {f.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Állapot</span>
+                {STATUS_FILTERS.map((f) => (
+                  <Button
+                    key={f.key}
+                    size="sm"
+                    variant={statusFilter === f.key ? "default" : "outline"}
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => changeStatusFilter(f.key)}
+                  >
+                    {f.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -247,6 +324,19 @@ export default function MyTasksPage() {
                 <ClipboardList className="size-3.5" />
                 Projektek megtekintése
               </Link>
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <CheckSquare className="mb-4 size-12 text-slate-200" />
+              <p className="text-lg font-semibold text-slate-600">Nincs a szűrésnek megfelelő feladat</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-4"
+                onClick={() => { changePeriodFilter("all"); changeStatusFilter("all"); }}
+              >
+                Szűrők törlése
+              </Button>
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
