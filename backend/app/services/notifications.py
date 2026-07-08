@@ -6,7 +6,7 @@ from email.mime.text import MIMEText
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Activity, ActivityStatus, Project, User
+from app.models import Activity, ActivityStatus, Notification, NotificationType, Project, User
 from app.services.scoping import scoped_activity_query
 
 logger = logging.getLogger("planora.notifications")
@@ -77,14 +77,68 @@ def send_email(to_email: str, subject: str, body: str) -> None:
         server.send_message(msg)
 
 
+def _create_notification_if_new(
+    db: Session, user: User, ntype: NotificationType, title: str, body: str, project_id: int
+) -> None:
+    # Avoid re-notifying about the same still-unread item on every digest run
+    # (this job fires daily) — only insert if no matching unread notification
+    # already exists for this user.
+    exists = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == user.id,
+            Notification.type == ntype,
+            Notification.related_project_id == project_id,
+            Notification.title == title,
+            Notification.read_at.is_(None),
+        )
+        .first()
+    )
+    if exists:
+        return
+    db.add(
+        Notification(
+            user_id=user.id,
+            type=ntype,
+            title=title,
+            body=body,
+            related_project_id=project_id,
+        )
+    )
+
+
+def create_digest_notifications(
+    db: Session,
+    user: User,
+    overdue: list[tuple[Activity, Project]],
+    upcoming: list[tuple[Activity, Project]],
+) -> None:
+    for activity, project in overdue:
+        _create_notification_if_new(
+            db, user, NotificationType.OVERDUE_TASK,
+            f"Lejárt előkészítés: {activity.name}",
+            f"{project.name} / {activity.name} — előkészítés: {activity.prep_date.isoformat()}",
+            project.id,
+        )
+    for activity, project in upcoming:
+        _create_notification_if_new(
+            db, user, NotificationType.UPCOMING_PREP,
+            f"Közelgő előkészítés: {activity.name}",
+            f"{project.name} / {activity.name} — előkészítés: {activity.prep_date.isoformat()}",
+            project.id,
+        )
+
+
 def send_daily_digest(db: Session) -> int:
     sent = 0
     users = db.query(User).filter(User.is_active.is_(True)).all()
     for user in users:
         overdue, upcoming = get_user_digest_items(db, user)
+        create_digest_notifications(db, user, overdue, upcoming)
         if not overdue and not upcoming:
             continue
         subject, body = render_digest(user, overdue, upcoming)
         send_email(user.email, subject, body)
         sent += 1
+    db.commit()
     return sent

@@ -2,17 +2,28 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   Calendar,
   ChevronRight,
   Download,
   Image as ImageIcon,
+  List,
+  MapPin,
   Plus,
   Search,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import { NewProjectDialog } from "@/components/NewProjectDialog";
+
+// Leaflet touches `window` at import time, so it can never render on the
+// server — load it only in the browser.
+const ProjectsMap = dynamic(() => import("@/components/ProjectsMap"), {
+  ssr: false,
+  loading: () => <div className="flex h-[560px] items-center justify-center text-xs text-slate-400">Térkép betöltése…</div>,
+});
 import { api, BUILDING_LABELS, downloadFile, ProjectCard, STATUS_LABELS } from "@/lib/api";
 import { clampPercent, DEFAULT_CFG, isLate, pmInitials, STATUS_CFG, STATUS_ORDER } from "@/lib/project-utils";
 import { Button } from "@/components/ui/button";
@@ -51,6 +62,7 @@ export default function ProjectsPage() {
   const [showNew, setShowNew]   = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
+  const [view, setView] = useState<"list" | "map">("list");
 
   useEffect(() => {
     api.projects()
@@ -71,6 +83,19 @@ export default function ProjectsPage() {
     ),
     [projects, q],
   );
+
+  async function toggleFavorite(e: React.MouseEvent, project: ProjectCard) {
+    e.stopPropagation();
+    const next = !project.is_favorite;
+    setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, is_favorite: next } : p)));
+    try {
+      if (next) await api.addFavorite(project.id);
+      else await api.removeFavorite(project.id);
+    } catch (err) {
+      setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, is_favorite: !next } : p)));
+      toast.error(err instanceof Error ? err.message : "Hiba a kedvenc jelölése során");
+    }
+  }
 
   function toggleSelected(id: number) {
     setSelected((prev) => {
@@ -107,11 +132,33 @@ export default function ProjectsPage() {
   );
 
   const pageHeader = (
-    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-slate-100 bg-white px-4">
+    <header className="sticky top-0 z-20 flex h-auto min-h-12 shrink-0 flex-wrap items-center gap-2.5 border-b border-slate-100 bg-white px-4 py-2">
       <SidebarTrigger className="text-slate-400 hover:text-slate-700" />
       <div className="h-5 w-px bg-slate-100" />
       <h1 className="text-[14px] font-bold tracking-tight text-slate-900">Projektek</h1>
-      <div className="flex-1" />
+      <div className="flex items-center rounded-lg border border-slate-200 p-0.5">
+        <button
+          type="button"
+          onClick={() => setView("list")}
+          className={cn(
+            "flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
+            view === "list" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800",
+          )}
+        >
+          <List className="size-3.5" /> Lista
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("map")}
+          className={cn(
+            "flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
+            view === "map" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800",
+          )}
+        >
+          <MapPin className="size-3.5" /> Térkép
+        </button>
+      </div>
+      <div className="hidden flex-1 sm:block" />
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
         <input
@@ -119,7 +166,7 @@ export default function ProjectsPage() {
           placeholder="Keresés…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-8 w-56 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none"
+          className="h-8 w-32 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none sm:w-56"
         />
       </div>
       {selected.size > 0 && (
@@ -155,8 +202,10 @@ export default function ProjectsPage() {
         })}
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm">
+      {view === "map" ? (
+        <ProjectsMap projects={filtered} />
+      ) : (
+      <div className="overflow-x-auto rounded-lg border border-slate-100 bg-white shadow-sm">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/60">
@@ -169,6 +218,7 @@ export default function ProjectsPage() {
                   className="size-3.5 cursor-pointer accent-blue-600"
                 />
               </th>
+              <th className="w-8" />
               <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Státusz</th>
               <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projekt</th>
               <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ügyfél / helyszín</th>
@@ -181,12 +231,12 @@ export default function ProjectsPage() {
           <tbody className="divide-y divide-slate-50">
             {loading && (
               <tr>
-                <td colSpan={8} className="px-3 py-10 text-center text-xs text-slate-400">Betöltés…</td>
+                <td colSpan={9} className="px-3 py-10 text-center text-xs text-slate-400">Betöltés…</td>
               </tr>
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-10 text-center text-xs text-slate-400">
+                <td colSpan={9} className="px-3 py-10 text-center text-xs text-slate-400">
                   {search ? "Nincs találat" : "Még nincs projekt"}
                 </td>
               </tr>
@@ -210,6 +260,16 @@ export default function ProjectsPage() {
                       onChange={() => toggleSelected(p.id)}
                       className="size-3.5 cursor-pointer accent-blue-600"
                     />
+                  </td>
+                  <td className="px-1 py-1.5">
+                    <button
+                      type="button"
+                      aria-label={p.is_favorite ? "Kedvenc eltávolítása" : "Kedvencnek jelölés"}
+                      onClick={(e) => toggleFavorite(e, p)}
+                      className="text-slate-300 hover:text-amber-400"
+                    >
+                      <Star className={cn("size-4", p.is_favorite && "fill-amber-400 text-amber-400")} />
+                    </button>
                   </td>
                   <td className="px-3 py-1.5">
                     <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", cfg.badge)}>
@@ -267,6 +327,7 @@ export default function ProjectsPage() {
           </tbody>
         </table>
       </div>
+      )}
 
       <NewProjectDialog
         open={showNew}

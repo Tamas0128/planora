@@ -1,12 +1,12 @@
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.dependencies import get_current_user, require_roles
+from app.dependencies import get_current_user
 from app.models import Activity, ActivityStatus, AuditLog, Project, ProjectStatus, User, UserRole
-from app.schemas import AuditLogResponse, DashboardStats, ProjectCard
+from app.schemas import AuditLogResponse, DashboardStats, ProjectCard, WeeklyWorkloadItem
 
 router = APIRouter(tags=["dashboard"])
 
@@ -47,12 +47,40 @@ def dashboard_stats(
         Activity.status != ActivityStatus.DONE,
     ).count()
 
-    from app.models import ProjectStatus
-
     slipping = projects_q.filter(
         Project.delivery_date < today,
         Project.status != ProjectStatus.TURNKEY,
     ).count()
+
+    # "On time" is approximated from the data we actually have — there's no
+    # separate actual-handover-date field, so we treat any non-turnkey project
+    # whose target delivery_date hasn't passed yet as "on track". Turnkey
+    # projects are excluded from the denominator (already delivered).
+    active_projects = projects_q.filter(Project.status != ProjectStatus.TURNKEY).count()
+    on_time_pct = round(((active_projects - slipping) / active_projects) * 100, 1) if active_projects else 100.0
+
+    month_start = today.replace(day=1)
+    next_month_start = (month_start + timedelta(days=32)).replace(day=1)
+    handovers_this_month = projects_q.filter(
+        Project.status == ProjectStatus.TURNKEY,
+        Project.delivery_date >= month_start,
+        Project.delivery_date < next_month_start,
+    ).count()
+
+    open_prep_tasks_total = activities_q.filter(
+        Activity.prep_date.isnot(None),
+        Activity.status != ActivityStatus.DONE,
+    ).count()
+
+    weekly_workload: list[WeeklyWorkloadItem] = []
+    for i in range(4):
+        week_start = today + timedelta(days=7 * i)
+        week_end = week_start + timedelta(days=6)
+        count = activities_q.filter(
+            Activity.start_date >= week_start,
+            Activity.start_date <= week_end,
+        ).count()
+        weekly_workload.append(WeeklyWorkloadItem(week_start=week_start, activity_count=count))
 
     return DashboardStats(
         overdue_tasks=overdue,
@@ -60,6 +88,10 @@ def dashboard_stats(
         upcoming_prep_14d=prep_14,
         slipping_projects=slipping,
         total_projects=projects_q.count(),
+        on_time_delivery_pct=on_time_pct,
+        handovers_this_month=handovers_this_month,
+        open_prep_tasks_total=open_prep_tasks_total,
+        weekly_workload=weekly_workload,
     )
 
 
@@ -90,15 +122,24 @@ def audit_logs(
     project_id: int | None = None,
     limit: int = 100,
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT)),
+    user: User = Depends(get_current_user),
 ):
+    from app.api.projects import _can_view_project
+
     q = (
         db.query(AuditLog)
         .options(joinedload(AuditLog.user), joinedload(AuditLog.project))
         .order_by(AuditLog.created_at.desc())
     )
     if project_id:
+        project = db.query(Project).get(project_id)
+        if not project or not _can_view_project(user, project):
+            raise HTTPException(status_code=403, detail="Access denied")
         q = q.filter(AuditLog.project_id == project_id)
+    elif user.role == UserRole.PROJECT_MANAGER:
+        q = q.join(Project, AuditLog.project_id == Project.id).filter(Project.project_manager_id == user.id)
+    elif user.role == UserRole.SITE_MANAGER:
+        q = q.join(Project, AuditLog.project_id == Project.id).filter(Project.site_manager_id == user.id)
     logs = q.limit(limit).all()
     return [
         AuditLogResponse(

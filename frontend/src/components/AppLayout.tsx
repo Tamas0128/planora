@@ -7,6 +7,7 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlarmClock,
+  Bell,
   BarChart2,
   CalendarDays,
   CheckSquare,
@@ -15,11 +16,23 @@ import {
   LayoutGrid,
   ListChecks,
   LogOut,
+  Search,
   Users,
 } from "lucide-react";
-import { api, clearToken, ROLE_LABELS, User } from "@/lib/api";
+import { api, clearToken, Notification as NotificationItem, ProjectCard, ROLE_LABELS, User } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +64,152 @@ const NAV_PRIMARY: NavItem[] = [
   { href: "/prep-center", label: "Előkészítés", icon: AlarmClock },
 ];
 
+function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ProjectCard[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync reset, no async step needed
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    const handle = setTimeout(() => {
+      api.search(query.trim())
+        .then(setResults)
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [query]);
+
+  function handleOpenChange(next: boolean) {
+    if (!next) { setQuery(""); setResults([]); }
+    onOpenChange(next);
+  }
+
+  function select(project: ProjectCard) {
+    handleOpenChange(false);
+    router.push(`/projects/${project.id}`);
+  }
+
+  return (
+    <CommandDialog open={open} onOpenChange={handleOpenChange} title="Keresés" description="Projekt keresése">
+      <Command shouldFilter={false}>
+        <CommandInput placeholder="Keresés projekt, ügyfél, település vagy azonosító szerint…" value={query} onValueChange={setQuery} />
+        <CommandList>
+          {!searching && query.trim() && results.length === 0 && (
+            <CommandEmpty>Nincs találat</CommandEmpty>
+          )}
+          {results.length > 0 && (
+            <CommandGroup heading="Projektek">
+              {results.map((p) => (
+                <CommandItem key={p.id} value={`${p.id}-${p.name}`} onSelect={() => select(p)}>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-medium">{p.name}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {p.project_code} · {p.settlement} · {p.client_name}
+                    </span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+        </CommandList>
+      </Command>
+    </CommandDialog>
+  );
+}
+
+function NotificationBell() {
+  const router = useRouter();
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [open, setOpen] = useState(false);
+
+  function load() {
+    api.notifications().then(setNotifications).catch(() => setNotifications([]));
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
+
+  async function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) load();
+  }
+
+  async function markRead(n: NotificationItem) {
+    if (!n.read_at) {
+      await api.markNotificationRead(n.id).catch(() => {});
+      load();
+    }
+    if (n.related_project_id) {
+      setOpen(false);
+      router.push(`/projects/${n.related_project_id}`);
+    }
+  }
+
+  async function markAllRead() {
+    await api.markAllNotificationsRead().catch(() => {});
+    load();
+  }
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
+        render={
+          <Button variant="ghost" size="icon-sm" className="relative text-slate-400 hover:bg-slate-100 hover:text-slate-700" />
+        }
+      >
+        <Bell className="size-4" />
+        {unreadCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="end">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <span className="text-[13px] font-semibold text-slate-800">Értesítések</span>
+          {unreadCount > 0 && (
+            <button onClick={markAllRead} className="text-[11px] text-green-700 hover:underline">
+              Mind olvasottnak jelöl
+            </button>
+          )}
+        </div>
+        <div className="max-h-80 overflow-y-auto">
+          {notifications.length === 0 ? (
+            <p className="py-6 text-center text-xs text-slate-400">Nincs értesítés</p>
+          ) : (
+            notifications.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => markRead(n)}
+                className={cn(
+                  "block w-full border-b border-slate-50 px-3 py-2 text-left hover:bg-slate-50",
+                  !n.read_at && "bg-blue-50/50",
+                )}
+              >
+                <p className="text-[12px] font-medium text-slate-800">{n.title}</p>
+                <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{n.body}</p>
+                <p className="mt-0.5 text-[10px] text-slate-400">
+                  {new Date(n.created_at).toLocaleString("hu-HU", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 const NAV_SECONDARY: NavItem[] = [
   { href: "/users",             label: "Felhasználók",   icon: Users,      roles: ["admin"] },
   { href: "/audit-log",         label: "Audit napló",    icon: BarChart2,  roles: ["admin", "management"] },
@@ -69,11 +228,23 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
   const [user, setUser] = useState<User | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.me().then(setUser).catch(() => router.push("/login"));
   }, [router]);
+
+  useEffect(() => {
+    function handleKeydown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, []);
 
   useEffect(() => {
     if (user?.has_avatar) {
@@ -151,6 +322,21 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
                   mixBlendMode: "screen",
                 }}
               />
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-1 px-2 pb-1 group-data-[collapsible=icon]:flex-col">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchOpen(true)}
+              className="h-7 flex-1 justify-start gap-1.5 px-2 text-[12px] text-white/50 hover:bg-white/10 hover:text-white group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            >
+              <Search className="size-3.5 shrink-0" />
+              <span className="group-data-[collapsible=icon]:hidden">Keresés</span>
+              <span className="ml-auto text-[10px] text-white/30 group-data-[collapsible=icon]:hidden">Ctrl+K</span>
+            </Button>
+            <div className="[&_button]:text-white/50 [&_button:hover]:bg-white/10 [&_button:hover]:text-white">
+              <NotificationBell />
             </div>
           </div>
         </SidebarHeader>
@@ -279,6 +465,8 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
 
         <main className={mainClassName ?? "flex-1 overflow-auto p-4"}>{children}</main>
       </SidebarInset>
+
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </SidebarProvider>
   );
 }

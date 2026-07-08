@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.documents import get_s3_client
@@ -10,6 +10,7 @@ from app.models import (
     ActivityDependency,
     ActivityStatus,
     Document,
+    Favorite,
     Project,
     ProjectStatus,
     User,
@@ -25,6 +26,8 @@ from app.schemas import (
     ProjectUpdate,
 )
 from app.services.audit import log_change
+from app.services.geocoding import geocode_project_in_background
+from app.services.health import compute_health_for_projects, predict_delay_risk
 from app.services.schedule_engine import cascade_from_activity, create_project_activities, recalculate_schedule
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -32,7 +35,9 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 STATUS_ORDER = list(ProjectStatus)
 
 
-def _project_to_card(project: Project) -> ProjectCard:
+def _project_to_card(
+    project: Project, favorite_ids: set[int] = frozenset(), health_map: dict[int, str] | None = None
+) -> ProjectCard:
     return ProjectCard(
         id=project.id,
         name=project.name,
@@ -47,7 +52,18 @@ def _project_to_card(project: Project) -> ProjectCard:
         project_manager_name=project.project_manager.full_name if project.project_manager else None,
         site_manager_name=project.site_manager.full_name if project.site_manager else None,
         has_thumbnail=project.has_thumbnail,
+        is_favorite=project.id in favorite_ids,
+        health=(health_map or {}).get(project.id, "ok"),
+        latitude=project.latitude,
+        longitude=project.longitude,
     )
+
+
+def _favorite_ids(db: Session, user: User) -> set[int]:
+    return {
+        row.project_id
+        for row in db.query(Favorite.project_id).filter(Favorite.user_id == user.id).all()
+    }
 
 
 def _can_view_project(user: User, project: Project) -> bool:
@@ -83,7 +99,9 @@ def list_projects(
     elif user.role == UserRole.SITE_MANAGER:
         q = q.filter(Project.site_manager_id == user.id)
     projects = q.order_by(Project.delivery_date).all()
-    return [_project_to_card(p) for p in projects]
+    favorite_ids = _favorite_ids(db, user)
+    health_map = compute_health_for_projects(db, projects)
+    return [_project_to_card(p, favorite_ids, health_map) for p in projects]
 
 
 @router.get("/kanban")
@@ -99,15 +117,51 @@ def kanban_board(
     elif user.role == UserRole.SITE_MANAGER:
         q = q.filter(Project.site_manager_id == user.id)
     projects = q.all()
+    favorite_ids = _favorite_ids(db, user)
+    health_map = compute_health_for_projects(db, projects)
     board = {s.value: [] for s in ProjectStatus}
     for p in projects:
-        board[p.status.value].append(_project_to_card(p))
+        board[p.status.value].append(_project_to_card(p, favorite_ids, health_map))
     return board
+
+
+@router.post("/{project_id}/favorite")
+def add_favorite(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = db.query(Project).get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not _can_view_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    existing = db.query(Favorite).filter(
+        Favorite.user_id == user.id, Favorite.project_id == project_id
+    ).first()
+    if not existing:
+        db.add(Favorite(user_id=user.id, project_id=project_id))
+        db.commit()
+    return {"ok": True}
+
+
+@router.delete("/{project_id}/favorite")
+def remove_favorite(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    db.query(Favorite).filter(
+        Favorite.user_id == user.id, Favorite.project_id == project_id
+    ).delete()
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("", response_model=ProjectDetail)
 def create_project(
     body: ProjectCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER, UserRole.SITE_MANAGER)),
 ):
@@ -125,7 +179,9 @@ def create_project(
     log_change(db, user, "project", "created", None, project.name, project.id, project.id)
     db.commit()
     db.refresh(project)
-    return _get_project_detail(db, project.id)
+    if project.latitude is None and project.longitude is None:
+        background_tasks.add_task(geocode_project_in_background, project.id, project.settlement, project.address)
+    return _get_project_detail(db, project.id, user)
 
 
 @router.get("/{project_id}", response_model=ProjectDetail)
@@ -139,10 +195,10 @@ def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
     if not _can_view_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
-    return _get_project_detail(db, project_id)
+    return _get_project_detail(db, project_id, user)
 
 
-def _get_project_detail(db: Session, project_id: int) -> ProjectDetail:
+def _get_project_detail(db: Session, project_id: int, user: User | None = None) -> ProjectDetail:
     project = (
         db.query(Project)
         .options(
@@ -153,6 +209,16 @@ def _get_project_detail(db: Session, project_id: int) -> ProjectDetail:
         )
         .get(project_id)
     )
+    is_favorite = False
+    if user is not None:
+        is_favorite = (
+            db.query(Favorite)
+            .filter(Favorite.user_id == user.id, Favorite.project_id == project_id)
+            .first()
+            is not None
+        )
+    health = compute_health_for_projects(db, [project]).get(project.id, "ok")
+    delay_risk, delay_risk_reason = predict_delay_risk(db, project)
     return ProjectDetail(
         id=project.id,
         name=project.name,
@@ -167,6 +233,12 @@ def _get_project_detail(db: Session, project_id: int) -> ProjectDetail:
         project_manager_name=project.project_manager.full_name if project.project_manager else None,
         site_manager_name=project.site_manager.full_name if project.site_manager else None,
         has_thumbnail=project.has_thumbnail,
+        is_favorite=is_favorite,
+        health=health,
+        delay_risk=delay_risk,
+        delay_risk_reason=delay_risk_reason,
+        latitude=project.latitude,
+        longitude=project.longitude,
         address=project.address,
         lot_number=project.lot_number,
         client_phone=project.client_phone,
@@ -211,7 +283,7 @@ def update_project(
     if "delivery_date" in changed_fields:
         recalculate_schedule(db, project)
     db.commit()
-    return _get_project_detail(db, project_id)
+    return _get_project_detail(db, project_id, user)
 
 
 @router.delete("/{project_id}")

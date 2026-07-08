@@ -84,17 +84,43 @@ function matchesRange(item: PrepTask, from: string, to: string): boolean {
   return true;
 }
 
-type SortKey = "activity_name" | "project_name" | "date" | "responsible_role";
+type SortKey = "priority" | "activity_name" | "project_name" | "date" | "responsible_role";
 
 const SORT_COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "priority", label: "Prioritás" },
   { key: "activity_name", label: "Tevékenység" },
   { key: "project_name", label: "Projekt" },
   { key: "date", label: "Dátum" },
   { key: "responsible_role", label: "Felelős" },
 ];
 
+// Szabály-alapú "intelligens prioritás" — nincs LLM: lejárt feladatok mindig
+// a legelöl, utána a sürgősségi sáv (ma / 7 napon belül / később), azon
+// belül a felelős szerepkör súlyozásával (PM/vezetői szerepkörök előrébb).
+const ROLE_PRIORITY_WEIGHT: Record<string, number> = {
+  admin: 0,
+  management: 0,
+  project_manager: 1,
+  site_manager: 2,
+  procurement: 3,
+  billing: 3,
+  subcontractor: 3,
+};
+
+function urgencyTier(item: PrepTask): number {
+  if (item.is_overdue) return 0;
+  if (item.days_until === 0) return 1;
+  if (item.days_until != null && item.days_until <= 7) return 2;
+  return 3;
+}
+
+function priorityScore(item: PrepTask): number {
+  return urgencyTier(item) * 10 + (ROLE_PRIORITY_WEIGHT[item.responsible_role] ?? 3);
+}
+
 function sortValue(item: PrepTask, key: SortKey): string {
   switch (key) {
+    case "priority": return String(priorityScore(item)).padStart(4, "0");
     case "activity_name": return item.activity_name;
     case "project_name": return item.project_name;
     case "date": return taskDate(item) ?? "";
@@ -294,7 +320,7 @@ export default function MyTasksPage() {
   const [nameFilter, setNameFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortKey, setSortKey] = useState<SortKey>("priority");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   function load() {

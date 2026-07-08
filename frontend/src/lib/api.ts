@@ -24,9 +24,15 @@ export interface ProjectCard {
   project_manager_name?: string;
   site_manager_name?: string;
   has_thumbnail: boolean;
+  is_favorite: boolean;
+  health: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface ProjectDetail extends ProjectCard {
+  delay_risk: string;
+  delay_risk_reason: string;
   address: string;
   lot_number?: string;
   client_phone?: string;
@@ -80,12 +86,21 @@ export interface PrepTask {
   days_until?: number;
 }
 
+export interface WeeklyWorkloadItem {
+  week_start: string;
+  activity_count: number;
+}
+
 export interface DashboardStats {
   overdue_tasks: number;
   upcoming_prep_7d: number;
   upcoming_prep_14d: number;
   slipping_projects: number;
   total_projects: number;
+  on_time_delivery_pct: number;
+  handovers_this_month: number;
+  open_prep_tasks_total: number;
+  weekly_workload: WeeklyWorkloadItem[];
 }
 
 export interface ProjectDocument {
@@ -96,6 +111,33 @@ export interface ProjectDocument {
   file_size: number;
   version: number;
   created_at: string;
+}
+
+export interface ProjectPhoto {
+  id: number;
+  filename: string;
+  content_type: string;
+  file_size: number;
+  taken_at: string;
+  comment?: string;
+  uploaded_by_name?: string;
+  created_at: string;
+}
+
+export interface DigestPreview {
+  overdue: PrepTask[];
+  upcoming: PrepTask[];
+}
+
+export interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  body: string;
+  related_project_id?: number;
+  related_project_name?: string;
+  created_at: string;
+  read_at?: string;
 }
 
 export interface AuditLogEntry {
@@ -361,6 +403,40 @@ export const api = {
 
   deleteThumbnail: (projectId: number) =>
     request<{ ok: boolean }>(`/projects/${projectId}/thumbnail`, { method: "DELETE" }),
+
+  addFavorite: (projectId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/favorite`, { method: "POST" }),
+
+  removeFavorite: (projectId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/favorite`, { method: "DELETE" }),
+
+  photos: (projectId: number) => request<ProjectPhoto[]>(`/projects/${projectId}/photos`),
+
+  uploadPhoto: (projectId: number, file: File, takenAt: string, comment?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("taken_at", takenAt);
+    if (comment) formData.append("comment", comment);
+    return request<ProjectPhoto>(`/projects/${projectId}/photos`, { method: "POST", body: formData });
+  },
+
+  downloadPhoto: (projectId: number, photoId: number) =>
+    request<{ url: string }>(`/projects/${projectId}/photos/${photoId}/download`),
+
+  deletePhoto: (projectId: number, photoId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/photos/${photoId}`, { method: "DELETE" }),
+
+  notifications: () => request<Notification[]>("/notifications"),
+
+  markNotificationRead: (id: number) =>
+    request<{ ok: boolean }>(`/notifications/${id}/read`, { method: "POST" }),
+
+  markAllNotificationsRead: () =>
+    request<{ ok: boolean }>("/notifications/read-all", { method: "POST" }),
+
+  search: (q: string) => request<ProjectCard[]>(`/search?q=${encodeURIComponent(q)}`),
+
+  digestPreview: () => request<DigestPreview>("/notifications/digest-preview"),
 };
 
 export const STATUS_LABELS: Record<string, string> = {

@@ -15,7 +15,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  api: { me: vi.fn() },
+  api: { me: vi.fn(), notifications: vi.fn().mockResolvedValue([]), search: vi.fn().mockResolvedValue([]) },
   clearToken: vi.fn(),
   ROLE_LABELS: {
     admin: "Admin",

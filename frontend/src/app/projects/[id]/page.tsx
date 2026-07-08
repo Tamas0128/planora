@@ -2,21 +2,25 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Calendar, Download, Image as ImageIcon, Pencil, Plus, Upload, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { Calendar, Download, Image as ImageIcon, Pencil, Plus, QrCode, TriangleAlert, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import {
   Activity,
   api,
+  AuditLogEntry,
   BUILDING_LABELS,
   downloadFile,
   getCachedUser,
   ProjectDetail,
   ProjectDocument,
+  ProjectPhoto,
   ROLE_LABELS,
   STATUS_LABELS,
   User,
 } from "@/lib/api";
+import { HEALTH_CFG } from "@/lib/project-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -168,6 +173,63 @@ function ProjectThumbnail({
   );
 }
 
+function PhotoUploadForm({ onUpload }: { onUpload: (file: File, takenAt: string, comment: string) => Promise<void> }) {
+  const [takenAt, setTakenAt] = useState(new Date().toISOString().split("T")[0]);
+  const [comment, setComment] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      await onUpload(file, takenAt, comment);
+      setComment("");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="space-y-1">
+        <Label htmlFor="photo-taken-at" className="text-[11px]">Dátum</Label>
+        <input
+          id="photo-taken-at"
+          type="date"
+          value={takenAt}
+          onChange={(e) => setTakenAt(e.target.value)}
+          className="block h-8 rounded border border-slate-200 bg-transparent px-2 text-xs focus:border-blue-500 focus:outline-none"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="photo-comment" className="text-[11px]">Megjegyzés</Label>
+        <Input
+          id="photo-comment"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          className="h-8 w-48 text-xs"
+          placeholder="Opcionális"
+        />
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture="environment"
+        className="hidden"
+        onChange={handleFile}
+      />
+      <Button type="button" size="sm" disabled={uploading} onClick={() => inputRef.current?.click()}>
+        <Upload className="size-3.5" />
+        {uploading ? "Feltöltés..." : "Fotó feltöltése"}
+      </Button>
+    </div>
+  );
+}
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -175,11 +237,16 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
+  const [photos, setPhotos] = useState<ProjectPhoto[]>([]);
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   // Initialise synchronously from cache so canEdit is true on first render
   // when AppLayout already resolved /auth/me (avoids a flash of read-only UI).
   const [me, setMe] = useState<User | null>(() => getCachedUser());
-  const [tab, setTab] = useState<"info" | "schedule" | "documents">("info");
+  const [tab, setTab] = useState<
+    "info" | "schedule" | "documents" | "photos" | "prep" | "participants" | "log"
+  >("info");
+  const [prepFilter, setPrepFilter] = useState<"all" | "overdue" | "today" | "7d" | "14d">("all");
   const [editing, setEditing] = useState(false);
   const [scheduleEditing, setScheduleEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string | number>>({});
@@ -196,12 +263,20 @@ export default function ProjectDetailPage() {
   function loadDocuments() {
     api.documents(id).then(setDocuments).catch(console.error);
   }
+  function loadPhotos() {
+    api.photos(id).then(setPhotos).catch(console.error);
+  }
+  function loadAuditLog() {
+    api.auditLogs(id).then(setAuditLog).catch(console.error);
+  }
 
   useEffect(() => {
     if (!id) return;
     loadProject();
     loadActivities();
     loadDocuments();
+    loadPhotos();
+    loadAuditLog();
     api.me().then(setMe).catch(() => setMe(null));
     api.users().then(setUsers).catch(() => setUsers([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -309,6 +384,40 @@ export default function ProjectDetailPage() {
     try {
       await api.deleteDocument(id, documentId);
       loadDocuments();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
+    }
+  }
+
+  async function handlePhotoUpload(file: File, takenAt: string, comment: string) {
+    try {
+      await api.uploadPhoto(id, file, takenAt, comment || undefined);
+      loadPhotos();
+      toast.success("Fotó feltöltve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Feltöltés sikertelen");
+    }
+  }
+
+  async function handlePhotoDownload(photoId: number) {
+    const tab = window.open("", "_blank");
+    if (!tab) {
+      toast.error("A böngésző blokkolta a felugró ablakot. Engedélyezd a felugró ablakokat ehhez az oldalhoz, majd próbáld újra.");
+      return;
+    }
+    try {
+      const { url } = await api.downloadPhoto(id, photoId);
+      tab.location.href = url;
+    } catch (err) {
+      tab.close();
+      toast.error(err instanceof Error ? err.message : "Hiba a letöltés során");
+    }
+  }
+
+  async function handleDeletePhoto(photoId: number) {
+    try {
+      await api.deletePhoto(id, photoId);
+      loadPhotos();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
     }
@@ -466,9 +575,13 @@ export default function ProjectDetailPage() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
-          <TabsTrigger value="info">Adatlap</TabsTrigger>
+          <TabsTrigger value="info">Áttekintés</TabsTrigger>
           <TabsTrigger value="schedule">Ütemterv</TabsTrigger>
           <TabsTrigger value="documents">Dokumentumok</TabsTrigger>
+          <TabsTrigger value="photos">Fotók</TabsTrigger>
+          <TabsTrigger value="prep">Előkészítés</TabsTrigger>
+          <TabsTrigger value="participants">Résztvevők</TabsTrigger>
+          <TabsTrigger value="log">Napló</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="mt-4">
@@ -506,6 +619,62 @@ export default function ProjectDetailPage() {
                   </AlertDialog>
                 </div>
               )}
+              <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Card className="p-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Készültség</p>
+                  <p className="mt-0.5 text-lg font-bold text-slate-900">{project.completion_percent}%</p>
+                </Card>
+                <Card className="p-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Mai feladatok</p>
+                  <p className="mt-0.5 text-lg font-bold text-slate-900">
+                    {activities.filter((a) => a.is_active && a.start_date?.slice(0, 10) === new Date().toISOString().split("T")[0]).length}
+                  </p>
+                </Card>
+                <Card className="p-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Késő feladatok</p>
+                  <p className="mt-0.5 text-lg font-bold text-slate-900">
+                    {activities.filter((a) => a.is_active && a.prep_date && a.prep_date < new Date().toISOString().split("T")[0] && a.status !== "done").length}
+                  </p>
+                </Card>
+                <Card className="p-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Dok. / Fotó</p>
+                  <p className="mt-0.5 text-lg font-bold text-slate-900">{documents.length} / {photos.length}</p>
+                </Card>
+              </div>
+
+              {project.delay_risk !== "ok" && (
+                <Card className={cn("mb-3 flex items-start gap-2 p-3", HEALTH_CFG[project.delay_risk]?.badge)}>
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                  <div>
+                    <p className="text-[12px] font-semibold">
+                      Késés-előrejelzés: {HEALTH_CFG[project.delay_risk]?.label ?? project.delay_risk}
+                    </p>
+                    <p className="mt-0.5 text-[11px] opacity-90">{project.delay_risk_reason}</p>
+                  </div>
+                </Card>
+              )}
+
+              <div className="mb-3">
+                <Dialog>
+                  <DialogTrigger render={<Button variant="outline" size="sm" />}>
+                    <QrCode className="size-3.5" /> QR-kód
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-xs">
+                    <DialogHeader>
+                      <DialogTitle>{project.name}</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center gap-2 py-2">
+                      {typeof window !== "undefined" && (
+                        <QRCodeSVG value={window.location.href} size={200} />
+                      )}
+                      <p className="text-center text-[11px] text-muted-foreground">
+                        Beolvasva a projekt gyorsan megnyitható helyszíni mobil eszközön.
+                      </p>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Card className="p-3">
                   <h3 className="mb-2 text-[13px] font-semibold">Projekt adatok</h3>
@@ -516,7 +685,6 @@ export default function ProjectDetailPage() {
                     <div className="flex justify-between"><dt className="text-muted-foreground">Épülettípus</dt><dd>{BUILDING_LABELS[project.building_type]}</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">Alapterület</dt><dd>{project.floor_area_sqm} m²</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">Átadás</dt><dd>{new Date(project.delivery_date).toLocaleDateString("hu-HU")}</dd></div>
-                    <div className="flex justify-between"><dt className="text-muted-foreground">Készültség</dt><dd>{project.completion_percent}%</dd></div>
                   </dl>
                 </Card>
                 <Card className="p-3">
@@ -526,21 +694,6 @@ export default function ProjectDetailPage() {
                     <div className="flex justify-between"><dt className="text-muted-foreground">Telefon</dt><dd>{project.client_phone || "—"}</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">E-mail</dt><dd>{project.client_email || "—"}</dd></div>
                   </dl>
-                </Card>
-                <Card className="p-3 md:col-span-2">
-                  <h3 className="mb-2 text-[13px] font-semibold">Résztvevők</h3>
-                  <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                    <div><dt className="text-muted-foreground">Projektmenedzser</dt><dd>{project.project_manager_name || "—"}</dd></div>
-                    <div><dt className="text-muted-foreground">Építésvezető</dt><dd>{project.site_manager_name || "—"}</dd></div>
-                    <div><dt className="text-muted-foreground">Beszerzés</dt><dd>{project.procurement_name || "—"}</dd></div>
-                    <div><dt className="text-muted-foreground">Számlázás</dt><dd>{project.billing_name || "—"}</dd></div>
-                  </dl>
-                  {project.subcontractors && (
-                    <div className="mt-2 text-xs">
-                      <dt className="text-muted-foreground">Alvállalkozók</dt>
-                      <dd className="mt-1 whitespace-pre-wrap">{project.subcontractors}</dd>
-                    </div>
-                  )}
                 </Card>
               </div>
             </div>
@@ -1009,6 +1162,185 @@ export default function ProjectDetailPage() {
                     <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                       Nincs feltöltött dokumentum
                     </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="photos" className="mt-3">
+          <Card className="p-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-[13px] font-semibold">Fotónapló</h3>
+              {canEdit && <PhotoUploadForm onUpload={handlePhotoUpload} />}
+            </div>
+            {photos.length === 0 ? (
+              <p className="py-8 text-center text-xs text-muted-foreground">Nincs feltöltött fotó</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {photos.map((photo) => (
+                  <div key={photo.id} className="group relative overflow-hidden rounded-lg border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => handlePhotoDownload(photo.id)}
+                      className="flex aspect-square w-full items-center justify-center bg-slate-50"
+                      title="Megnyitás"
+                    >
+                      <ImageIcon className="size-8 text-slate-300" />
+                    </button>
+                    <div className="p-2">
+                      <p className="text-[11px] font-semibold text-slate-700">
+                        {new Date(photo.taken_at).toLocaleDateString("hu-HU")}
+                      </p>
+                      {photo.comment && <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{photo.comment}</p>}
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">{photo.uploaded_by_name || "—"} · {formatBytes(photo.file_size)}</p>
+                    </div>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePhoto(photo.id)}
+                        aria-label="Fotó törlése"
+                        className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-slate-500 opacity-0 shadow-sm hover:text-destructive group-hover:opacity-100"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="prep" className="mt-3">
+          <Card className="p-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-[13px] font-semibold">Előkészítés</h3>
+              <div className="flex gap-1">
+                {([
+                  ["all", "Mind"], ["overdue", "Lejárt"], ["today", "Mai"], ["7d", "7 napon belül"], ["14d", "14 napon belül"],
+                ] as const).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    size="sm"
+                    variant={prepFilter === value ? "default" : "outline"}
+                    onClick={() => setPrepFilter(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            {(() => {
+              const now = new Date();
+              const today = now.toISOString().split("T")[0];
+              const in7 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7).toISOString().split("T")[0];
+              const in14 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 14).toISOString().split("T")[0];
+              const prepItems = activities.filter((a) => {
+                if (!a.is_active || !a.prep_date) return false;
+                const d = a.prep_date.slice(0, 10);
+                if (prepFilter === "overdue") return d < today;
+                if (prepFilter === "today") return d === today;
+                if (prepFilter === "7d") return d >= today && d <= in7;
+                if (prepFilter === "14d") return d >= today && d <= in14;
+                return true;
+              });
+              return (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tevékenység</TableHead>
+                      <TableHead>Felelős</TableHead>
+                      <TableHead>Előkészítés dátuma</TableHead>
+                      <TableHead>Kezdés</TableHead>
+                      <TableHead>Állapot</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {prepItems.map((a) => (
+                      <TableRow key={a.id}>
+                        <TableCell className="font-medium text-xs">{a.name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{ROLE_LABELS[a.responsible_role] || a.responsible_role}</TableCell>
+                        <TableCell className={cn("text-xs", a.prep_date && a.prep_date.slice(0, 10) < today && "font-semibold text-red-500")}>
+                          {a.prep_date ? new Date(a.prep_date).toLocaleDateString("hu-HU") : "—"}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {a.start_date ? new Date(a.start_date).toLocaleDateString("hu-HU") : "—"}
+                        </TableCell>
+                        <TableCell className={`text-xs font-medium ${ACTIVITY_STATUS_COLOR[a.status]}`}>
+                          {ACTIVITY_STATUS_OPTIONS.find(([v]) => v === a.status)?.[1] ?? a.status}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {prepItems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Nincs találat</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              );
+            })()}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="participants" className="mt-3">
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Résztvevők</h3>
+              {canEdit && (
+                <Button size="sm" variant="outline" onClick={() => { startEdit(); setTab("info"); }}>
+                  <Pencil className="size-3.5" /> Szerkesztés
+                </Button>
+              )}
+            </div>
+            <dl className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+              <div><dt className="text-muted-foreground">Projektmenedzser</dt><dd className="mt-0.5 font-medium">{project.project_manager_name || "—"}</dd></div>
+              <div><dt className="text-muted-foreground">Építésvezető</dt><dd className="mt-0.5 font-medium">{project.site_manager_name || "—"}</dd></div>
+              <div><dt className="text-muted-foreground">Beszerzés</dt><dd className="mt-0.5 font-medium">{project.procurement_name || "—"}</dd></div>
+              <div><dt className="text-muted-foreground">Számlázás</dt><dd className="mt-0.5 font-medium">{project.billing_name || "—"}</dd></div>
+            </dl>
+            {project.subcontractors && (
+              <div className="mt-3 border-t pt-3 text-xs">
+                <dt className="text-muted-foreground">Alvállalkozók</dt>
+                <dd className="mt-1 whitespace-pre-wrap">{project.subcontractors}</dd>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="log" className="mt-3">
+          <Card className="py-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Időpont</TableHead>
+                  <TableHead>Felhasználó</TableHead>
+                  <TableHead>Mező</TableHead>
+                  <TableHead>Régi érték</TableHead>
+                  <TableHead>Új érték</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {auditLog.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(entry.created_at).toLocaleString("hu-HU")}
+                    </TableCell>
+                    <TableCell className="text-xs">{entry.user_name || "—"}</TableCell>
+                    <TableCell className="text-xs">{entry.field_name}</TableCell>
+                    <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground" title={entry.old_value ?? undefined}>
+                      {entry.old_value ?? "—"}
+                    </TableCell>
+                    <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground" title={entry.new_value ?? undefined}>
+                      {entry.new_value ?? "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {auditLog.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Nincs napló bejegyzés</TableCell>
                   </TableRow>
                 )}
               </TableBody>

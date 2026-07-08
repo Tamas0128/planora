@@ -127,6 +127,8 @@ class Project(Base):
     )
     subcontractors: Mapped[str | None] = mapped_column(Text, nullable=True)
     thumbnail_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -143,6 +145,9 @@ class Project(Base):
         back_populates="project", cascade="all, delete-orphan"
     )
     documents: Mapped[list["Document"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+    photos: Mapped[list["Photo"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="project")
@@ -247,6 +252,59 @@ class Document(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     project: Mapped["Project"] = relationship(back_populates="documents")
+
+
+class Photo(Base):
+    __tablename__ = "photos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    filename: Mapped[str] = mapped_column(String(500))
+    content_type: Mapped[str] = mapped_column(String(100))
+    file_size: Mapped[int] = mapped_column(Integer)
+    s3_key: Mapped[str] = mapped_column(String(1000))
+    taken_at: Mapped[date] = mapped_column(Date)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    uploaded_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    project: Mapped["Project"] = relationship(back_populates="photos")
+    uploaded_by: Mapped["User"] = relationship()
+
+
+class NotificationType(str, enum.Enum):
+    OVERDUE_TASK = "overdue_task"
+    UPCOMING_PREP = "upcoming_prep"
+    SLIPPING_PROJECT = "slipping_project"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    type: Mapped[NotificationType] = mapped_column(Enum(NotificationType))
+    title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column(Text)
+    related_project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    related_project: Mapped["Project | None"] = relationship()
+
+
+class Favorite(Base):
+    __tablename__ = "favorites"
+    __table_args__ = (
+        UniqueConstraint("user_id", "project_id", name="uq_favorite_user_project"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class AuditLog(Base):

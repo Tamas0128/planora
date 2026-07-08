@@ -31,3 +31,9 @@ export const STATUS_CFG: Record<string, {
 };
 
 export const DEFAULT_CFG = STATUS_CFG.planning;
+
+export const HEALTH_CFG: Record<string, { label: string; badge: string; dot: string }> = {
+  ok:       { label: "Rendben",    badge: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+  warning:  { label: "Figyelendő", badge: "bg-amber-50 text-amber-700",     dot: "bg-amber-500" },
+  critical: { label: "Kritikus",   badge: "bg-red-50 text-red-700",         dot: "bg-red-500" },
+};

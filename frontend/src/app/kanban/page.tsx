@@ -10,13 +10,14 @@ import {
   Package,
   Plus,
   Search,
+  Star,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import { NewProjectDialog } from "@/components/NewProjectDialog";
 import { api, BUILDING_LABELS, ProjectCard, STATUS_LABELS } from "@/lib/api";
-import { clampPercent, DEFAULT_CFG, isLate, pmInitials, STATUS_CFG, STATUS_ORDER } from "@/lib/project-utils";
+import { clampPercent, DEFAULT_CFG, HEALTH_CFG, isLate, pmInitials, STATUS_CFG, STATUS_ORDER } from "@/lib/project-utils";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -47,12 +48,14 @@ function CardThumbnail({ projectId, hasThumbnail }: { projectId: number; hasThum
 }
 
 function KanbanCard({
-  project, status, selected, onClick,
+  project, status, selected, onClick, onToggleFavorite,
 }: {
   project: ProjectCard; status: string; selected: boolean; onClick: () => void;
+  onToggleFavorite: (e: React.MouseEvent) => void;
 }) {
   const late = isLate(project.delivery_date);
   const cfg = STATUS_CFG[status] ?? DEFAULT_CFG;
+  const healthCfg = HEALTH_CFG[project.health] ?? HEALTH_CFG.ok;
   const initials = pmInitials(project.project_manager_name);
   const pct = clampPercent(project.completion_percent);
 
@@ -76,9 +79,19 @@ function KanbanCard({
           <h4 className="text-[13px] font-semibold leading-snug text-slate-900">{project.name}</h4>
           <p className="mt-0.5 truncate text-[11px] text-slate-500">{project.settlement} · {project.client_name}</p>
         </div>
+        <button
+          type="button"
+          aria-label={project.is_favorite ? "Kedvenc eltávolítása" : "Kedvencnek jelölés"}
+          onClick={onToggleFavorite}
+          className="shrink-0 text-slate-300 hover:text-amber-400"
+        >
+          <Star className={cn("size-3.5", project.is_favorite && "fill-amber-400 text-amber-400")} />
+        </button>
       </div>
-      {late && (
-        <span className="mt-1.5 inline-block rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">Késik</span>
+      {project.health !== "ok" && (
+        <span className={cn("mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold", healthCfg.badge)}>
+          {healthCfg.label}
+        </span>
       )}
       <div className="mt-2 flex items-center justify-between">
         <div className={cn("flex items-center gap-1 text-[11px]", late ? "text-red-400" : "text-slate-400")}>
@@ -101,6 +114,7 @@ function KanbanCard({
 function RightPanel({ project, onClose, onOpen }: { project: ProjectCard; onClose: () => void; onOpen: () => void }) {
   const late = isLate(project.delivery_date);
   const cfg = STATUS_CFG[project.status] ?? DEFAULT_CFG;
+  const healthCfg = HEALTH_CFG[project.health] ?? HEALTH_CFG.ok;
   const initials = pmInitials(project.project_manager_name);
   const pct = clampPercent(project.completion_percent);
 
@@ -112,7 +126,9 @@ function RightPanel({ project, onClose, onOpen }: { project: ProjectCard; onClos
             <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", cfg.badge)}>
               {STATUS_LABELS[project.status]}
             </span>
-            {late && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">Késik</span>}
+            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", healthCfg.badge)}>
+              {healthCfg.label}
+            </span>
           </div>
           <h2 className="text-[14px] font-bold leading-snug text-slate-900">{project.name}</h2>
           <p className="mt-0.5 text-[11px] text-slate-400">{project.project_code}</p>
@@ -198,17 +214,40 @@ export default function KanbanPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  async function toggleFavorite(e: React.MouseEvent, project: ProjectCard) {
+    e.stopPropagation();
+    const next = !project.is_favorite;
+    setBoard((prev) => ({
+      ...prev,
+      [project.status]: (prev[project.status] ?? []).map((p) =>
+        p.id === project.id ? { ...p, is_favorite: next } : p
+      ),
+    }));
+    try {
+      if (next) await api.addFavorite(project.id);
+      else await api.removeFavorite(project.id);
+    } catch (err) {
+      setBoard((prev) => ({
+        ...prev,
+        [project.status]: (prev[project.status] ?? []).map((p) =>
+          p.id === project.id ? { ...p, is_favorite: !next } : p
+        ),
+      }));
+      toast.error(err instanceof Error ? err.message : "Hiba a kedvenc jelölése során");
+    }
+  }
+
   const q = search.toLowerCase();
 
   const pageHeader = (
-    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-slate-100 bg-white px-4">
+    <header className="sticky top-0 z-20 flex h-auto min-h-12 shrink-0 flex-wrap items-center gap-2.5 border-b border-slate-100 bg-white px-4 py-2">
       <SidebarTrigger className="text-slate-400 hover:text-slate-700" />
       <div className="h-5 w-px bg-slate-100" />
       <h1 className="text-[14px] font-bold tracking-tight text-slate-900">Kanban tábla</h1>
-      <button className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-600 hover:bg-slate-50">
+      <button className="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-600 hover:bg-slate-50 sm:flex">
         Minden projekt <ChevronDown className="size-3.5 text-slate-400" />
       </button>
-      <div className="flex-1" />
+      <div className="hidden flex-1 sm:block" />
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
         <input
@@ -216,7 +255,7 @@ export default function KanbanPage() {
           placeholder="Keresés…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-8 w-52 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none"
+          className="h-8 w-32 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none sm:w-52"
         />
       </div>
       <Button size="sm" onClick={() => setShowNew(true)} className="h-8 gap-1.5 text-[13px] font-semibold">
@@ -260,6 +299,7 @@ export default function KanbanPage() {
                           status={status}
                           selected={selected?.id === p.id}
                           onClick={() => setSelected(selected?.id === p.id ? null : p)}
+                          onToggleFavorite={(e) => toggleFavorite(e, p)}
                         />
                       ))}
                       {cards.length === 0 && (

@@ -2,13 +2,31 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Building2, Clock, Gauge, TrendingDown } from "lucide-react";
+import { ArrowUpRight, Building2, Clock, Gauge, GripVertical, Star, TrendingDown } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import {
   api,
   AuditLogEntry,
   DashboardStats,
+  DigestPreview,
   PrepTask,
   ProjectCard,
 } from "@/lib/api";
@@ -32,6 +50,38 @@ const TASK_STATUS: Record<string, { label: string; cls: string }> = {
   done:        { label: "Kész",        cls: "bg-emerald-100 text-emerald-700" },
   blocked:     { label: "Blokkolt",    cls: "bg-red-100 text-red-700" },
 };
+
+const WIDGET_ORDER_KEY = "planora_dashboard_widget_order";
+const DEFAULT_WIDGET_ORDER = ["status", "upcoming", "tasks", "favorites", "digest", "gantt", "log"];
+const WIDGET_SPAN: Record<string, string> = {
+  status: "lg:col-span-4",
+  upcoming: "lg:col-span-5",
+  tasks: "lg:col-span-3",
+  favorites: "lg:col-span-4",
+  digest: "lg:col-span-4",
+  gantt: "lg:col-span-8",
+  log: "lg:col-span-5",
+};
+
+function loadWidgetOrder(): string[] {
+  if (typeof window === "undefined") return DEFAULT_WIDGET_ORDER;
+  try {
+    const raw = window.localStorage.getItem(WIDGET_ORDER_KEY);
+    if (!raw) return DEFAULT_WIDGET_ORDER;
+    const parsed = JSON.parse(raw) as string[];
+    // Guard against a stale saved order missing/adding widgets after an update.
+    if (
+      Array.isArray(parsed) &&
+      parsed.length === DEFAULT_WIDGET_ORDER.length &&
+      DEFAULT_WIDGET_ORDER.every((id) => parsed.includes(id))
+    ) {
+      return parsed;
+    }
+  } catch {
+    // fall through to default
+  }
+  return DEFAULT_WIDGET_ORDER;
+}
 
 /* ─── CSS donut chart ────────────────────────────────────────── */
 function DonutChart({ segments, total }: { segments: { color: string; pct: number }[]; total: number }) {
@@ -77,6 +127,30 @@ function StatCard({
   );
 }
 
+/* ─── Drag handle wrapper ─────────────────────────────────────── */
+function SortableWidget({ id, className, children }: { id: string; className?: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className={cn("relative", className)}>
+      <button
+        {...attributes}
+        {...listeners}
+        type="button"
+        aria-label="Widget áthelyezése"
+        className="absolute right-2 top-2 z-10 cursor-grab touch-none rounded p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-500 active:cursor-grabbing"
+      >
+        <GripVertical className="size-3.5" />
+      </button>
+      {children}
+    </div>
+  );
+}
+
 /* ─── Fő oldal ───────────────────────────────────────────────── */
 export default function DashboardPage() {
   const [stats, setStats]       = useState<DashboardStats | null>(null);
@@ -84,7 +158,14 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectCard[]>([]);
   const [tasks, setTasks]       = useState<PrepTask[]>([]);
   const [logs, setLogs]         = useState<AuditLogEntry[]>([]);
+  const [digest, setDigest]     = useState<DigestPreview | null>(null);
   const [me, setMe]             = useState<{ full_name: string } | null>(null);
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(loadWidgetOrder);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     api.dashboardStats().then(setStats).catch(console.error);
@@ -93,7 +174,20 @@ export default function DashboardPage() {
     api.prepCenter("all").then(setTasks).catch(console.error);
     api.auditLogs().then((l) => setLogs(l.slice(0, 10))).catch(console.error);
     api.me().then(setMe).catch(console.error);
+    api.digestPreview().then(setDigest).catch(console.error);
   }, []);
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setWidgetOrder((prev) => {
+      const oldIndex = prev.indexOf(String(active.id));
+      const newIndex = prev.indexOf(String(over.id));
+      const next = arrayMove(prev, oldIndex, newIndex);
+      window.localStorage.setItem(WIDGET_ORDER_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
 
   /* Donut adatok */
   const total = Object.values(kanban).reduce((s, col) => s + col.length, 0);
@@ -117,6 +211,8 @@ export default function DashboardPage() {
     [projects],
   );
 
+  const favoriteProjects = useMemo(() => projects.filter((p) => p.is_favorite), [projects]);
+
   /* Feladatok */
   const overdueTasks = tasks.filter((t) => t.is_overdue).slice(0, 5);
   const activeTasks  = tasks.filter((t) => !t.is_overdue).slice(0, 6);
@@ -137,6 +233,262 @@ export default function DashboardPage() {
       });
   }, [projects]);
 
+  const widgetContent: Record<string, React.ReactNode> = {
+    status: (
+      <Card className="h-full overflow-hidden py-0">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <h2 className="text-[13px] font-semibold text-slate-800">Projekt áttekintő</h2>
+          <Link href="/projects" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
+            Összes <ArrowUpRight className="size-3" />
+          </Link>
+        </div>
+        <div className="p-3">
+          <DonutChart segments={donutSegments} total={total} />
+          <div className="mt-3 space-y-1.5">
+            {STATUS_ORDER.map((key) => {
+              const count = kanban[key]?.length ?? 0;
+              const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
+              return (
+                <div key={key} className="flex items-center gap-2 text-[11px]">
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: STATUS_CFG[key].dot }} />
+                  <span className="flex-1 text-slate-600">{STATUS_CFG[key].label}</span>
+                  <span className="font-semibold text-slate-700">{count}</span>
+                  <span className="w-8 text-right text-slate-400">{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
+    ),
+    upcoming: (
+      <Card className="h-full overflow-hidden py-0">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <h2 className="text-[13px] font-semibold text-slate-800">Közelgő projektek</h2>
+          <Link href="/projects" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
+            Mind <ArrowUpRight className="size-3" />
+          </Link>
+        </div>
+        <div className="divide-y divide-slate-50">
+          {upcomingProjects.length === 0 ? (
+            <p className="py-6 text-center text-xs text-slate-400">Nincs projekt</p>
+          ) : (
+            upcomingProjects.map((p) => {
+              const isLate = new Date(p.delivery_date) < new Date();
+              return (
+                <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-semibold text-slate-800">{p.name}</p>
+                    <p className="truncate text-[10px] text-slate-400">{p.project_manager_name ?? "—"}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className={cn("text-[10px] font-semibold", isLate ? "text-red-500" : "text-slate-500")}>
+                      {new Date(p.delivery_date).toLocaleDateString("hu-HU")}
+                    </span>
+                    <Badge className="px-1.5 py-0 text-[9px] bg-slate-100 text-slate-600">
+                      {p.completion_percent}%
+                    </Badge>
+                    {isLate && (
+                      <Badge className="px-1.5 py-0 text-[9px] bg-red-100 text-red-600">Késik</Badge>
+                    )}
+                  </div>
+                </Link>
+              );
+            })
+          )}
+        </div>
+      </Card>
+    ),
+    tasks: (
+      <Card className="h-full overflow-hidden py-0">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <h2 className="text-[13px] font-semibold text-slate-800">Közelgő feladatok</h2>
+          <Link href="/my-tasks" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
+            Mind <ArrowUpRight className="size-3" />
+          </Link>
+        </div>
+        {overdueTasks.length > 0 && (
+          <div className="border-b border-red-100 bg-red-50/60 px-3 py-1">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-red-500">Lejárt · {overdueTasks.length}</p>
+          </div>
+        )}
+        <div className="divide-y divide-slate-50">
+          {[...overdueTasks, ...activeTasks].map((t) => (
+            <Link
+              key={`${t.project_id}-${t.activity_id}`}
+              href={`/projects/${t.project_id}`}
+              className={cn(
+                "flex items-start gap-2 px-2.5 py-1.5 hover:bg-slate-50 transition-colors",
+                t.is_overdue ? "border-l-[2px] border-l-red-400" : "border-l-[2px] border-l-slate-200",
+              )}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] font-semibold text-slate-700">{t.activity_name}</p>
+                <p className="truncate text-[10px] text-slate-400">{t.project_name}</p>
+              </div>
+              <Badge className={cn("mt-0.5 shrink-0 px-1.5 py-0 text-[9px]", TASK_STATUS[t.status]?.cls ?? "bg-slate-100 text-slate-600")}>
+                {TASK_STATUS[t.status]?.label ?? t.status}
+              </Badge>
+            </Link>
+          ))}
+          {tasks.length === 0 && (
+            <p className="py-6 text-center text-xs text-slate-400">Nincs feladat</p>
+          )}
+        </div>
+      </Card>
+    ),
+    favorites: (
+      <Card className="h-full overflow-hidden py-0">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <h2 className="text-[13px] font-semibold text-slate-800">Kedvencek</h2>
+          <Star className="size-3.5 fill-amber-400 text-amber-400" />
+        </div>
+        <div className="divide-y divide-slate-50">
+          {favoriteProjects.length === 0 ? (
+            <p className="py-6 text-center text-xs text-slate-400">Nincs kedvencnek jelölt projekt</p>
+          ) : (
+            favoriteProjects.map((p) => (
+              <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-semibold text-slate-800">{p.name}</p>
+                  <p className="truncate text-[10px] text-slate-400">{p.settlement} · {p.client_name}</p>
+                </div>
+                <Badge className="px-1.5 py-0 text-[9px] bg-slate-100 text-slate-600">{p.completion_percent}%</Badge>
+              </Link>
+            ))
+          )}
+        </div>
+      </Card>
+    ),
+    digest: (
+      <Card className="h-full overflow-hidden py-0">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <h2 className="text-[13px] font-semibold text-slate-800">Napi összefoglaló</h2>
+        </div>
+        <div className="max-h-[280px] space-y-3 overflow-y-auto p-3">
+          {!digest || (digest.overdue.length === 0 && digest.upcoming.length === 0) ? (
+            <p className="py-6 text-center text-xs text-slate-400">Nincs lejárt vagy közelgő előkészítés</p>
+          ) : (
+            <>
+              {digest.overdue.length > 0 && (
+                <div>
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-red-500">
+                    Lejárt előkészítések · {digest.overdue.length}
+                  </p>
+                  <ul className="space-y-1">
+                    {digest.overdue.slice(0, 5).map((t) => (
+                      <li key={`${t.project_id}-${t.activity_id}`}>
+                        <Link href={`/projects/${t.project_id}`} className="text-[11px] text-slate-700 hover:underline">
+                          {t.project_name} / {t.activity_name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {digest.upcoming.length > 0 && (
+                <div>
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-amber-500">
+                    Közelgő előkészítések (7 napon belül) · {digest.upcoming.length}
+                  </p>
+                  <ul className="space-y-1">
+                    {digest.upcoming.slice(0, 5).map((t) => (
+                      <li key={`${t.project_id}-${t.activity_id}`}>
+                        <Link href={`/projects/${t.project_id}`} className="text-[11px] text-slate-700 hover:underline">
+                          {t.project_name} / {t.activity_name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </Card>
+    ),
+    gantt: (
+      <Card className="h-full overflow-hidden py-0">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <h2 className="text-[13px] font-semibold text-slate-800">Ütemterv áttekintő</h2>
+          <span className="text-[10px] text-slate-400">következő 90 nap</span>
+        </div>
+        <div className="p-3">
+          <div className="mb-1.5 ml-[124px] flex text-[9px] text-slate-400">
+            <span className="flex-1 text-left">Ma</span>
+            <span className="flex-1 text-center">+30 nap</span>
+            <span className="flex-1 text-center">+60 nap</span>
+            <span className="flex-1 text-right">+90 nap</span>
+          </div>
+          <div className="space-y-1.5">
+            {ganttProjects.length === 0 ? (
+              <p className="py-6 text-center text-xs text-slate-400">Nincs közelgő projekt</p>
+            ) : (
+              ganttProjects.map((p) => (
+                <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 group">
+                  <span className="w-[120px] shrink-0 truncate text-[11px] text-slate-600 group-hover:text-slate-900">
+                    {p.name}
+                  </span>
+                  <div className="relative flex-1 h-4 rounded-full bg-slate-100">
+                    <div
+                      className={cn("h-full rounded-full transition-all", p.barColor)}
+                      style={{ width: `${p.pct}%` }}
+                      title={`${p.days} nap múlva`}
+                    />
+                    <span className="absolute right-1.5 top-0 flex h-full items-center text-[9px] font-semibold text-white mix-blend-overlay">
+                      {p.days}n
+                    </span>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+      </Card>
+    ),
+    log: (
+      <Card className="h-full overflow-hidden py-0">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <h2 className="text-[13px] font-semibold text-slate-800">Legutóbbi tevékenységek</h2>
+          <Link href="/audit-log" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
+            Napló <ArrowUpRight className="size-3" />
+          </Link>
+        </div>
+        <div className="divide-y divide-slate-50">
+          {logs.length === 0 ? (
+            <p className="py-6 text-center text-xs text-slate-400">Nincs tevékenység</p>
+          ) : (
+            logs.map((log) => (
+              <div key={log.id} className="flex items-start gap-2 px-3 py-1.5">
+                <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-[9px] font-bold text-green-700">
+                  {(log.user_name ?? "?")[0].toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-slate-700">
+                    <span className="font-semibold">{log.user_name ?? "Ismeretlen"}</span>
+                    {" módosította: "}
+                    <span className="text-slate-500">{log.field_name}</span>
+                    {log.project_name && (
+                      <>
+                        {" — "}
+                        <Link href={`/projects/${log.project_id}`} className="text-green-700 hover:underline">
+                          {log.project_name}
+                        </Link>
+                      </>
+                    )}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {new Date(log.created_at).toLocaleString("hu-HU", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+    ),
+  };
+
   return (
     <AppLayout>
       {/* ── Fejléc ── */}
@@ -150,204 +502,43 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 4 Stat kártya ── */}
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="mb-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <StatCard label="Aktív projekt"      value={stats?.total_projects ?? null}    sub="Összesen"            icon={Building2}    iconBg="bg-blue-50"   iconColor="text-blue-600"   href="/projects" />
         <StatCard label="Lejárt feladat"     value={stats?.overdue_tasks ?? null}     sub="Azonnal"             icon={Clock}        iconBg="bg-red-50"    iconColor="text-red-600"    href="/prep-center?filter=overdue" />
         <StatCard label="Csúszó projekt"     value={stats?.slipping_projects ?? null} sub="Határidőn túl"       icon={TrendingDown} iconBg="bg-amber-50"  iconColor="text-amber-600"  href="/projects" />
         <StatCard label="Átlag teljesítmény" value={avgCompletion !== null ? `${avgCompletion}%` : null} sub="Összesen" icon={Gauge} iconBg="bg-green-50" iconColor="text-green-600" href="/projects" />
       </div>
 
-      {/* ── Középső sor ── */}
-      <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-12">
-
-        {/* Projekt áttekintő – donut + lista */}
-        <Card className="overflow-hidden py-0 lg:col-span-4">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <h2 className="text-[13px] font-semibold text-slate-800">Projekt áttekintő</h2>
-            <Link href="/projects" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
-              Összes <ArrowUpRight className="size-3" />
-            </Link>
-          </div>
-          <div className="p-3">
-            <DonutChart segments={donutSegments} total={total} />
-            <div className="mt-3 space-y-1.5">
-              {STATUS_ORDER.map((key) => {
-                const count = kanban[key]?.length ?? 0;
-                const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
-                return (
-                  <div key={key} className="flex items-center gap-2 text-[11px]">
-                    <span className="size-2 shrink-0 rounded-full" style={{ background: STATUS_CFG[key].dot }} />
-                    <span className="flex-1 text-slate-600">{STATUS_CFG[key].label}</span>
-                    <span className="font-semibold text-slate-700">{count}</span>
-                    <span className="w-8 text-right text-slate-400">{pct}%</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+      {/* ── Vezetői KPI-k ── */}
+      <div className="mb-4 grid grid-cols-3 gap-2.5">
+        <Card className="p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Határidőre készül</p>
+          <p className="mt-1 text-xl font-bold leading-tight text-slate-800">
+            {stats ? `${stats.on_time_delivery_pct}%` : "…"}
+          </p>
         </Card>
-
-        {/* Közelgő projektek */}
-        <Card className="overflow-hidden py-0 lg:col-span-5">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <h2 className="text-[13px] font-semibold text-slate-800">Közelgő projektek</h2>
-            <Link href="/projects" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
-              Mind <ArrowUpRight className="size-3" />
-            </Link>
-          </div>
-          <div className="divide-y divide-slate-50">
-            {upcomingProjects.length === 0 ? (
-              <p className="py-6 text-center text-xs text-slate-400">Nincs projekt</p>
-            ) : (
-              upcomingProjects.map((p) => {
-                const isLate = new Date(p.delivery_date) < new Date();
-                return (
-                  <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 transition-colors">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[11px] font-semibold text-slate-800">{p.name}</p>
-                      <p className="truncate text-[10px] text-slate-400">{p.project_manager_name ?? "—"}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className={cn("text-[10px] font-semibold", isLate ? "text-red-500" : "text-slate-500")}>
-                        {new Date(p.delivery_date).toLocaleDateString("hu-HU")}
-                      </span>
-                      <Badge className="px-1.5 py-0 text-[9px] bg-slate-100 text-slate-600">
-                        {p.completion_percent}%
-                      </Badge>
-                      {isLate && (
-                        <Badge className="px-1.5 py-0 text-[9px] bg-red-100 text-red-600">Késik</Badge>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })
-            )}
-          </div>
+        <Card className="p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Havi átadások</p>
+          <p className="mt-1 text-xl font-bold leading-tight text-slate-800">{stats?.handovers_this_month ?? "…"}</p>
         </Card>
+        <Card className="p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Nyitott előkészítés</p>
+          <p className="mt-1 text-xl font-bold leading-tight text-slate-800">{stats?.open_prep_tasks_total ?? "…"}</p>
+        </Card>
+      </div>
 
-        {/* Közelgő feladatok */}
-        <Card className="overflow-hidden py-0 lg:col-span-3">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <h2 className="text-[13px] font-semibold text-slate-800">Közelgő feladatok</h2>
-            <Link href="/my-tasks" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
-              Mind <ArrowUpRight className="size-3" />
-            </Link>
-          </div>
-          {overdueTasks.length > 0 && (
-            <div className="border-b border-red-100 bg-red-50/60 px-3 py-1">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-red-500">Lejárt · {overdueTasks.length}</p>
-            </div>
-          )}
-          <div className="divide-y divide-slate-50">
-            {[...overdueTasks, ...activeTasks].map((t) => (
-              <Link
-                key={`${t.project_id}-${t.activity_id}`}
-                href={`/projects/${t.project_id}`}
-                className={cn(
-                  "flex items-start gap-2 px-2.5 py-1.5 hover:bg-slate-50 transition-colors",
-                  t.is_overdue ? "border-l-[2px] border-l-red-400" : "border-l-[2px] border-l-slate-200",
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-semibold text-slate-700">{t.activity_name}</p>
-                  <p className="truncate text-[10px] text-slate-400">{t.project_name}</p>
-                </div>
-                <Badge className={cn("mt-0.5 shrink-0 px-1.5 py-0 text-[9px]", TASK_STATUS[t.status]?.cls ?? "bg-slate-100 text-slate-600")}>
-                  {TASK_STATUS[t.status]?.label ?? t.status}
-                </Badge>
-              </Link>
+      {/* ── Testreszabható widget-rács ── */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+            {widgetOrder.map((id) => (
+              <SortableWidget key={id} id={id} className={WIDGET_SPAN[id]}>
+                {widgetContent[id]}
+              </SortableWidget>
             ))}
-            {tasks.length === 0 && (
-              <p className="py-6 text-center text-xs text-slate-400">Nincs feladat</p>
-            )}
           </div>
-        </Card>
-      </div>
-
-      {/* ── Alsó sor ── */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-
-        {/* Ütemterv áttekintő – Gantt */}
-        <Card className="overflow-hidden py-0 lg:col-span-7">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <h2 className="text-[13px] font-semibold text-slate-800">Ütemterv áttekintő</h2>
-            <span className="text-[10px] text-slate-400">következő 90 nap</span>
-          </div>
-          <div className="p-3">
-            {/* X-tengely jelölők */}
-            <div className="mb-1.5 ml-[124px] flex text-[9px] text-slate-400">
-              <span className="flex-1 text-left">Ma</span>
-              <span className="flex-1 text-center">+30 nap</span>
-              <span className="flex-1 text-center">+60 nap</span>
-              <span className="flex-1 text-right">+90 nap</span>
-            </div>
-            <div className="space-y-1.5">
-              {ganttProjects.length === 0 ? (
-                <p className="py-6 text-center text-xs text-slate-400">Nincs közelgő projekt</p>
-              ) : (
-                ganttProjects.map((p) => (
-                  <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 group">
-                    <span className="w-[120px] shrink-0 truncate text-[11px] text-slate-600 group-hover:text-slate-900">
-                      {p.name}
-                    </span>
-                    <div className="relative flex-1 h-4 rounded-full bg-slate-100">
-                      <div
-                        className={cn("h-full rounded-full transition-all", p.barColor)}
-                        style={{ width: `${p.pct}%` }}
-                        title={`${p.days} nap múlva`}
-                      />
-                      <span className="absolute right-1.5 top-0 flex h-full items-center text-[9px] font-semibold text-white mix-blend-overlay">
-                        {p.days}n
-                      </span>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
-        </Card>
-
-        {/* Legutóbbi tevékenységek */}
-        <Card className="overflow-hidden py-0 lg:col-span-5">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <h2 className="text-[13px] font-semibold text-slate-800">Legutóbbi tevékenységek</h2>
-            <Link href="/audit-log" className="flex items-center gap-0.5 text-[11px] text-green-700 hover:underline">
-              Napló <ArrowUpRight className="size-3" />
-            </Link>
-          </div>
-          <div className="divide-y divide-slate-50">
-            {logs.length === 0 ? (
-              <p className="py-6 text-center text-xs text-slate-400">Nincs tevékenység</p>
-            ) : (
-              logs.map((log) => (
-                <div key={log.id} className="flex items-start gap-2 px-3 py-1.5">
-                  <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-[9px] font-bold text-green-700">
-                    {(log.user_name ?? "?")[0].toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] text-slate-700">
-                      <span className="font-semibold">{log.user_name ?? "Ismeretlen"}</span>
-                      {" módosította: "}
-                      <span className="text-slate-500">{log.field_name}</span>
-                      {log.project_name && (
-                        <>
-                          {" — "}
-                          <Link href={`/projects/${log.project_id}`} className="text-green-700 hover:underline">
-                            {log.project_name}
-                          </Link>
-                        </>
-                      )}
-                    </p>
-                    <p className="text-[10px] text-slate-400">
-                      {new Date(log.created_at).toLocaleString("hu-HU", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-      </div>
+        </SortableContext>
+      </DndContext>
     </AppLayout>
   );
 }

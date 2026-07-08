@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     daily_digest_hour: int = 7
     daily_digest_minute: int = 0
 
+    # Off by default so tests/dev never make real network calls to Nominatim;
+    # the real deployment turns this on via docker-compose's environment.
+    geocoding_enabled: bool = False
+
     @model_validator(mode="after")
     def _warn_insecure_defaults(self) -> "Settings":
         if self.secret_key in _INSECURE_DEFAULTS:

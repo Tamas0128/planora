@@ -48,6 +48,7 @@ services:
       SMTP_PORT: "1025"
       SMTP_USE_TLS: "false"
       SMTP_FROM: noreply@planora.local
+      GEOCODING_ENABLED: "true"
     depends_on:
       postgres:
         condition: service_healthy

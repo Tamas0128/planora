@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.models import ActivityStatus, BuildingType, ProjectStatus, UserRole
+from app.models import ActivityStatus, BuildingType, NotificationType, ProjectStatus, UserRole
 
 
 class TokenResponse(BaseModel):
@@ -66,6 +66,8 @@ class ProjectCreate(BaseModel):
     procurement_id: Optional[int] = None
     billing_id: Optional[int] = None
     subcontractors: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -85,6 +87,8 @@ class ProjectUpdate(BaseModel):
     procurement_id: Optional[int] = None
     billing_id: Optional[int] = None
     subcontractors: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class ProjectCard(BaseModel):
@@ -101,11 +105,17 @@ class ProjectCard(BaseModel):
     project_manager_name: Optional[str] = None
     site_manager_name: Optional[str] = None
     has_thumbnail: bool = False
+    is_favorite: bool = False
+    health: str = "ok"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     model_config = {"from_attributes": True}
 
 
 class ProjectDetail(ProjectCard):
+    delay_risk: str = "ok"
+    delay_risk_reason: str = ""
     address: str
     lot_number: Optional[str] = None
     client_phone: Optional[str] = None
@@ -196,12 +206,21 @@ class PrepTaskItem(BaseModel):
     days_until: Optional[int] = None
 
 
+class WeeklyWorkloadItem(BaseModel):
+    week_start: date
+    activity_count: int
+
+
 class DashboardStats(BaseModel):
     overdue_tasks: int
     upcoming_prep_7d: int
     upcoming_prep_14d: int
     slipping_projects: int
     total_projects: int
+    on_time_delivery_pct: float
+    handovers_this_month: int
+    open_prep_tasks_total: int
+    weekly_workload: list[WeeklyWorkloadItem] = []
 
 
 class AuditLogResponse(BaseModel):
@@ -228,5 +247,36 @@ class DocumentResponse(BaseModel):
     file_size: int
     version: int
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PhotoResponse(BaseModel):
+    id: int
+    filename: str
+    content_type: str
+    file_size: int
+    taken_at: date
+    comment: Optional[str] = None
+    uploaded_by_name: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DigestPreview(BaseModel):
+    overdue: list[PrepTaskItem]
+    upcoming: list[PrepTaskItem]
+
+
+class NotificationResponse(BaseModel):
+    id: int
+    type: NotificationType
+    title: str
+    body: str
+    related_project_id: Optional[int] = None
+    related_project_name: Optional[str] = None
+    created_at: datetime
+    read_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
