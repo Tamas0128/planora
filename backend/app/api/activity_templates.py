@@ -76,6 +76,21 @@ def update_template(
             ActivityTemplate.name == updates["name"], ActivityTemplate.id != template_id
         ).first():
             raise HTTPException(status_code=400, detail="Már létezik sablon ezzel a névvel")
+
+    if "sort_order" in updates:
+        # Same "requested position, not raw column value" contract as
+        # Activity.sort_order reordering (backend/app/api/projects.py's
+        # update_activity) — 1-based position among ALL templates, siblings
+        # get resequenced to a dense 0..n-1 range.
+        requested_position = updates.pop("sort_order")
+        siblings = db.query(ActivityTemplate).order_by(ActivityTemplate.sort_order).all()
+        siblings.remove(template)
+        insert_at = max(0, min(requested_position - 1, len(siblings)))
+        siblings.insert(insert_at, template)
+        for idx, sib in enumerate(siblings):
+            if sib.sort_order != idx:
+                sib.sort_order = idx
+
     for field, value in updates.items():
         setattr(template, field, value)
     db.commit()

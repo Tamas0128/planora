@@ -1,10 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Plus, X } from "lucide-react";
+import { GripVertical, Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import { ActivityTemplate, api, getCachedUser, ROLE_LABELS, User } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +69,35 @@ import {
 
 const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
 
+function SortableTemplateRow({
+  template, dragEnabled, children,
+}: {
+  template: ActivityTemplate; dragEnabled: boolean; children: (dragHandle: React.ReactNode) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: template.id,
+    disabled: !dragEnabled,
+  });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+  const dragHandle = dragEnabled ? (
+    <button
+      type="button"
+      aria-label="Sorrend módosítása húzással"
+      className="cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical className="size-3.5" />
+    </button>
+  ) : null;
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className={cn(isDragging && "relative z-10 shadow-md")}>
+      {children(dragHandle)}
+    </TableRow>
+  );
+}
+
 export default function ActivityTemplatesPage() {
   const [templates, setTemplates] = useState<ActivityTemplate[]>([]);
   const [me, setMe] = useState<User | null>(() => getCachedUser());
@@ -64,6 +110,10 @@ export default function ActivityTemplatesPage() {
     default_prep_days: 14,
     responsible_role: "project_manager",
   });
+  const templateSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor),
+  );
 
   function loadTemplates() {
     api.activityTemplates().then(setTemplates).catch(console.error);
@@ -120,6 +170,31 @@ export default function ActivityTemplatesPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
     }
+  }
+
+  async function commitPosition(id: number, position: number) {
+    if (!Number.isFinite(position) || position < 1) {
+      toast.error("A sorszámnak legalább 1-nek kell lennie.");
+      loadTemplates();
+      return;
+    }
+    try {
+      await api.updateActivityTemplate(id, { sort_order: position });
+      loadTemplates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a sorrend mentése során");
+      loadTemplates();
+    }
+  }
+
+  function handleTemplateDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = templates.findIndex((t) => t.id === active.id);
+    const newIndex = templates.findIndex((t) => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    setTemplates((prev) => arrayMove(prev, oldIndex, newIndex));
+    commitPosition(Number(active.id), newIndex + 1);
   }
 
   async function addPrerequisite(templateId: number, prerequisiteId: number) {
@@ -194,6 +269,7 @@ export default function ActivityTemplatesPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="min-w-[70px]">Sorszám</TableHead>
               <TableHead className="min-w-[160px]">Tevékenység</TableHead>
               <TableHead className="min-w-[120px]">Felelős</TableHead>
               <TableHead className="min-w-[90px]">Futási idő (nap)</TableHead>
@@ -203,8 +279,33 @@ export default function ActivityTemplatesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
+            <DndContext
+              sensors={templateSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleTemplateDragEnd}
+            >
+              <SortableContext items={templates.map((t) => t.id)} strategy={verticalListSortingStrategy}>
             {templates.map((t) => (
-              <TableRow key={t.id}>
+              <SortableTemplateRow key={t.id} template={t} dragEnabled={!!canEdit && editing}>
+                {(dragHandle) => (<>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    {dragHandle}
+                    {canEdit && editing ? (
+                      <Input
+                        type="number"
+                        min={1}
+                        value={t.sort_order + 1}
+                        aria-label="Sorszám"
+                        onChange={(e) => updateLocal(t.id, { sort_order: Number(e.target.value) - 1 })}
+                        onBlur={(e) => commitPosition(t.id, Number(e.target.value))}
+                        className="w-14"
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{t.sort_order + 1}</span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">
                   {canEdit && editing ? (
                     <Input
@@ -335,11 +436,14 @@ export default function ActivityTemplatesPage() {
                     </AlertDialog>
                   </TableCell>
                 )}
-              </TableRow>
+                </>)}
+              </SortableTemplateRow>
             ))}
+              </SortableContext>
+            </DndContext>
             {templates.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nincs tevékenység sablon
                 </TableCell>
               </TableRow>

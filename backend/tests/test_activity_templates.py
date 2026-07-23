@@ -119,6 +119,37 @@ def test_delete_template_used_by_existing_project_does_not_error(client, admin_h
     assert activities[0]["name"] == used_template["name"]
 
 
+def test_reorder_template_moves_to_requested_position(client, admin_headers):
+    templates = client.get("/api/activity-templates", headers=admin_headers).json()
+    last = templates[-1]
+
+    resp = client.patch(
+        f"/api/activity-templates/{last['id']}",
+        json={"sort_order": 1},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+    reordered = client.get("/api/activity-templates", headers=admin_headers).json()
+    assert reordered[0]["id"] == last["id"]
+    assert [t["sort_order"] for t in reordered] == list(range(len(reordered)))
+
+
+def test_reorder_template_clamps_out_of_range_position(client, admin_headers):
+    templates = client.get("/api/activity-templates", headers=admin_headers).json()
+    first = templates[0]
+
+    resp = client.patch(
+        f"/api/activity-templates/{first['id']}",
+        json={"sort_order": 9999},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+    reordered = client.get("/api/activity-templates", headers=admin_headers).json()
+    assert reordered[-1]["id"] == first["id"]
+
+
 def test_new_project_reflects_edited_template_dependency(client, admin_headers):
     templates = client.get("/api/activity-templates", headers=admin_headers).json()
     a, b = templates[2], templates[3]  # arbitrary pair not already linked by DEFAULT_ACTIVITIES
