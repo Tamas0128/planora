@@ -259,6 +259,7 @@ def _get_project_detail(db: Session, project_id: int, user: User | None = None) 
 def update_project(
     project_id: int,
     body: ProjectUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -282,7 +283,16 @@ def update_project(
             changed_fields.add(field)
     if "delivery_date" in changed_fields:
         recalculate_schedule(db, project)
-    db.commit()
+    # Address/settlement changed and the caller didn't supply new coordinates
+    # of their own — the old pin (if any) is now for the wrong place, so drop
+    # it and let the map re-geocode against the updated address.
+    if ("settlement" in changed_fields or "address" in changed_fields) and "latitude" not in updates and "longitude" not in updates:
+        project.latitude = None
+        project.longitude = None
+        db.commit()
+        background_tasks.add_task(geocode_project_in_background, project.id, project.settlement, project.address)
+    else:
+        db.commit()
     return _get_project_detail(db, project_id, user)
 
 

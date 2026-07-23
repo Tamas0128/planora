@@ -138,7 +138,7 @@ export default function ProjectsPage() {
   const [showNew, setShowNew]   = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
-  const [view, setView] = useState<"list" | "cards" | "map">("list");
+  const [view, setView] = useState<"list" | "cards" | "map">("cards");
 
   useEffect(() => {
     api.projects()
