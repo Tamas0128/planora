@@ -144,6 +144,7 @@ class ActivityResponse(BaseModel):
     prep_date: Optional[date] = None
     status: ActivityStatus
     is_active: bool = True
+    sort_order: int = 0
     prerequisite_ids: list[int] = []
 
     model_config = {"from_attributes": True}
@@ -159,6 +160,7 @@ class ActivityUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     is_active: Optional[bool] = None
+    sort_order: Optional[int] = None
 
 
 class DependencyCreate(BaseModel):

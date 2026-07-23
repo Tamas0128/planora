@@ -3,8 +3,24 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Calendar, Download, Image as ImageIcon, Pencil, Plus, QrCode, TriangleAlert, Upload, X } from "lucide-react";
+import { Calendar, Download, GripVertical, Image as ImageIcon, Pencil, Plus, QrCode, TriangleAlert, Upload, X } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import {
   Activity,
@@ -231,6 +247,39 @@ function PhotoUploadForm({ onUpload }: { onUpload: (file: File, takenAt: string,
   );
 }
 
+function SortableActivityRow({
+  activity, dragEnabled, children,
+}: {
+  activity: Activity; dragEnabled: boolean; children: (dragHandle: React.ReactNode) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: activity.id,
+    disabled: !dragEnabled,
+  });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+  const dragHandle = dragEnabled ? (
+    <button
+      type="button"
+      aria-label="Sorrend módosítása húzással"
+      className="cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical className="size-3.5" />
+    </button>
+  ) : null;
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={cn(!activity.is_active && "bg-slate-50 opacity-50", isDragging && "relative z-10 shadow-md")}
+    >
+      {children(dragHandle)}
+    </TableRow>
+  );
+}
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -251,6 +300,10 @@ export default function ProjectDetailPage() {
   const [prepFilter, setPrepFilter] = useState<"all" | "overdue" | "today" | "7d" | "14d">("all");
   const [editing, setEditing] = useState(false);
   const [scheduleEditing, setScheduleEditing] = useState(false);
+  const activitySensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor),
+  );
   const [form, setForm] = useState<Record<string, string | number>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -506,6 +559,32 @@ export default function ProjectDetailPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
     }
+  }
+
+  async function commitActivityPosition(activityId: number, position: number) {
+    if (!Number.isFinite(position) || position < 1) {
+      toast.error("A sorszámnak legalább 1-nek kell lennie.");
+      loadActivities();
+      return;
+    }
+    try {
+      await api.updateActivity(id, activityId, { sort_order: position });
+      loadActivities();
+      loadProject();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a sorrend mentése során");
+      loadActivities();
+    }
+  }
+
+  function handleActivityDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = activities.findIndex((a) => a.id === active.id);
+    const newIndex = activities.findIndex((a) => a.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    setActivities((prev) => arrayMove(prev, oldIndex, newIndex));
+    commitActivityPosition(Number(active.id), newIndex + 1);
   }
 
   async function handleDeleteProject() {
@@ -909,6 +988,7 @@ export default function ProjectDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="min-w-[70px]">Sorszám</TableHead>
                   <TableHead className="min-w-[160px]">Tevékenység</TableHead>
                   <TableHead className="min-w-[120px]">Felelős</TableHead>
                   <TableHead className="min-w-[140px]">Kijelölve</TableHead>
@@ -923,8 +1003,33 @@ export default function ProjectDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                <DndContext
+                  sensors={activitySensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleActivityDragEnd}
+                >
+                  <SortableContext items={activities.map((a) => a.id)} strategy={verticalListSortingStrategy}>
                 {activities.map((a) => (
-                  <TableRow key={a.id} className={cn(!a.is_active && "bg-slate-50 opacity-50")}>
+                  <SortableActivityRow key={a.id} activity={a} dragEnabled={!!canEdit && scheduleEditing}>
+                    {(dragHandle) => (<>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {dragHandle}
+                        {canEdit && scheduleEditing ? (
+                          <Input
+                            type="number"
+                            min={1}
+                            value={a.sort_order + 1}
+                            aria-label="Sorszám"
+                            onChange={(e) => updateLocalActivity(a.id, { sort_order: Number(e.target.value) - 1 })}
+                            onBlur={(e) => commitActivityPosition(a.id, Number(e.target.value))}
+                            className="w-14"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{a.sort_order + 1}</span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="font-medium">
                       {canEdit && scheduleEditing ? (
                         <Input
@@ -1125,8 +1230,11 @@ export default function ProjectDetailPage() {
                         </div>
                       )}
                     </TableCell>
-                  </TableRow>
+                    </>)}
+                  </SortableActivityRow>
                 ))}
+                  </SortableContext>
+                </DndContext>
               </TableBody>
             </Table>
           </Card>

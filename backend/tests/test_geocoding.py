@@ -132,7 +132,10 @@ def test_update_project_keeps_coords_when_caller_supplies_both(client, admin_hea
         "app.api.projects.geocode_project_in_background",
         lambda pid, settlement, address: calls.append((pid, settlement, address)),
     )
-    project = create_project(client, admin_headers)
+    # Give it coordinates at creation so create_project's own trigger stays
+    # silent — otherwise its creation-time call would contaminate `calls`
+    # before the PATCH under test even runs.
+    project = create_project(client, admin_headers, latitude=47.5, longitude=19.0)
 
     resp = client.patch(
         f"/api/projects/{project['id']}",
