@@ -191,6 +191,7 @@ class ActivityTemplateUpdate(BaseModel):
     duration_days: Optional[int] = None
     default_prep_days: Optional[int] = None
     responsible_role: Optional[UserRole] = None
+    sort_order: Optional[int] = None
 
 
 class TemplateDependencyCreate(BaseModel):
