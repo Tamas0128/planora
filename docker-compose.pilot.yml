@@ -1,0 +1,33 @@
+# Pilot-környezet port-felülírásai — a `docker-compose.yml` mellé adva
+# indítja el, teljesen elkülönített volume-okkal/hálózattal (a projekt
+# nevet a `-p planora-pilot` flag adja), így a fejlesztői stack adatait
+# nem érinti.
+#
+# Indítás:
+#   docker compose -p planora-pilot -f docker-compose.yml -f docker-compose.pilot.yml \
+#     --env-file .env.pilot up -d --build postgres minio mailpit backend frontend nginx
+#
+# (A postgres-backup/minio-backup/https-local szolgáltatásokat a pilothoz
+# szándékosan nem indítjuk el — nem kellenek egy demo/pilot környezethez.)
+
+services:
+  postgres:
+    ports: !override
+      - "5434:5432"
+
+  minio:
+    ports: !override
+      - "9010:9000"
+
+  mailpit:
+    ports: !override
+      - "8035:8025"
+
+  frontend:
+    ports: !override
+      - "3002:3000"
+
+  nginx:
+    ports: !override
+      - "8090:80"
+      - "8453:443"
