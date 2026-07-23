@@ -12,8 +12,10 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm.attributes import get_history
 
 from app.database import Base
 
@@ -155,6 +157,29 @@ class Project(Base):
     @property
     def has_thumbnail(self) -> bool:
         return self.thumbnail_key is not None
+
+
+@event.listens_for(Project, "before_update")
+def _clear_stale_coordinates(mapper, connection, target: Project) -> None:
+    """A project's pin only makes sense for the address it was geocoded
+    against — if settlement/address change in this flush and the caller
+    didn't also supply new coordinates of their own, drop the now-stale pin
+    so it doesn't silently point at the wrong place. Applies to ANY code
+    path that mutates a loaded Project instance (not just the two API
+    endpoints that happen to touch these fields today), since this runs at
+    the ORM flush level rather than being duplicated per call site.
+    """
+    location_changed = (
+        get_history(target, "settlement").has_changes()
+        or get_history(target, "address").has_changes()
+    )
+    coords_supplied = (
+        get_history(target, "latitude").has_changes()
+        or get_history(target, "longitude").has_changes()
+    )
+    if location_changed and not coords_supplied:
+        target.latitude = None
+        target.longitude = None
 
 
 class ActivityTemplate(Base):

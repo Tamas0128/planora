@@ -45,9 +45,19 @@ def geocode_project_in_background(project_id: int, settlement: str, address: str
     db = SessionLocal()
     try:
         project = db.query(Project).get(project_id)
-        # Only fill in coordinates the user hasn't already set/edited in the
-        # meantime — never overwrite a manually corrected pin.
-        if project and project.latitude is None and project.longitude is None:
+        # Only fill in coordinates if nothing has claimed this pin since we
+        # started (a manual edit, or a newer edit's own geocode task already
+        # landed) AND the project's address hasn't changed again in the
+        # meantime — otherwise these coordinates are for an address the
+        # project no longer has, which would silently pin it to the wrong
+        # place if a second edit's task resolves before this one.
+        if (
+            project
+            and project.latitude is None
+            and project.longitude is None
+            and project.settlement == settlement
+            and project.address == address
+        ):
             project.latitude, project.longitude = coords
             db.commit()
     finally:

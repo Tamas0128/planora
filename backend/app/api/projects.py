@@ -59,6 +59,21 @@ def _project_to_card(
     )
 
 
+def _schedule_geocode_if_needed(
+    background_tasks: BackgroundTasks,
+    has_coords: bool,
+    project_id: int,
+    settlement: str,
+    address: str,
+) -> None:
+    """Kick off a background re-geocode unless the project already has (or
+    was just given) coordinates for its current address. Shared by
+    create_project and update_project so the two call sites can't drift.
+    """
+    if not has_coords:
+        background_tasks.add_task(geocode_project_in_background, project_id, settlement, address)
+
+
 def _favorite_ids(db: Session, user: User) -> set[int]:
     return {
         row.project_id
@@ -179,8 +194,11 @@ def create_project(
     log_change(db, user, "project", "created", None, project.name, project.id, project.id)
     db.commit()
     db.refresh(project)
-    if project.latitude is None and project.longitude is None:
-        background_tasks.add_task(geocode_project_in_background, project.id, project.settlement, project.address)
+    _schedule_geocode_if_needed(
+        background_tasks,
+        project.latitude is not None or project.longitude is not None,
+        project.id, project.settlement, project.address,
+    )
     return _get_project_detail(db, project.id, user)
 
 
@@ -268,6 +286,7 @@ def update_project(
         raise HTTPException(status_code=404, detail="Project not found")
     if not _can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
+    old_latitude, old_longitude = project.latitude, project.longitude
     updates = body.model_dump(exclude_unset=True)
     changed_fields = set()
     for field, value in updates.items():
@@ -283,16 +302,23 @@ def update_project(
             changed_fields.add(field)
     if "delivery_date" in changed_fields:
         recalculate_schedule(db, project)
-    # Address/settlement changed and the caller didn't supply new coordinates
-    # of their own — the old pin (if any) is now for the wrong place, so drop
-    # it and let the map re-geocode against the updated address.
-    if ("settlement" in changed_fields or "address" in changed_fields) and "latitude" not in updates and "longitude" not in updates:
-        project.latitude = None
-        project.longitude = None
-        db.commit()
-        background_tasks.add_task(geocode_project_in_background, project.id, project.settlement, project.address)
-    else:
-        db.commit()
+    # Address/settlement changing clears the now-stale pin automatically (see
+    # Project's before_update hook in models.py) unless the caller supplied
+    # both new coordinates of their own — log that side effect here, while we
+    # still have request/user context, and decide whether to re-geocode.
+    location_changed = "settlement" in changed_fields or "address" in changed_fields
+    coords_supplied = "latitude" in updates and "longitude" in updates
+    if location_changed and not coords_supplied and (old_latitude is not None or old_longitude is not None):
+        log_change(db, user, "project", "latitude", str(old_latitude), None, project.id, project.id)
+        log_change(db, user, "project", "longitude", str(old_longitude), None, project.id, project.id)
+    # Capture the new address before committing — SessionLocal's default
+    # expire_on_commit means reading these off `project` after db.commit()
+    # would force an implicit re-SELECT that fails if the row was deleted
+    # concurrently in that window.
+    settlement, address = project.settlement, project.address
+    db.commit()
+    if location_changed:
+        _schedule_geocode_if_needed(background_tasks, coords_supplied, project_id, settlement, address)
     return _get_project_detail(db, project_id, user)
 
 

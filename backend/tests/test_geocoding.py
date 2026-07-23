@@ -106,3 +106,117 @@ def test_create_project_skips_geocoding_when_coords_given(client, admin_headers,
     )
     create_project(client, admin_headers, latitude=47.5, longitude=19.0)
     assert len(calls) == 0
+
+
+def test_update_project_clears_stale_pin_and_schedules_geocode(client, admin_headers, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "app.api.projects.geocode_project_in_background",
+        lambda pid, settlement, address: calls.append((pid, settlement, address)),
+    )
+    project = create_project(client, admin_headers, latitude=47.5, longitude=19.0)
+
+    resp = client.patch(
+        f"/api/projects/{project['id']}", json={"address": "New street 2"}, headers=admin_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["latitude"] is None
+    assert body["longitude"] is None
+    assert calls == [(project["id"], project["settlement"], "New street 2")]
+
+
+def test_update_project_keeps_coords_when_caller_supplies_both(client, admin_headers, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "app.api.projects.geocode_project_in_background",
+        lambda pid, settlement, address: calls.append((pid, settlement, address)),
+    )
+    project = create_project(client, admin_headers)
+
+    resp = client.patch(
+        f"/api/projects/{project['id']}",
+        json={"address": "New street 2", "latitude": 1.0, "longitude": 2.0},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["latitude"] == 1.0
+    assert body["longitude"] == 2.0
+    assert calls == []
+
+
+def test_update_project_leaves_coords_alone_when_location_unchanged(client, admin_headers, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "app.api.projects.geocode_project_in_background",
+        lambda pid, settlement, address: calls.append((pid, settlement, address)),
+    )
+    project = create_project(client, admin_headers, latitude=47.5, longitude=19.0)
+
+    resp = client.patch(
+        f"/api/projects/{project['id']}", json={"floor_area_sqm": 150}, headers=admin_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["latitude"] == 47.5
+    assert body["longitude"] == 19.0
+    assert calls == []
+
+
+def test_geocode_project_in_background_skips_when_address_changed_since_scheduling(monkeypatch):
+    from app.models import Project
+    from app.services import geocoding
+
+    monkeypatch.setattr(geocoding, "geocode_address", lambda settlement, address: (1.0, 2.0))
+    monkeypatch.setattr("app.database.SessionLocal", TestingSessionLocal)
+
+    db = TestingSessionLocal()
+    try:
+        project = Project(
+            name="Race Test", project_code="RACE-1", settlement="Old town", address="Old address",
+            client_name="Client", floor_area_sqm=100, delivery_date=date(2026, 12, 1),
+        )
+        db.add(project)
+        db.commit()
+        db.refresh(project)
+        pid = project.id
+        # Simulate a second, newer edit landing before this (stale) task runs.
+        project.settlement = "New town"
+        project.address = "New address"
+        db.commit()
+    finally:
+        db.close()
+
+    # This task was scheduled for the OLD address, which no longer matches.
+    geocoding.geocode_project_in_background(pid, "Old town", "Old address")
+
+    db = TestingSessionLocal()
+    try:
+        reloaded = db.query(Project).get(pid)
+        assert reloaded.latitude is None
+        assert reloaded.longitude is None
+    finally:
+        db.close()
+
+
+def test_project_before_update_hook_clears_coords_on_address_change():
+    from app.models import Project
+
+    db = TestingSessionLocal()
+    try:
+        project = Project(
+            name="Hook Test", project_code="HOOK-1", settlement="Town", address="Addr 1",
+            client_name="Client", floor_area_sqm=100, delivery_date=date(2026, 12, 1),
+            latitude=1.0, longitude=2.0,
+        )
+        db.add(project)
+        db.commit()
+
+        project.address = "Addr 2"
+        db.commit()
+        db.refresh(project)
+        assert project.latitude is None
+        assert project.longitude is None
+    finally:
+        db.close()
