@@ -200,6 +200,9 @@ class Activity(Base):
     sort_order: Mapped[int] = mapped_column(Integer)
     prep_days: Mapped[int] = mapped_column(Integer, default=14)
     responsible_role: Mapped[UserRole] = mapped_column(Enum(UserRole))
+    assignee_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -211,6 +214,7 @@ class Activity(Base):
 
     project: Mapped["Project"] = relationship(back_populates="activities")
     template: Mapped["ActivityTemplate | None"] = relationship()
+    assignee: Mapped["User | None"] = relationship(foreign_keys=[assignee_id])
     prerequisites: Mapped[list["ActivityDependency"]] = relationship(
         back_populates="activity",
         foreign_keys="ActivityDependency.activity_id",

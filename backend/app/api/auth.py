@@ -23,6 +23,7 @@ from app.schemas import (
     LoginRequest,
     RefreshRequest,
     TokenResponse,
+    UserBrief,
     UserCreate,
     UserResponse,
     UserUpdate,
@@ -123,6 +124,14 @@ def list_users(
     _: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT)),
 ):
     return db.query(User).order_by(User.full_name).all()
+
+
+@router.get("/users/directory", response_model=list[UserBrief])
+def users_directory(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    return db.query(User).filter(User.is_active.is_(True)).order_by(User.full_name).all()
 
 
 @router.patch("/users/{user_id}", response_model=UserResponse)

@@ -32,6 +32,22 @@ export const STATUS_CFG: Record<string, {
 
 export const DEFAULT_CFG = STATUS_CFG.planning;
 
+export const ACTIVITY_STATUS_ORDER = ["pending", "in_progress", "blocked", "done"] as const;
+
+export const ACTIVITY_STATUS_LABELS: Record<string, string> = {
+  pending: "Várakozik",
+  in_progress: "Folyamatban",
+  blocked: "Blokkolt",
+  done: "Kész",
+};
+
+export const ACTIVITY_STATUS_CFG: Record<string, { leftBorder: string; badge: string; dot: string }> = {
+  pending:      { leftBorder: "border-l-slate-300",  badge: "bg-slate-100 text-slate-600",   dot: "bg-slate-400" },
+  in_progress:  { leftBorder: "border-l-amber-400",  badge: "bg-amber-100 text-amber-700",   dot: "bg-amber-500" },
+  blocked:      { leftBorder: "border-l-red-400",    badge: "bg-red-100 text-red-700",       dot: "bg-red-500" },
+  done:         { leftBorder: "border-l-emerald-500", badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+};
+
 export const HEALTH_CFG: Record<string, { label: string; badge: string; dot: string }> = {
   ok:       { label: "Rendben",    badge: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
   warning:  { label: "Figyelendő", badge: "bg-amber-50 text-amber-700",     dot: "bg-amber-500" },

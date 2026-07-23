@@ -8,8 +8,10 @@ import {
   ChevronRight,
   Download,
   Image as ImageIcon,
+  LayoutGrid,
   List,
   MapPin,
+  Package,
   Plus,
   Search,
   Star,
@@ -54,6 +56,80 @@ function ProjectThumbnailPreview({ projectId, hasThumbnail }: { projectId: numbe
   );
 }
 
+function ProjectBoxThumbnail({ projectId, hasThumbnail }: { projectId: number; hasThumbnail: boolean }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hasThumbnail) {
+      api.thumbnailUrl(projectId).then((r) => setUrl(r.url)).catch(() => setUrl(null));
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync reset, no async step needed
+      setUrl(null);
+    }
+  }, [projectId, hasThumbnail]);
+
+  return (
+    <div className="relative h-36 w-full shrink-0 overflow-hidden bg-slate-100">
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL, not a static/local asset
+        <img src={url} alt="" className="size-full object-cover" />
+      ) : (
+        <div className="flex size-full items-center justify-center">
+          <ImageIcon className="size-8 text-slate-300" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectBox({
+  project, onClick, onToggleFavorite,
+}: {
+  project: ProjectCard; onClick: () => void; onToggleFavorite: (e: React.MouseEvent) => void;
+}) {
+  const late = isLate(project.delivery_date);
+  const cfg = STATUS_CFG[project.status] ?? DEFAULT_CFG;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+      className="cursor-pointer overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <div className="relative">
+        <ProjectBoxThumbnail projectId={project.id} hasThumbnail={project.has_thumbnail} />
+        <span className={cn("absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-sm", cfg.badge)}>
+          {STATUS_LABELS[project.status]}
+        </span>
+        <button
+          type="button"
+          aria-label={project.is_favorite ? "Kedvenc eltávolítása" : "Kedvencnek jelölés"}
+          onClick={onToggleFavorite}
+          className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-slate-400 shadow-sm hover:text-amber-400"
+        >
+          <Star className={cn("size-3.5", project.is_favorite && "fill-amber-400 text-amber-400")} />
+        </button>
+      </div>
+      <div className="p-3">
+        <h3 className="truncate text-[14px] font-bold text-slate-900">{project.name}</h3>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{project.client_name} · {project.settlement}</p>
+        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500">
+          <span className="flex items-center gap-1">
+            <Package className="size-3 shrink-0" />
+            {project.floor_area_sqm} m²
+          </span>
+          <span className={cn("flex items-center gap-1", late && "font-semibold text-red-500")}>
+            <Calendar className="size-3 shrink-0" />
+            {new Date(project.delivery_date).toLocaleDateString("hu-HU")}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectCard[]>([]);
@@ -62,7 +138,7 @@ export default function ProjectsPage() {
   const [showNew, setShowNew]   = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
-  const [view, setView] = useState<"list" | "map">("list");
+  const [view, setView] = useState<"list" | "cards" | "map">("list");
 
   useEffect(() => {
     api.projects()
@@ -149,6 +225,16 @@ export default function ProjectsPage() {
         </button>
         <button
           type="button"
+          onClick={() => setView("cards")}
+          className={cn(
+            "flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
+            view === "cards" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800",
+          )}
+        >
+          <LayoutGrid className="size-3.5" /> Kártyák
+        </button>
+        <button
+          type="button"
           onClick={() => setView("map")}
           className={cn(
             "flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
@@ -204,6 +290,25 @@ export default function ProjectsPage() {
 
       {view === "map" ? (
         <ProjectsMap projects={filtered} />
+      ) : view === "cards" ? (
+        loading ? (
+          <div className="flex items-center justify-center py-20 text-[13px] text-slate-400">Betöltés…</div>
+        ) : filtered.length === 0 ? (
+          <div className="flex items-center justify-center py-20 text-[13px] text-slate-400">
+            {search ? "Nincs találat" : "Még nincs projekt"}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((p) => (
+              <ProjectBox
+                key={p.id}
+                project={p}
+                onClick={() => router.push(`/projects/${p.id}`)}
+                onToggleFavorite={(e) => toggleFavorite(e, p)}
+              />
+            ))}
+          </div>
+        )
       ) : (
       <div className="overflow-x-auto rounded-lg border border-slate-100 bg-white shadow-sm">
         <table className="w-full text-left">

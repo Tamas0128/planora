@@ -137,6 +137,8 @@ class ActivityResponse(BaseModel):
     duration_days: int
     prep_days: int
     responsible_role: UserRole
+    assignee_id: Optional[int] = None
+    assignee_name: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     prep_date: Optional[date] = None
@@ -152,6 +154,7 @@ class ActivityUpdate(BaseModel):
     duration_days: Optional[int] = None
     prep_days: Optional[int] = None
     responsible_role: Optional[UserRole] = None
+    assignee_id: Optional[int] = None
     status: Optional[ActivityStatus] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
@@ -204,6 +207,36 @@ class PrepTaskItem(BaseModel):
     status: ActivityStatus
     is_overdue: bool
     days_until: Optional[int] = None
+
+
+class TaskBoardItem(BaseModel):
+    activity_id: int
+    activity_name: str
+    status: ActivityStatus
+    responsible_role: UserRole
+    assignee_id: Optional[int] = None
+    assignee_name: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    prep_date: Optional[date] = None
+    project_id: int
+    project_name: str
+    project_code: str
+    client_name: str
+    settlement: str
+    delivery_date: date
+    project_status: ProjectStatus
+    project_manager_name: Optional[str] = None
+    site_manager_name: Optional[str] = None
+    has_thumbnail: bool = False
+
+
+class UserBrief(BaseModel):
+    id: int
+    full_name: str
+    role: UserRole
+
+    model_config = {"from_attributes": True}
 
 
 class WeeklyWorkloadItem(BaseModel):

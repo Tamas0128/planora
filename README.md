@@ -28,9 +28,11 @@ docker compose up --build
 ### Alapértelmezett admin
 
 - **Felhasználónév:** `admin`
-- **Jelszó:** `admin123`
+- **Jelszó:** a `.env` fájlban megadott `ADMIN_PASSWORD` (ha üresen hagyod, első indításkor véletlenszerű jelszót generál a rendszer, és kiírja a backend konténer logjába)
 
-> Első indításkor automatikusan létrejön az admin felhasználó és a 25 alap tevékenység sablon.
+> Első indításkor automatikusan létrejön az admin felhasználó és a 24 alap tevékenység sablon.
+
+Production telepítéshez lásd a [TELEPITES.md](TELEPITES.md) leírást.
 
 ## Fejlesztés (Docker nélkül)
 

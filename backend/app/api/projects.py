@@ -332,6 +332,7 @@ def list_activities(
         raise HTTPException(status_code=403, detail="Access denied")
     activities = (
         db.query(Activity)
+        .options(joinedload(Activity.assignee))
         .filter(Activity.project_id == project_id)
         .order_by(Activity.sort_order)
         .all()
@@ -346,6 +347,8 @@ def list_activities(
                 duration_days=a.duration_days,
                 prep_days=a.prep_days,
                 responsible_role=a.responsible_role,
+                assignee_id=a.assignee_id,
+                assignee_name=a.assignee.full_name if a.assignee else None,
                 start_date=a.start_date,
                 end_date=a.end_date,
                 prep_date=a.prep_date,
@@ -433,6 +436,8 @@ def update_activity(
         duration_days=activity.duration_days,
         prep_days=activity.prep_days,
         responsible_role=activity.responsible_role,
+        assignee_id=activity.assignee_id,
+        assignee_name=activity.assignee.full_name if activity.assignee else None,
         start_date=activity.start_date,
         end_date=activity.end_date,
         prep_date=activity.prep_date,

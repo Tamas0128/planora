@@ -1,12 +1,12 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import Activity, ActivityStatus, User
-from app.schemas import PrepTaskItem
+from app.models import Activity, ActivityStatus, Project, User
+from app.schemas import PrepTaskItem, TaskBoardItem
 from app.services.scoping import scoped_activity_query
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -81,3 +81,41 @@ def my_tasks(
             )
         )
     return items
+
+
+@router.get("/kanban")
+def task_kanban(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    q = scoped_activity_query(db, user).options(
+        joinedload(Activity.assignee),
+        joinedload(Project.project_manager),
+        joinedload(Project.site_manager),
+    )
+    board: dict[str, list[TaskBoardItem]] = {s.value: [] for s in ActivityStatus}
+    for activity, project in q.all():
+        board[activity.status.value].append(
+            TaskBoardItem(
+                activity_id=activity.id,
+                activity_name=activity.name,
+                status=activity.status,
+                responsible_role=activity.responsible_role,
+                assignee_id=activity.assignee_id,
+                assignee_name=activity.assignee.full_name if activity.assignee else None,
+                start_date=activity.start_date,
+                end_date=activity.end_date,
+                prep_date=activity.prep_date,
+                project_id=project.id,
+                project_name=project.name,
+                project_code=project.project_code,
+                client_name=project.client_name,
+                settlement=project.settlement,
+                delivery_date=project.delivery_date,
+                project_status=project.status,
+                project_manager_name=project.project_manager.full_name if project.project_manager else None,
+                site_manager_name=project.site_manager.full_name if project.site_manager else None,
+                has_thumbnail=project.has_thumbnail,
+            )
+        )
+    return board

@@ -19,6 +19,7 @@ import {
   ROLE_LABELS,
   STATUS_LABELS,
   User,
+  UserBrief,
 } from "@/lib/api";
 import { HEALTH_CFG } from "@/lib/project-utils";
 import {
@@ -240,6 +241,7 @@ export default function ProjectDetailPage() {
   const [photos, setPhotos] = useState<ProjectPhoto[]>([]);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [assignableUsers, setAssignableUsers] = useState<UserBrief[]>([]);
   // Initialise synchronously from cache so canEdit is true on first render
   // when AppLayout already resolved /auth/me (avoids a flash of read-only UI).
   const [me, setMe] = useState<User | null>(() => getCachedUser());
@@ -279,6 +281,7 @@ export default function ProjectDetailPage() {
     loadAuditLog();
     api.me().then(setMe).catch(() => setMe(null));
     api.users().then(setUsers).catch(() => setUsers([]));
+    api.usersDirectory().then(setAssignableUsers).catch(() => setAssignableUsers([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -480,6 +483,15 @@ export default function ProjectDetailPage() {
   async function commitActivityRole(activityId: number, role: string) {
     try {
       await api.updateActivity(id, activityId, { responsible_role: role });
+      loadActivities();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
+  }
+
+  async function commitActivityAssignee(activityId: number, value: string) {
+    try {
+      await api.updateActivity(id, activityId, { assignee_id: value === "none" ? null : Number(value) });
       loadActivities();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
@@ -899,6 +911,7 @@ export default function ProjectDetailPage() {
                 <TableRow>
                   <TableHead className="min-w-[160px]">Tevékenység</TableHead>
                   <TableHead className="min-w-[120px]">Felelős</TableHead>
+                  <TableHead className="min-w-[140px]">Kijelölve</TableHead>
                   <TableHead className="min-w-[90px]">Futási idő (nap)</TableHead>
                   <TableHead className="min-w-[90px]">Előkészítési idő (nap)</TableHead>
                   <TableHead className="min-w-[110px]">Előkészítés dátuma</TableHead>
@@ -943,6 +956,30 @@ export default function ProjectDetailPage() {
                       ) : (
                         <span className="text-xs text-muted-foreground">
                           {ROLE_LABELS[a.responsible_role] || a.responsible_role}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {canEdit && scheduleEditing ? (
+                        <Select
+                          value={a.assignee_id ? String(a.assignee_id) : "none"}
+                          onValueChange={(v) => commitActivityAssignee(a.id, v as string)}
+                        >
+                          <SelectTrigger size="sm" className="min-w-[130px]">
+                            <SelectValue>
+                              {() => a.assignee_name ?? "Nincs kijelölve"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nincs kijelölve</SelectItem>
+                            {assignableUsers.map((u) => (
+                              <SelectItem key={u.id} value={String(u.id)}>{u.full_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {a.assignee_name ?? "—"}
                         </span>
                       )}
                     </TableCell>

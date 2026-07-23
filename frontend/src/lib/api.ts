@@ -54,6 +54,8 @@ export interface Activity {
   duration_days: number;
   prep_days: number;
   responsible_role: string;
+  assignee_id?: number;
+  assignee_name?: string;
   start_date?: string;
   end_date?: string;
   prep_date?: string;
@@ -84,6 +86,34 @@ export interface PrepTask {
   status: string;
   is_overdue: boolean;
   days_until?: number;
+}
+
+export interface TaskBoardItem {
+  activity_id: number;
+  activity_name: string;
+  status: string;
+  responsible_role: string;
+  assignee_id?: number;
+  assignee_name?: string;
+  start_date?: string;
+  end_date?: string;
+  prep_date?: string;
+  project_id: number;
+  project_name: string;
+  project_code: string;
+  client_name: string;
+  settlement: string;
+  delivery_date: string;
+  project_status: string;
+  project_manager_name?: string;
+  site_manager_name?: string;
+  has_thumbnail: boolean;
+}
+
+export interface UserBrief {
+  id: number;
+  full_name: string;
+  role: string;
 }
 
 export interface WeeklyWorkloadItem {
@@ -286,6 +316,10 @@ export const api = {
   },
 
   kanban: () => request<Record<string, ProjectCard[]>>("/projects/kanban"),
+
+  taskKanban: () => request<Record<string, TaskBoardItem[]>>("/tasks/kanban"),
+
+  usersDirectory: () => request<UserBrief[]>("/auth/users/directory"),
 
   projects: () => request<ProjectCard[]>("/projects"),
 
