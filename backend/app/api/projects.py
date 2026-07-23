@@ -390,6 +390,7 @@ def list_activities(
                 prep_date=a.prep_date,
                 status=a.status,
                 is_active=a.is_active,
+                sort_order=a.sort_order,
                 prerequisite_ids=[d.prerequisite_id for d in deps],
             )
         )
@@ -415,6 +416,34 @@ def update_activity(
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     updates = body.model_dump(exclude_unset=True)
+    reordered = False
+
+    if "sort_order" in updates:
+        # `sort_order` in the request is the 1-based position the caller
+        # wants this activity moved to among ALL of the project's activities
+        # (active or not, matching list_activities' ordering) — not a raw
+        # column value. Move it there and resequence every sibling to a
+        # dense 0..n-1 range so the stored sort_order always stays gapless
+        # and unique, whether the reorder came from dragging a kanban-style
+        # row or editing the position number directly.
+        requested_position = updates.pop("sort_order")
+        siblings = (
+            db.query(Activity)
+            .filter(Activity.project_id == project_id)
+            .order_by(Activity.sort_order)
+            .all()
+        )
+        siblings.remove(activity)
+        insert_at = max(0, min(requested_position - 1, len(siblings)))
+        siblings.insert(insert_at, activity)
+        for idx, sib in enumerate(siblings):
+            if sib.sort_order != idx:
+                log_change(
+                    db, user, "activity", "sort_order",
+                    str(sib.sort_order), str(idx), project.id, sib.id,
+                )
+                sib.sort_order = idx
+        reordered = True
 
     if updates.get("is_active") is False and activity.is_active:
         blockers = (
@@ -453,7 +482,7 @@ def update_activity(
 
     if "start_date" in updates:
         cascade_from_activity(db, project, activity)
-    elif "duration_days" in updates or "prep_days" in updates or "is_active" in updates:
+    elif "duration_days" in updates or "prep_days" in updates or "is_active" in updates or reordered:
         recalculate_schedule(db, project)
     else:
         done = db.query(Activity).filter(
@@ -479,6 +508,7 @@ def update_activity(
         prep_date=activity.prep_date,
         status=activity.status,
         is_active=activity.is_active,
+        sort_order=activity.sort_order,
         prerequisite_ids=[d.prerequisite_id for d in deps],
     )
 

@@ -61,6 +61,7 @@ export interface Activity {
   prep_date?: string;
   status: string;
   is_active: boolean;
+  sort_order: number;
   prerequisite_ids: number[];
 }
 

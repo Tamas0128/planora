@@ -25,6 +25,13 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import AppLayout from "@/components/AppLayout";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { api, STATUS_LABELS, TaskBoardItem, UserBrief } from "@/lib/api";
 import {
   ACTIVITY_STATUS_CFG,
@@ -99,24 +106,34 @@ function DraggableTaskCard({
 }: {
   item: TaskBoardItem; selected: boolean; onClick: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: String(item.activity_id) });
+  // Each card is both draggable AND its own drop target (same id, separate
+  // dnd-kit registries) — this is what lets a dragged card be dropped on
+  // top of another card to land at that position, not just at the column's
+  // end (which is all a column-level-only droppable could ever resolve to).
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: String(item.activity_id) });
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: String(item.activity_id) });
 
   return (
     <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
-      className={cn(
-        "cursor-grab touch-none active:cursor-grabbing",
-        isDragging && "opacity-30",
-        selected && "ring-2 ring-blue-500/25 rounded-lg",
-      )}
+      ref={setDropRef}
+      className={cn("rounded-lg transition-shadow", isOver && "ring-2 ring-blue-400")}
     >
-      <TaskCardBody item={item} />
+      <div
+        ref={setDragRef}
+        {...attributes}
+        {...listeners}
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+        className={cn(
+          "cursor-grab touch-none active:cursor-grabbing",
+          isDragging && "opacity-30",
+          selected && "ring-2 ring-blue-500/25 rounded-lg",
+        )}
+      >
+        <TaskCardBody item={item} />
+      </div>
     </div>
   );
 }
@@ -137,7 +154,15 @@ function RightPanel({ item, onClose, onOpen }: { item: TaskBoardItem; onClose: (
   const initials = pmInitials(item.assignee_name);
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col overflow-hidden border-l border-slate-100 bg-white">
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent
+        side="right"
+        className="flex w-80 max-w-[85vw] flex-col gap-0 p-0 sm:max-w-80 [&>button]:hidden"
+      >
+      <SheetHeader className="sr-only">
+        <SheetTitle>{item.activity_name}</SheetTitle>
+        <SheetDescription>Feladat részletei</SheetDescription>
+      </SheetHeader>
       <div className="flex shrink-0 items-start justify-between border-b border-slate-100 p-3">
         <div className="min-w-0 flex-1 pr-2">
           <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
@@ -208,7 +233,8 @@ function RightPanel({ item, onClose, onOpen }: { item: TaskBoardItem; onClose: (
           Projekt megnyitása
         </button>
       </div>
-    </aside>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -262,22 +288,42 @@ export default function KanbanPage() {
     const { active, over } = event;
     if (!over) return;
     const activityId = Number(active.id);
-    const targetStatus = String(over.id);
     const found = findItem(activityId);
-    if (!found || found.status === targetStatus) return;
+    if (!found) return;
 
+    // `over.id` is either a column's status (dropped on empty column space)
+    // or another card's activity_id (dropped on top of a specific card) —
+    // in the latter case the card's own status/index tells us both which
+    // column it landed in and exactly where, instead of always appending
+    // to the column's end.
+    const overId = String(over.id);
+    const overCard = ACTIVITY_STATUS_ORDER.includes(overId as (typeof ACTIVITY_STATUS_ORDER)[number])
+      ? null
+      : findItem(Number(overId));
+    const targetStatus = overCard ? overCard.status : overId;
+    if (!ACTIVITY_STATUS_ORDER.includes(targetStatus as (typeof ACTIVITY_STATUS_ORDER)[number])) return;
+    if (found.status === targetStatus && (!overCard || overCard.item.activity_id === activityId)) return;
+
+    const statusChanged = found.status !== targetStatus;
     const prevBoard = board;
     setBoard((prev) => {
       const next = { ...prev };
       next[found.status] = next[found.status].filter((i) => i.activity_id !== activityId);
-      next[targetStatus] = [...(next[targetStatus] ?? []), { ...found.item, status: targetStatus }];
+      const movedItem = { ...found.item, status: targetStatus };
+      const destItems = [...(next[targetStatus] ?? [])];
+      const targetIndex = overCard ? destItems.findIndex((i) => i.activity_id === overCard.item.activity_id) : -1;
+      if (targetIndex === -1) destItems.push(movedItem);
+      else destItems.splice(targetIndex, 0, movedItem);
+      next[targetStatus] = destItems;
       return next;
     });
 
-    api.updateActivity(found.item.project_id, found.item.activity_id, { status: targetStatus }).catch((err) => {
-      setBoard(prevBoard);
-      toast.error(err instanceof Error ? err.message : "Hiba a státusz módosítása során");
-    });
+    if (statusChanged) {
+      api.updateActivity(found.item.project_id, found.item.activity_id, { status: targetStatus }).catch((err) => {
+        setBoard(prevBoard);
+        toast.error(err instanceof Error ? err.message : "Hiba a státusz módosítása során");
+      });
+    }
   }
 
   const draggedItem = activeId ? findItem(Number(activeId))?.item : null;
