@@ -76,6 +76,30 @@ def login_json(request: Request, body: LoginRequest, db: Session = Depends(get_d
     )
 
 
+@router.get("/pilot-status")
+def pilot_status():
+    return {"pilot_mode": settings.pilot_mode}
+
+
+@router.post("/pilot-login", response_model=TokenResponse)
+def pilot_login(request: Request, db: Session = Depends(get_db)):
+    if not settings.pilot_mode:
+        raise HTTPException(status_code=404, detail="Not found")
+    _check_login_rate(request)
+    user = (
+        db.query(User)
+        .filter(User.role == UserRole.ADMIN, User.is_active.is_(True))
+        .first()
+    )
+    if not user:
+        raise HTTPException(status_code=500, detail="No admin user available")
+    token_data = {"sub": str(user.id), "role": user.role.value}
+    return TokenResponse(
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+    )
+
+
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(body: RefreshRequest, db: Session = Depends(get_db)):
     payload = decode_token(body.refresh_token)

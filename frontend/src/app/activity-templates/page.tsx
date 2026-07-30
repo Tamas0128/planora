@@ -36,6 +36,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -127,6 +128,8 @@ export default function ActivityTemplatesPage() {
   const canEdit = me?.role === "admin" || me?.role === "management";
   const nameById: Record<number, string> = {};
   for (const t of templates) nameById[t.id] = t.name;
+  const allIncluded = templates.length > 0 && templates.every((t) => t.include_by_default);
+  const someIncluded = templates.some((t) => t.include_by_default);
 
   function updateLocal(id: number, patch: Partial<ActivityTemplate>) {
     setTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -215,6 +218,25 @@ export default function ActivityTemplatesPage() {
     }
   }
 
+  async function commitInclude(id: number, include: boolean) {
+    updateLocal(id, { include_by_default: include });
+    try {
+      await api.updateActivityTemplate(id, { include_by_default: include });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+      loadTemplates();
+    }
+  }
+
+  async function toggleAllInclude(include: boolean) {
+    try {
+      await api.setAllTemplatesIncludeByDefault(include);
+      loadTemplates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
+  }
+
   async function deleteTemplate(id: number) {
     try {
       await api.deleteActivityTemplate(id);
@@ -275,6 +297,18 @@ export default function ActivityTemplatesPage() {
               <TableHead className="min-w-[90px]">Futási idő (nap)</TableHead>
               <TableHead className="min-w-[90px]">Előkészítési idő (nap)</TableHead>
               <TableHead className="min-w-[160px]">Előfeltételek</TableHead>
+              <TableHead className="min-w-[110px]">
+                <div className="flex items-center gap-1.5">
+                  <Checkbox
+                    checked={allIncluded}
+                    indeterminate={someIncluded && !allIncluded}
+                    disabled={!(canEdit && editing)}
+                    aria-label="Összes be/ki kapcsolása"
+                    onCheckedChange={() => toggleAllInclude(!allIncluded)}
+                  />
+                  Alapból bekerül
+                </div>
+              </TableHead>
               {editing && <TableHead className="w-10"></TableHead>}
             </TableRow>
           </TableHeader>
@@ -407,6 +441,14 @@ export default function ActivityTemplatesPage() {
                     )}
                   </div>
                 </TableCell>
+                <TableCell>
+                  <Checkbox
+                    checked={t.include_by_default}
+                    disabled={!(canEdit && editing)}
+                    aria-label="Alapból bekerüljön az új projektekbe"
+                    onCheckedChange={(checked) => commitInclude(t.id, !!checked)}
+                  />
+                </TableCell>
                 {editing && (
                   <TableCell className="text-right">
                     <AlertDialog>
@@ -443,7 +485,7 @@ export default function ActivityTemplatesPage() {
             </DndContext>
             {templates.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                   Nincs tevékenység sablon
                 </TableCell>
               </TableRow>

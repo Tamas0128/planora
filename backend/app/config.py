@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 7
     admin_password: str = ""
+    pilot_mode: bool = False
     s3_endpoint: str = "http://localhost:9000"
     s3_public_endpoint: str = "http://localhost:9000"
     s3_access_key: str = "minioadmin"

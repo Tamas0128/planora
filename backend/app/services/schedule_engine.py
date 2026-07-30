@@ -113,14 +113,14 @@ def seed_activity_templates(db: Session) -> None:
 
 
 def create_project_activities(db: Session, project: Project) -> list[Activity]:
-    templates = (
-        db.query(ActivityTemplate).order_by(ActivityTemplate.sort_order).all()
-    )
-    if not templates:
+    if db.query(ActivityTemplate).count() == 0:
         seed_activity_templates(db)
-        templates = (
-            db.query(ActivityTemplate).order_by(ActivityTemplate.sort_order).all()
-        )
+    templates = (
+        db.query(ActivityTemplate)
+        .filter(ActivityTemplate.include_by_default.is_(True))
+        .order_by(ActivityTemplate.sort_order)
+        .all()
+    )
 
     activities: list[Activity] = []
     template_id_to_activity: dict[int, Activity] = {}

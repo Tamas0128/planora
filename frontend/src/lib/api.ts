@@ -73,6 +73,7 @@ export interface ActivityTemplate {
   default_prep_days: number;
   responsible_role: string;
   prerequisite_template_ids: number[];
+  include_by_default: boolean;
 }
 
 export interface PrepTask {
@@ -94,6 +95,7 @@ export interface TaskBoardItem {
   activity_name: string;
   status: string;
   responsible_role: string;
+  duration_days: number;
   assignee_id?: number;
   assignee_name?: string;
   start_date?: string;
@@ -305,6 +307,13 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
 
+  pilotStatus: () => request<{ pilot_mode: boolean }>("/auth/pilot-status"),
+
+  pilotLogin: () =>
+    request<{ access_token: string; refresh_token: string }>("/auth/pilot-login", {
+      method: "POST",
+    }),
+
   // AppLayout and several pages each want the current user on mount; share
   // one in-flight/just-resolved request instead of firing /auth/me per page.
   me: () => {
@@ -337,10 +346,21 @@ export const api = {
 
   activities: (projectId: number) => request<Activity[]>(`/projects/${projectId}/activities`),
 
+  createActivity: (projectId: number, data: Record<string, unknown>) =>
+    request<Activity>(`/projects/${projectId}/activities`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   updateActivity: (projectId: number, activityId: number, data: Record<string, unknown>) =>
     request<Activity>(`/projects/${projectId}/activities/${activityId}`, {
       method: "PATCH",
       body: JSON.stringify(data),
+    }),
+
+  deleteActivity: (projectId: number, activityId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/activities/${activityId}`, {
+      method: "DELETE",
     }),
 
   dashboardStats: () => request<DashboardStats>("/dashboard/stats"),
@@ -404,6 +424,12 @@ export const api = {
 
   deleteActivityTemplate: (id: number) =>
     request<{ ok: boolean }>(`/activity-templates/${id}`, { method: "DELETE" }),
+
+  setAllTemplatesIncludeByDefault: (include: boolean) =>
+    request<{ ok: boolean }>("/activity-templates/include-all", {
+      method: "PATCH",
+      body: JSON.stringify({ include_by_default: include }),
+    }),
 
   addTemplateDependency: (templateId: number, prerequisiteTemplateId: number) =>
     request<{ ok: boolean }>(`/activity-templates/${templateId}/dependencies`, {

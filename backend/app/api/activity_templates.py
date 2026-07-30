@@ -6,6 +6,7 @@ from app.dependencies import get_current_user, require_roles
 from app.models import ActivityTemplate, ActivityTemplateDependency, User, UserRole
 from app.schemas import (
     ActivityTemplateCreate,
+    ActivityTemplateIncludeAll,
     ActivityTemplateResponse,
     ActivityTemplateUpdate,
     TemplateDependencyCreate,
@@ -26,6 +27,7 @@ def _to_response(db: Session, t: ActivityTemplate) -> ActivityTemplateResponse:
         default_prep_days=t.default_prep_days,
         responsible_role=t.responsible_role,
         prerequisite_template_ids=[d.prerequisite_template_id for d in deps],
+        include_by_default=t.include_by_default,
     )
 
 
@@ -36,6 +38,17 @@ def list_templates(
 ):
     templates = db.query(ActivityTemplate).order_by(ActivityTemplate.sort_order).all()
     return [_to_response(db, t) for t in templates]
+
+
+@router.patch("/include-all")
+def set_all_include_by_default(
+    body: ActivityTemplateIncludeAll,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT)),
+):
+    db.query(ActivityTemplate).update({ActivityTemplate.include_by_default: body.include_by_default})
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("", response_model=ActivityTemplateResponse)
@@ -53,6 +66,7 @@ def create_template(
         sort_order=max_sort,
         default_prep_days=body.default_prep_days,
         responsible_role=body.responsible_role,
+        include_by_default=body.include_by_default,
     )
     db.add(template)
     db.commit()

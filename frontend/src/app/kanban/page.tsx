@@ -6,6 +6,7 @@ import {
   Calendar,
   Image as ImageIcon,
   MapPin,
+  Plus,
   Search,
   User as UserIcon,
   X,
@@ -26,13 +27,28 @@ import {
 } from "@dnd-kit/core";
 import AppLayout from "@/components/AppLayout";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { api, STATUS_LABELS, TaskBoardItem, UserBrief } from "@/lib/api";
+import { api, ProjectCard, ROLE_LABELS, STATUS_LABELS, TaskBoardItem, UserBrief } from "@/lib/api";
 import {
   ACTIVITY_STATUS_CFG,
   ACTIVITY_STATUS_LABELS,
@@ -44,6 +60,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+
+const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
 
 function CardThumbnail({ projectId, hasThumbnail }: { projectId: number; hasThumbnail: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -147,11 +165,68 @@ function KanbanColumn({ status, children }: { status: string; children: React.Re
   );
 }
 
-function RightPanel({ item, onClose, onOpen }: { item: TaskBoardItem; onClose: () => void; onOpen: () => void }) {
+function RightPanel({
+  item, users, onClose, onOpen, onUpdated, onDeleted,
+}: {
+  item: TaskBoardItem;
+  users: UserBrief[];
+  onClose: () => void;
+  onOpen: () => void;
+  onUpdated: () => void;
+  onDeleted: () => void;
+}) {
   const late = isLate(item.end_date ?? "9999-12-31");
   const cfg = ACTIVITY_STATUS_CFG[item.status] ?? ACTIVITY_STATUS_CFG.pending;
   const projectCfg = STATUS_CFG[item.project_status] ?? STATUS_CFG.planning;
   const initials = pmInitials(item.assignee_name);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: item.activity_name,
+    responsible_role: item.responsible_role,
+    assignee_id: item.assignee_id ? String(item.assignee_id) : "none",
+    duration_days: item.duration_days,
+  });
+
+  useEffect(() => {
+    setForm({
+      name: item.activity_name,
+      responsible_role: item.responsible_role,
+      assignee_id: item.assignee_id ? String(item.assignee_id) : "none",
+      duration_days: item.duration_days,
+    });
+    setEditing(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.activity_id]);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await api.updateActivity(item.project_id, item.activity_id, {
+        name: form.name,
+        responsible_role: form.responsible_role,
+        assignee_id: form.assignee_id === "none" ? null : Number(form.assignee_id),
+        duration_days: Number(form.duration_days),
+      });
+      setEditing(false);
+      onUpdated();
+      toast.success("Feladat mentve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      await api.deleteActivity(item.project_id, item.activity_id);
+      toast.success("Feladat törölve");
+      onDeleted();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
+    }
+  }
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -173,7 +248,16 @@ function RightPanel({ item, onClose, onOpen }: { item: TaskBoardItem; onClose: (
               {STATUS_LABELS[item.project_status]}
             </span>
           </div>
-          <h2 className="text-[14px] font-bold leading-snug text-slate-900">{item.activity_name}</h2>
+          {editing ? (
+            <Input
+              value={form.name}
+              aria-label="Feladat neve"
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              className="h-7 text-[13px] font-bold"
+            />
+          ) : (
+            <h2 className="text-[14px] font-bold leading-snug text-slate-900">{item.activity_name}</h2>
+          )}
           <p className="mt-0.5 text-[11px] text-slate-400">{item.project_code}</p>
         </div>
         <button
@@ -194,13 +278,59 @@ function RightPanel({ item, onClose, onOpen }: { item: TaskBoardItem; onClose: (
           </div>
         </div>
 
-        <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős</p>
-          <div className="flex items-center gap-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">{initials}</div>
-            <span className="text-[13px] font-medium text-slate-800">{item.assignee_name ?? "Nincs kijelölve"}</span>
+        {editing ? (
+          <>
+            <div>
+              <Label className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Kijelölve</Label>
+              <Select value={form.assignee_id} onValueChange={(v) => setForm((f) => ({ ...f, assignee_id: v as string }))}>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue>
+                    {() => users.find((u) => String(u.id) === form.assignee_id)?.full_name ?? "Nincs kijelölve"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nincs kijelölve</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={String(u.id)}>{u.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős szerepkör</Label>
+              <Select value={form.responsible_role} onValueChange={(v) => setForm((f) => ({ ...f, responsible_role: v as string }))}>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue>{(v: string) => ROLE_LABELS[v] || v}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_OPTIONS.map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="kanban-edit-duration" className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                Futási idő (nap)
+              </Label>
+              <Input
+                id="kanban-edit-duration"
+                type="number"
+                min={1}
+                value={form.duration_days}
+                onChange={(e) => setForm((f) => ({ ...f, duration_days: Number(e.target.value) }))}
+              />
+            </div>
+          </>
+        ) : (
+          <div>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős</p>
+            <div className="flex items-center gap-2">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">{initials}</div>
+              <span className="text-[13px] font-medium text-slate-800">{item.assignee_name ?? "Nincs kijelölve"}</span>
+            </div>
           </div>
-        </div>
+        )}
 
         <div>
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Helyszín</p>
@@ -219,7 +349,7 @@ function RightPanel({ item, onClose, onOpen }: { item: TaskBoardItem; onClose: (
           </div>
         </div>
 
-        {(item.project_manager_name || item.site_manager_name) && (
+        {!editing && (item.project_manager_name || item.site_manager_name) && (
           <div>
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projekt kapcsolattartók</p>
             {item.project_manager_name && <p className="text-[12px] text-slate-700">PV: {item.project_manager_name}</p>}
@@ -228,7 +358,43 @@ function RightPanel({ item, onClose, onOpen }: { item: TaskBoardItem; onClose: (
         )}
       </div>
 
-      <div className="shrink-0 border-t border-slate-100 p-3">
+      <div className="shrink-0 space-y-2 border-t border-slate-100 p-3">
+        {editing ? (
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setEditing(false)} disabled={saving}>
+              Mégse
+            </Button>
+            <Button className="flex-1" onClick={handleSave} disabled={saving}>
+              {saving ? "Mentés..." : "Mentés"}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setEditing(true)}>
+              Szerkesztés
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger render={<Button variant="outline" className="flex-1 text-destructive" />}>
+                Törlés
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Biztosan törlöd ezt a feladatot?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    &quot;{item.activity_name}&quot; archiválásra kerül és eltűnik az ütemtervből és a kanban
+                    tábláról. Az adatai megmaradnak, de nem jelenik meg többé.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Mégse</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90">
+                    Törlés
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
         <button onClick={onOpen} className="w-full rounded-lg bg-blue-600 py-2 text-[13px] font-semibold text-white hover:bg-blue-700">
           Projekt megnyitása
         </button>
@@ -238,28 +404,83 @@ function RightPanel({ item, onClose, onOpen }: { item: TaskBoardItem; onClose: (
   );
 }
 
+const NEW_TASK_STATUS_OPTIONS = ACTIVITY_STATUS_ORDER.map((s) => [s, ACTIVITY_STATUS_LABELS[s]] as [string, string]);
+
+function makeNewTaskForm() {
+  return {
+    project_id: "", name: "", responsible_role: "project_manager", assignee_id: "none",
+    duration_days: 1, prep_days: 14, status: "pending",
+  };
+}
+
 export default function KanbanPage() {
   const router = useRouter();
   const [board, setBoard]         = useState<Record<string, TaskBoardItem[]>>({});
   const [users, setUsers]         = useState<UserBrief[]>([]);
+  const [projects, setProjects]   = useState<ProjectCard[]>([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [selected, setSelected]   = useState<TaskBoardItem | null>(null);
   const [activeId, setActiveId]   = useState<string | null>(null);
+  const [showNewTask, setShowNewTask] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [newTaskForm, setNewTaskForm] = useState(makeNewTaskForm);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor),
   );
 
+  function loadBoard() {
+    return api.taskKanban()
+      .then((b) => {
+        setBoard(b);
+        if (selected) {
+          const stillThere = Object.values(b).flat().find((i) => i.activity_id === selected.activity_id);
+          setSelected(stillThere ?? null);
+        }
+        return b;
+      })
+      .catch(() => toast.error("Nem sikerült betölteni a feladatok listáját"));
+  }
+
   useEffect(() => {
-    api.taskKanban()
-      .then(setBoard)
-      .catch(() => toast.error("Nem sikerült betölteni a feladatok listáját"))
-      .finally(() => setLoading(false));
+    loadBoard().finally(() => setLoading(false));
     api.usersDirectory().then(setUsers).catch(() => {});
+    api.projects().then(setProjects).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function createTask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newTaskForm.project_id) {
+      toast.error("Válassz projektet");
+      return;
+    }
+    setCreatingTask(true);
+    try {
+      const projectId = Number(newTaskForm.project_id);
+      const created = await api.createActivity(projectId, {
+        name: newTaskForm.name,
+        responsible_role: newTaskForm.responsible_role,
+        assignee_id: newTaskForm.assignee_id === "none" ? null : Number(newTaskForm.assignee_id),
+        duration_days: Number(newTaskForm.duration_days),
+        prep_days: Number(newTaskForm.prep_days),
+      });
+      if (newTaskForm.status !== "pending") {
+        await api.updateActivity(projectId, created.id, { status: newTaskForm.status });
+      }
+      setShowNewTask(false);
+      setNewTaskForm(makeNewTaskForm());
+      loadBoard();
+      toast.success("Feladat létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingTask(false);
+    }
+  }
 
   const q = search.toLowerCase();
 
@@ -334,6 +555,9 @@ export default function KanbanPage() {
       <div className="h-5 w-px bg-slate-100" />
       <h1 className="text-[14px] font-bold tracking-tight text-slate-900">Kanban tábla</h1>
       <div className="hidden flex-1 sm:block" />
+      <Button size="sm" onClick={() => setShowNewTask(true)}>
+        <Plus className="size-3.5" /> Új feladat
+      </Button>
       <Select value={assigneeFilter} onValueChange={(v) => v && setAssigneeFilter(v)}>
         <SelectTrigger size="sm" className="h-8 w-[160px] text-[13px]">
           <SelectValue>
@@ -418,11 +642,131 @@ export default function KanbanPage() {
         {selected && (
           <RightPanel
             item={selected}
+            users={users}
             onClose={() => setSelected(null)}
             onOpen={() => router.push(`/projects/${selected.project_id}`)}
+            onUpdated={loadBoard}
+            onDeleted={() => { setSelected(null); loadBoard(); }}
           />
         )}
       </div>
+
+      <Dialog open={showNewTask} onOpenChange={(v) => { setShowNewTask(v); if (!v) setNewTaskForm(makeNewTaskForm()); }}>
+        <DialogContent>
+          <form onSubmit={createTask}>
+            <DialogHeader>
+              <DialogTitle>Új feladat</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-3 py-2">
+              <div className="space-y-1.5">
+                <Label>Projekt</Label>
+                <Select
+                  value={newTaskForm.project_id}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, project_id: v as string }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {() => projects.find((p) => String(p.id) === newTaskForm.project_id)?.name ?? "Válassz projektet"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name} ({p.project_code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-task-name">Feladat neve</Label>
+                <Input
+                  id="new-task-name"
+                  required
+                  value={newTaskForm.name}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Felelős szerepkör</Label>
+                <Select
+                  value={newTaskForm.responsible_role}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, responsible_role: v as string }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => ROLE_LABELS[v] || v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Kijelölve</Label>
+                <Select
+                  value={newTaskForm.assignee_id}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, assignee_id: v as string }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {() => users.find((u) => String(u.id) === newTaskForm.assignee_id)?.full_name ?? "Nincs kijelölve"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nincs kijelölve</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)}>{u.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Kezdő állapot</Label>
+                <Select
+                  value={newTaskForm.status}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, status: v as string }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => ACTIVITY_STATUS_LABELS[v] || v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NEW_TASK_STATUS_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-task-duration">Futási idő (nap)</Label>
+                <Input
+                  id="new-task-duration"
+                  type="number"
+                  min={1}
+                  required
+                  value={newTaskForm.duration_days}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, duration_days: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-task-prep">Előkészítési idő (nap)</Label>
+                <Input
+                  id="new-task-prep"
+                  type="number"
+                  min={1}
+                  required
+                  value={newTaskForm.prep_days}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, prep_days: Number(e.target.value) }))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={creatingTask}>
+                {creatingTask ? "Mentés..." : "Létrehozás"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

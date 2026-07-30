@@ -52,7 +52,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -308,6 +308,11 @@ export default function ProjectDetailPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [showNewActivity, setShowNewActivity] = useState(false);
+  const [creatingActivity, setCreatingActivity] = useState(false);
+  const [newActivityForm, setNewActivityForm] = useState({
+    name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none",
+  });
 
   function loadProject() {
     api.project(id).then((p) => { setProject(p); setDeliveryDate(p.delivery_date); }).catch(console.error);
@@ -558,6 +563,37 @@ export default function ProjectDetailPage() {
       loadProject();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
+  }
+
+  async function deleteActivity(activityId: number) {
+    try {
+      await api.deleteActivity(id, activityId);
+      loadActivities();
+      loadProject();
+      toast.success("Feladat törölve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
+    }
+  }
+
+  async function createActivity(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingActivity(true);
+    try {
+      await api.createActivity(id, {
+        ...newActivityForm,
+        assignee_id: newActivityForm.assignee_id === "none" ? null : Number(newActivityForm.assignee_id),
+      });
+      setShowNewActivity(false);
+      setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none" });
+      loadActivities();
+      loadProject();
+      toast.success("Feladat létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingActivity(false);
     }
   }
 
@@ -973,6 +1009,11 @@ export default function ProjectDetailPage() {
                 Gantt PDF
               </Button>
               {canEdit && (
+                <Button size="sm" onClick={() => setShowNewActivity(true)}>
+                  <Plus className="size-3.5" /> Új feladat
+                </Button>
+              )}
+              {canEdit && (
                 <Button
                   size="sm"
                   variant={scheduleEditing ? "default" : "outline"}
@@ -1211,33 +1252,152 @@ export default function ProjectDetailPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {a.is_active ? (
-                        canEdit && scheduleEditing ? (
-                          <Button variant="link" className="h-auto p-0 text-xs" onClick={() => toggleActivityActive(a)}>
-                            Letiltás
-                          </Button>
-                        ) : (
-                          <Badge className="bg-emerald-100 text-emerald-700">Aktív</Badge>
-                        )
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <Badge variant="secondary">Inaktív</Badge>
-                          {canEdit && scheduleEditing && (
+                      <div className="flex items-center gap-1.5">
+                        {a.is_active ? (
+                          canEdit && scheduleEditing ? (
                             <Button variant="link" className="h-auto p-0 text-xs" onClick={() => toggleActivityActive(a)}>
-                              Aktiválás
+                              Letiltás
                             </Button>
-                          )}
-                        </div>
-                      )}
+                          ) : (
+                            <Badge className="bg-emerald-100 text-emerald-700">Aktív</Badge>
+                          )
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary">Inaktív</Badge>
+                            {canEdit && scheduleEditing && (
+                              <Button variant="link" className="h-auto p-0 text-xs" onClick={() => toggleActivityActive(a)}>
+                                Aktiválás
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                        {canEdit && scheduleEditing && (
+                          <AlertDialog>
+                            <AlertDialogTrigger
+                              render={<Button variant="link" className="h-auto p-0 text-xs text-destructive" />}
+                            >
+                              Törlés
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Biztosan törlöd ezt a feladatot?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  &quot;{a.name}&quot; archiválásra kerül és eltűnik az ütemtervből. Az adatai megmaradnak,
+                                  de nem jelenik meg többé.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Mégse</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteActivity(a.id)}
+                                  className="bg-destructive text-white hover:bg-destructive/90"
+                                >
+                                  Törlés
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </TableCell>
                     </>)}
                   </SortableActivityRow>
                 ))}
                   </SortableContext>
                 </DndContext>
+                {activities.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
+                      Nincs feladat ehhez a projekthez
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Card>
+
+          <Dialog open={showNewActivity} onOpenChange={(v) => { setShowNewActivity(v); if (!v) setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none" }); }}>
+            <DialogContent>
+              <form onSubmit={createActivity}>
+                <DialogHeader>
+                  <DialogTitle>Új feladat</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-activity-name">Feladat neve</Label>
+                    <Input
+                      id="new-activity-name"
+                      required
+                      value={newActivityForm.name}
+                      onChange={(e) => setNewActivityForm((f) => ({ ...f, name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Felelős</Label>
+                    <Select
+                      value={newActivityForm.responsible_role}
+                      onValueChange={(v) => setNewActivityForm((f) => ({ ...f, responsible_role: v as string }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue>{(v: string) => ROLE_LABELS[v] || v}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLE_OPTIONS.map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Kijelölve</Label>
+                    <Select
+                      value={newActivityForm.assignee_id}
+                      onValueChange={(v) => setNewActivityForm((f) => ({ ...f, assignee_id: v as string }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
+                          {() => assignableUsers.find((u) => String(u.id) === newActivityForm.assignee_id)?.full_name ?? "Nincs kijelölve"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nincs kijelölve</SelectItem>
+                        {assignableUsers.map((u) => (
+                          <SelectItem key={u.id} value={String(u.id)}>{u.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-activity-duration">Futási idő (nap)</Label>
+                    <Input
+                      id="new-activity-duration"
+                      type="number"
+                      min={1}
+                      required
+                      value={newActivityForm.duration_days}
+                      onChange={(e) => setNewActivityForm((f) => ({ ...f, duration_days: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-activity-prep">Előkészítési idő (nap)</Label>
+                    <Input
+                      id="new-activity-prep"
+                      type="number"
+                      min={1}
+                      required
+                      value={newActivityForm.prep_days}
+                      onChange={(e) => setNewActivityForm((f) => ({ ...f, prep_days: Number(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creatingActivity}>
+                    {creatingActivity ? "Mentés..." : "Létrehozás"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="documents" className="mt-3">

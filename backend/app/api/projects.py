@@ -17,6 +17,7 @@ from app.models import (
     UserRole,
 )
 from app.schemas import (
+    ActivityCreate,
     ActivityResponse,
     ActivityUpdate,
     DependencyCreate,
@@ -182,15 +183,16 @@ def create_project(
 ):
     if db.query(Project).filter(Project.project_code == body.project_code).first():
         raise HTTPException(status_code=400, detail="Project code already exists")
-    project = Project(**body.model_dump())
+    project = Project(**body.model_dump(exclude={"with_schedule"}))
     if user.role == UserRole.PROJECT_MANAGER and not project.project_manager_id:
         project.project_manager_id = user.id
     elif user.role == UserRole.SITE_MANAGER and not project.site_manager_id:
         project.site_manager_id = user.id
     db.add(project)
     db.flush()
-    create_project_activities(db, project)
-    recalculate_schedule(db, project)
+    if body.with_schedule:
+        create_project_activities(db, project)
+        recalculate_schedule(db, project)
     log_change(db, user, "project", "created", None, project.name, project.id, project.id)
     db.commit()
     db.refresh(project)
@@ -355,6 +357,56 @@ def delete_project(
     return {"ok": True, "deleted": project_name}
 
 
+@router.post("/{project_id}/activities", response_model=ActivityResponse)
+def create_activity(
+    project_id: int,
+    body: ActivityCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = db.query(Project).get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not _can_edit_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    max_sort = (
+        db.query(Activity)
+        .filter(Activity.project_id == project_id, Activity.is_archived.is_(False))
+        .count()
+    )
+    activity = Activity(
+        project_id=project_id,
+        name=body.name,
+        duration_days=body.duration_days,
+        prep_days=body.prep_days,
+        responsible_role=body.responsible_role,
+        assignee_id=body.assignee_id,
+        sort_order=max_sort,
+    )
+    db.add(activity)
+    db.flush()
+    log_change(db, user, "activity", "created", None, activity.name, project.id, activity.id)
+    recalculate_schedule(db, project)
+    db.commit()
+    db.refresh(activity)
+    return ActivityResponse(
+        id=activity.id,
+        name=activity.name,
+        duration_days=activity.duration_days,
+        prep_days=activity.prep_days,
+        responsible_role=activity.responsible_role,
+        assignee_id=activity.assignee_id,
+        assignee_name=activity.assignee.full_name if activity.assignee else None,
+        start_date=activity.start_date,
+        end_date=activity.end_date,
+        prep_date=activity.prep_date,
+        status=activity.status,
+        is_active=activity.is_active,
+        sort_order=activity.sort_order,
+        prerequisite_ids=[],
+    )
+
+
 @router.get("/{project_id}/activities", response_model=list[ActivityResponse])
 def list_activities(
     project_id: int,
@@ -369,7 +421,7 @@ def list_activities(
     activities = (
         db.query(Activity)
         .options(joinedload(Activity.assignee))
-        .filter(Activity.project_id == project_id)
+        .filter(Activity.project_id == project_id, Activity.is_archived.is_(False))
         .order_by(Activity.sort_order)
         .all()
     )
@@ -429,7 +481,7 @@ def update_activity(
         requested_position = updates.pop("sort_order")
         siblings = (
             db.query(Activity)
-            .filter(Activity.project_id == project_id)
+            .filter(Activity.project_id == project_id, Activity.is_archived.is_(False))
             .order_by(Activity.sort_order)
             .all()
         )
@@ -511,6 +563,53 @@ def update_activity(
         sort_order=activity.sort_order,
         prerequisite_ids=[d.prerequisite_id for d in deps],
     )
+
+
+@router.delete("/{project_id}/activities/{activity_id}")
+def delete_activity(
+    project_id: int,
+    activity_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = db.query(Project).get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not _can_edit_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    activity = db.query(Activity).filter(
+        Activity.id == activity_id, Activity.project_id == project_id
+    ).first()
+    if not activity or activity.is_archived:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    blockers = (
+        db.query(Activity)
+        .join(ActivityDependency, ActivityDependency.activity_id == Activity.id)
+        .filter(
+            ActivityDependency.prerequisite_id == activity_id,
+            Activity.is_active.is_(True),
+            Activity.is_archived.is_(False),
+        )
+        .all()
+    )
+    if blockers:
+        names = ", ".join(b.name for b in blockers)
+        raise HTTPException(
+            status_code=400,
+            detail=f"A tevékenység nem törölhető, mert az alábbi aktív tevékenységek függenek tőle: {names}",
+        )
+
+    log_change(db, user, "activity", "deleted", activity.name, None, project.id, activity.id)
+    activity.is_archived = True
+    activity.is_active = False
+    activity.start_date = None
+    activity.end_date = None
+    activity.prep_date = None
+    db.flush()
+    recalculate_schedule(db, project)
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/{project_id}/activities/{activity_id}/dependencies")

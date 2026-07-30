@@ -193,6 +193,7 @@ class ActivityTemplate(Base):
     responsible_role: Mapped[UserRole] = mapped_column(
         Enum(UserRole), default=UserRole.PROJECT_MANAGER
     )
+    include_by_default: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class ActivityTemplateDependency(Base):
@@ -236,6 +237,7 @@ class Activity(Base):
         Enum(ActivityStatus), default=ActivityStatus.PENDING
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     project: Mapped["Project"] = relationship(back_populates="activities")
     template: Mapped["ActivityTemplate | None"] = relationship()

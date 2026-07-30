@@ -32,6 +32,7 @@ function makeForm() {
     client_name: "", client_phone: "", client_email: "",
     floor_area_sqm: 145, building_type: "light_steel",
     delivery_date: new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0],
+    with_schedule: true,
   };
 }
 
@@ -212,6 +213,37 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
                     value={form.delivery_date}
                     onChange={(e) => update("delivery_date", e.target.value)}
                   />
+                </div>
+                <div className="col-span-full space-y-1.5">
+                  <Label>Ütemterv</Label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => update("with_schedule", true)}
+                      className={cn(
+                        "rounded-md border p-3 text-left text-sm transition-colors",
+                        form.with_schedule ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                      )}
+                    >
+                      <p className="font-medium">Ütemezett feladatokkal</p>
+                      <p className="text-xs text-muted-foreground">
+                        A rendszer automatikusan létrehozza az ütemterv sablonban bejelölt feladatokat.
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => update("with_schedule", false)}
+                      className={cn(
+                        "rounded-md border p-3 text-left text-sm transition-colors",
+                        !form.with_schedule ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                      )}
+                    >
+                      <p className="font-medium">Feladatlista nélkül</p>
+                      <p className="text-xs text-muted-foreground">
+                        A projekt üres ütemtervvel jön létre, a feladatokat utólag lehet felvenni.
+                      </p>
+                    </button>
+                  </div>
                 </div>
                 <div className="col-span-full space-y-1.5 rounded-md border border-border bg-muted/40 p-3 text-sm">
                   <p className="font-medium">{form.name || "—"} ({form.project_code || "—"})</p>

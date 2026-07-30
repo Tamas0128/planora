@@ -11,6 +11,10 @@
 # szándékosan nem indítjuk el — nem kellenek egy demo/pilot környezethez.)
 
 services:
+  backend:
+    environment:
+      PILOT_MODE: ${PILOT_MODE:-false}
+
   postgres:
     ports: !override
       - "5434:5432"

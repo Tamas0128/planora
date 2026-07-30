@@ -68,6 +68,7 @@ class ProjectCreate(BaseModel):
     subcontractors: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    with_schedule: bool = True
 
 
 class ProjectUpdate(BaseModel):
@@ -150,6 +151,14 @@ class ActivityResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ActivityCreate(BaseModel):
+    name: str
+    duration_days: int
+    prep_days: int = 14
+    responsible_role: UserRole = UserRole.PROJECT_MANAGER
+    assignee_id: Optional[int] = None
+
+
 class ActivityUpdate(BaseModel):
     name: Optional[str] = None
     duration_days: Optional[int] = None
@@ -175,6 +184,7 @@ class ActivityTemplateResponse(BaseModel):
     default_prep_days: int
     responsible_role: UserRole
     prerequisite_template_ids: list[int] = []
+    include_by_default: bool = True
 
     model_config = {"from_attributes": True}
 
@@ -184,6 +194,7 @@ class ActivityTemplateCreate(BaseModel):
     duration_days: int
     default_prep_days: int = 14
     responsible_role: UserRole = UserRole.PROJECT_MANAGER
+    include_by_default: bool = True
 
 
 class ActivityTemplateUpdate(BaseModel):
@@ -192,6 +203,11 @@ class ActivityTemplateUpdate(BaseModel):
     default_prep_days: Optional[int] = None
     responsible_role: Optional[UserRole] = None
     sort_order: Optional[int] = None
+    include_by_default: Optional[bool] = None
+
+
+class ActivityTemplateIncludeAll(BaseModel):
+    include_by_default: bool
 
 
 class TemplateDependencyCreate(BaseModel):
@@ -217,6 +233,7 @@ class TaskBoardItem(BaseModel):
     activity_name: str
     status: ActivityStatus
     responsible_role: UserRole
+    duration_days: int
     assignee_id: Optional[int] = None
     assignee_name: Optional[str] = None
     start_date: Optional[date] = None
