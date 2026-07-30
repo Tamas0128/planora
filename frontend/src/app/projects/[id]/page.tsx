@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Calendar, Download, GripVertical, Image as ImageIcon, Pencil, Plus, QrCode, TriangleAlert, Upload, X } from "lucide-react";
+import { Calendar, Download, GripVertical, Image as ImageIcon, NotebookPen, Pencil, Plus, QrCode, TriangleAlert, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -64,6 +64,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -286,6 +287,49 @@ function SortableActivityRow({
   );
 }
 
+function ActivityNotesCell({
+  notes, canEdit, onSave,
+}: {
+  notes?: string; canEdit: boolean; onSave: (notes: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(notes ?? "");
+
+  return (
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) setDraft(notes ?? ""); }}>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={notes ? "Jegyzet megtekintése/szerkesztése" : "Jegyzet hozzáadása"}
+            className={cn(notes ? "text-primary" : "text-muted-foreground/60")}
+          />
+        }
+      >
+        <NotebookPen className="size-3.5" />
+      </PopoverTrigger>
+      <PopoverContent className="w-72 space-y-2">
+        {canEdit ? (
+          <>
+            <Textarea
+              rows={4}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Jegyzet a feladathoz…"
+            />
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => { onSave(draft); setOpen(false); }}>Mentés</Button>
+            </div>
+          </>
+        ) : (
+          <p className="whitespace-pre-wrap text-sm text-foreground/80">{notes || "Nincs jegyzet"}</p>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -318,7 +362,7 @@ export default function ProjectDetailPage() {
   const [creatingActivity, setCreatingActivity] = useState(false);
   const [newActivityForm, setNewActivityForm] = useState({
     name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none",
-    category: "other", documentation_subtype: undefined as string | undefined,
+    category: "other", documentation_subtype: undefined as string | undefined, notes: "",
   });
 
   function loadProject() {
@@ -529,6 +573,16 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function commitActivityNotes(activityId: number, notes: string) {
+    try {
+      await api.updateActivity(id, activityId, { notes: notes || null });
+      loadActivities();
+      toast.success("Jegyzet mentve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
+  }
+
   async function commitActivityName(activityId: number, name: string) {
     const trimmed = name.trim();
     if (!trimmed) {
@@ -593,7 +647,7 @@ export default function ProjectDetailPage() {
         assignee_id: newActivityForm.assignee_id === "none" ? null : Number(newActivityForm.assignee_id),
       });
       setShowNewActivity(false);
-      setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined });
+      setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined, notes: "" });
       loadActivities();
       loadProject();
       toast.success("Feladat létrehozva");
@@ -1046,6 +1100,7 @@ export default function ProjectDetailPage() {
                   <TableHead className="min-w-[100px]">Kezdés</TableHead>
                   <TableHead className="min-w-[100px]">Befejezés</TableHead>
                   <TableHead className="min-w-[160px]">Előfeltételek</TableHead>
+                  <TableHead className="min-w-[70px]">Jegyzet</TableHead>
                   <TableHead className="min-w-[130px]">Státusz</TableHead>
                   <TableHead className="min-w-[90px]">Állapot</TableHead>
                 </TableRow>
@@ -1239,6 +1294,13 @@ export default function ProjectDetailPage() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <ActivityNotesCell
+                        notes={a.notes}
+                        canEdit={!!canEdit && scheduleEditing}
+                        onSave={(notes) => commitActivityNotes(a.id, notes)}
+                      />
+                    </TableCell>
+                    <TableCell>
                       {canEdit && scheduleEditing ? (
                       <Select value={a.status} onValueChange={(v) => updateStatus(a.id, v as string)}>
                         <SelectTrigger size="sm" className={ACTIVITY_STATUS_COLOR[a.status]}>
@@ -1314,7 +1376,7 @@ export default function ProjectDetailPage() {
                 </DndContext>
                 {activities.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={13} className="py-8 text-center text-muted-foreground">
                       Nincs feladat ehhez a projekthez
                     </TableCell>
                   </TableRow>
@@ -1323,7 +1385,7 @@ export default function ProjectDetailPage() {
             </Table>
           </Card>
 
-          <Dialog open={showNewActivity} onOpenChange={(v) => { setShowNewActivity(v); if (!v) setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined }); }}>
+          <Dialog open={showNewActivity} onOpenChange={(v) => { setShowNewActivity(v); if (!v) setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined, notes: "" }); }}>
             <DialogContent>
               <form onSubmit={createActivity}>
                 <DialogHeader>
@@ -1428,6 +1490,15 @@ export default function ProjectDetailPage() {
                       required
                       value={newActivityForm.prep_days}
                       onChange={(e) => setNewActivityForm((f) => ({ ...f, prep_days: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-activity-notes">Jegyzet</Label>
+                    <Textarea
+                      id="new-activity-notes"
+                      rows={3}
+                      value={newActivityForm.notes}
+                      onChange={(e) => setNewActivityForm((f) => ({ ...f, notes: e.target.value }))}
                     />
                   </div>
                 </div>

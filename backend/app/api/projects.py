@@ -384,6 +384,7 @@ def create_activity(
         sort_order=max_sort,
         category=body.category,
         documentation_subtype=body.documentation_subtype,
+        notes=body.notes,
     )
     db.add(activity)
     db.flush()
@@ -408,6 +409,7 @@ def create_activity(
         prerequisite_ids=[],
         category=activity.category,
         documentation_subtype=activity.documentation_subtype,
+        notes=activity.notes,
     )
 
 
@@ -450,6 +452,7 @@ def list_activities(
                 prerequisite_ids=[d.prerequisite_id for d in deps],
                 category=a.category,
                 documentation_subtype=a.documentation_subtype,
+                notes=a.notes,
             )
         )
     return result
@@ -570,6 +573,7 @@ def update_activity(
         prerequisite_ids=[d.prerequisite_id for d in deps],
         category=activity.category,
         documentation_subtype=activity.documentation_subtype,
+        notes=activity.notes,
     )
 
 

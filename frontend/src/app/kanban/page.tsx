@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -227,6 +228,7 @@ function RightPanel({
     duration_days: item.duration_days,
     category: item.category,
     documentation_subtype: item.documentation_subtype,
+    notes: item.notes ?? "",
   });
 
   useEffect(() => {
@@ -237,6 +239,7 @@ function RightPanel({
       duration_days: item.duration_days,
       category: item.category,
       documentation_subtype: item.documentation_subtype,
+      notes: item.notes ?? "",
     });
     setEditing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -252,6 +255,7 @@ function RightPanel({
         duration_days: Number(form.duration_days),
         category: form.category,
         documentation_subtype: form.category === "documentation" ? form.documentation_subtype : null,
+        notes: form.notes || null,
       });
       setEditing(false);
       onUpdated();
@@ -453,6 +457,22 @@ function RightPanel({
             {item.site_manager_name && <p className="text-[12px] text-foreground/80">ÉV: {item.site_manager_name}</p>}
           </div>
         )}
+
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Jegyzet</p>
+          {editing ? (
+            <Textarea
+              rows={4}
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              placeholder="Jegyzet a feladathoz…"
+            />
+          ) : item.notes ? (
+            <p className="whitespace-pre-wrap text-[12px] text-foreground/80">{item.notes}</p>
+          ) : (
+            <p className="text-[12px] text-muted-foreground">Nincs jegyzet</p>
+          )}
+        </div>
       </div>
 
       <div className="shrink-0 space-y-2 border-t border-border p-3">
@@ -507,7 +527,7 @@ function makeNewTaskForm() {
   return {
     project_id: "", name: "", responsible_role: "project_manager", assignee_id: "none",
     duration_days: 1, prep_days: 14, status: "pending", category: "other",
-    documentation_subtype: undefined as string | undefined,
+    documentation_subtype: undefined as string | undefined, notes: "",
   };
 }
 
@@ -567,6 +587,7 @@ export default function KanbanPage() {
         prep_days: Number(newTaskForm.prep_days),
         category: newTaskForm.category,
         documentation_subtype: newTaskForm.category === "documentation" ? newTaskForm.documentation_subtype : null,
+        notes: newTaskForm.notes || null,
       });
       if (newTaskForm.status !== "pending") {
         await api.updateActivity(projectId, created.id, { status: newTaskForm.status });
@@ -890,6 +911,15 @@ export default function KanbanPage() {
                   required
                   value={newTaskForm.prep_days}
                   onChange={(e) => setNewTaskForm((f) => ({ ...f, prep_days: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-task-notes">Jegyzet</Label>
+                <Textarea
+                  id="new-task-notes"
+                  rows={3}
+                  value={newTaskForm.notes}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, notes: e.target.value }))}
                 />
               </div>
             </div>

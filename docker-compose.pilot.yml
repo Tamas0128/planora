@@ -5,10 +5,14 @@
 #
 # Indítás:
 #   docker compose -p planora-pilot -f docker-compose.yml -f docker-compose.pilot.yml \
-#     --env-file .env.pilot up -d --build postgres minio mailpit backend frontend nginx
+#     --env-file .env.pilot up -d --build postgres minio mailpit backend frontend nginx postgres-backup minio-backup
 #
-# (A postgres-backup/minio-backup/https-local szolgáltatásokat a pilothoz
-# szándékosan nem indítjuk el — nem kellenek egy demo/pilot környezethez.)
+# A postgres-backup/minio-backup szolgáltatások naponta (00:30, ill. 01:00)
+# mentik a Postgres adatbázist és a MinIO dokumentum-tárolót a
+# planora-pilot_postgres_backups / planora-pilot_minio_backups volume-okba
+# (indításkor azonnal is készül egy alap-mentés). Visszaállításhoz lásd:
+# infra/restore.ps1. A https-local (Caddy) szolgáltatást a pilothoz
+# szándékosan nem indítjuk el — nem kell egy demo/pilot környezethez.
 
 services:
   backend:

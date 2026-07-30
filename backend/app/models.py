@@ -278,6 +278,7 @@ class Activity(Base):
     documentation_subtype: Mapped[DocumentationSubtype | None] = mapped_column(
         Enum(DocumentationSubtype), nullable=True
     )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     project: Mapped["Project"] = relationship(back_populates="activities")
     template: Mapped["ActivityTemplate | None"] = relationship()

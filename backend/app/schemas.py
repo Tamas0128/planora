@@ -157,6 +157,7 @@ class ActivityResponse(BaseModel):
     prerequisite_ids: list[int] = []
     category: ActivityCategory = ActivityCategory.OTHER
     documentation_subtype: Optional[DocumentationSubtype] = None
+    notes: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -169,6 +170,7 @@ class ActivityCreate(BaseModel):
     assignee_id: Optional[int] = None
     category: ActivityCategory = ActivityCategory.OTHER
     documentation_subtype: Optional[DocumentationSubtype] = None
+    notes: Optional[str] = None
 
 
 class ActivityUpdate(BaseModel):
@@ -184,6 +186,7 @@ class ActivityUpdate(BaseModel):
     sort_order: Optional[int] = None
     category: Optional[ActivityCategory] = None
     documentation_subtype: Optional[DocumentationSubtype] = None
+    notes: Optional[str] = None
 
 
 class DependencyCreate(BaseModel):
@@ -256,6 +259,7 @@ class TaskBoardItem(BaseModel):
     duration_days: int
     category: ActivityCategory = ActivityCategory.OTHER
     documentation_subtype: Optional[DocumentationSubtype] = None
+    notes: Optional[str] = None
     assignee_id: Optional[int] = None
     assignee_name: Optional[str] = None
     start_date: Optional[date] = None

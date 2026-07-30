@@ -65,6 +65,7 @@ export interface Activity {
   prerequisite_ids: number[];
   category: string;
   documentation_subtype?: string;
+  notes?: string;
 }
 
 export interface ActivityTemplate {
@@ -102,6 +103,7 @@ export interface TaskBoardItem {
   duration_days: number;
   category: string;
   documentation_subtype?: string;
+  notes?: string;
   assignee_id?: number;
   assignee_name?: string;
   start_date?: string;

@@ -69,6 +69,7 @@ services:
       BACKUP_KEEP_WEEKS: 12
       BACKUP_KEEP_MONTHS: 12
       BACKUP_DIR: /backups
+      BACKUP_ON_START: "TRUE"
     volumes:
       - postgres_backups:/backups
     depends_on:
