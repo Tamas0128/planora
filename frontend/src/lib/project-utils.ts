@@ -23,11 +23,11 @@ export const STATUS_CFG: Record<string, {
   badge: string;
   statText: string;
 }> = {
-  planning:      { leftBorder: "border-l-neutral-400", progressBar: "bg-neutral-400", badge: "bg-neutral-100 text-neutral-700", statText: "text-neutral-700" },
-  foundation:    { leftBorder: "border-l-neutral-500", progressBar: "bg-neutral-500", badge: "bg-neutral-100 text-neutral-700", statText: "text-neutral-700" },
-  structure:     { leftBorder: "border-l-neutral-600", progressBar: "bg-neutral-600", badge: "bg-neutral-200 text-neutral-800", statText: "text-neutral-800" },
-  exterior_done: { leftBorder: "border-l-neutral-800", progressBar: "bg-neutral-800", badge: "bg-neutral-200 text-neutral-900", statText: "text-neutral-900" },
-  turnkey:       { leftBorder: "border-l-accent-500",  progressBar: "bg-accent-500",  badge: "bg-accent-100 text-accent-700",   statText: "text-accent-700" },
+  planning:      { leftBorder: "border-l-accent-300", progressBar: "bg-accent-300", badge: "bg-neutral-100 text-neutral-700",  statText: "text-neutral-700" },
+  foundation:    { leftBorder: "border-l-accent-400", progressBar: "bg-accent-400", badge: "bg-accent-100 text-accent-700",   statText: "text-accent-700" },
+  structure:     { leftBorder: "border-l-accent-500", progressBar: "bg-accent-500", badge: "bg-accent-100 text-accent-700",   statText: "text-accent-700" },
+  exterior_done: { leftBorder: "border-l-accent-600", progressBar: "bg-accent-600", badge: "bg-accent-200 text-accent-800",   statText: "text-accent-800" },
+  turnkey:       { leftBorder: "border-l-accent-700", progressBar: "bg-accent-700", badge: "bg-accent-200 text-accent-800",   statText: "text-accent-800" },
 };
 
 export const DEFAULT_CFG = STATUS_CFG.planning;
@@ -42,14 +42,14 @@ export const ACTIVITY_STATUS_LABELS: Record<string, string> = {
 };
 
 export const ACTIVITY_STATUS_CFG: Record<string, { leftBorder: string; badge: string; dot: string }> = {
-  pending:      { leftBorder: "border-l-neutral-300", badge: "bg-neutral-100 text-neutral-600", dot: "bg-neutral-400" },
-  in_progress:  { leftBorder: "border-l-accent-400",  badge: "bg-accent-100 text-accent-700",   dot: "bg-accent-400" },
-  blocked:      { leftBorder: "border-l-accent-700",  badge: "bg-accent-200 text-accent-800",   dot: "bg-accent-700" },
-  done:         { leftBorder: "border-l-neutral-800", badge: "bg-neutral-200 text-neutral-900", dot: "bg-neutral-800" },
+  pending:      { leftBorder: "border-l-neutral-300",  badge: "bg-neutral-100 text-neutral-600",   dot: "bg-neutral-400" },
+  in_progress:  { leftBorder: "border-l-accent-500",   badge: "bg-accent-100 text-accent-700",     dot: "bg-accent-500" },
+  blocked:      { leftBorder: "border-l-critical",     badge: "bg-critical-bg text-critical",      dot: "bg-critical" },
+  done:         { leftBorder: "border-l-neutral-800",  badge: "bg-neutral-200 text-neutral-900",   dot: "bg-neutral-800" },
 };
 
 export const HEALTH_CFG: Record<string, { label: string; badge: string; dot: string }> = {
-  ok:       { label: "Rendben",    badge: "bg-neutral-100 text-neutral-700", dot: "bg-neutral-600" },
-  warning:  { label: "Figyelendő", badge: "bg-accent-100 text-accent-700",   dot: "bg-accent-400" },
-  critical: { label: "Kritikus",   badge: "bg-accent-200 text-accent-800",   dot: "bg-accent-700" },
+  ok:       { label: "Rendben",    badge: "bg-accent-100 text-accent-700",     dot: "bg-accent-600" },
+  warning:  { label: "Figyelendő", badge: "bg-warning-bg text-warning-foreground", dot: "bg-warning" },
+  critical: { label: "Kritikus",   badge: "bg-critical-bg text-critical",      dot: "bg-critical" },
 };

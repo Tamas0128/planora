@@ -115,7 +115,7 @@ const ACTIVITY_STATUS_COLOR: Record<string, string> = {
   pending: "text-muted-foreground",
   in_progress: "text-accent-700",
   done: "text-neutral-800",
-  blocked: "text-primary",
+  blocked: "text-critical",
 };
 
 function formatBytes(bytes: number): string {
@@ -721,7 +721,7 @@ export default function ProjectDetailPage() {
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger
-                      render={<Button variant="outline" className="border-accent-300 text-accent-800 hover:bg-accent-100" />}
+                      render={<Button variant="outline" className="border-warning text-warning-foreground hover:bg-warning-bg" />}
                     >
                       Törlés
                     </AlertDialogTrigger>
@@ -1259,7 +1259,7 @@ export default function ProjectDetailPage() {
                               Letiltás
                             </Button>
                           ) : (
-                            <Badge className="bg-neutral-100 text-neutral-700">Aktív</Badge>
+                            <Badge className="bg-accent-100 text-accent-700">Aktív</Badge>
                           )
                         ) : (
                           <div className="flex items-center gap-1.5">

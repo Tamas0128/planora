@@ -46,9 +46,9 @@ const STATUS_ORDER = ["planning", "foundation", "structure", "exterior_done", "t
 
 const TASK_STATUS: Record<string, { label: string; cls: string }> = {
   pending:     { label: "Várakozik",    cls: "bg-neutral-100 text-neutral-600" },
-  in_progress: { label: "Folyamatban", cls: "bg-accent-100 text-accent-700" },
+  in_progress: { label: "Folyamatban", cls: "bg-warning-bg text-warning-foreground" },
   done:        { label: "Kész",        cls: "bg-neutral-200 text-neutral-900" },
-  blocked:     { label: "Blokkolt",    cls: "bg-accent-200 text-accent-800" },
+  blocked:     { label: "Blokkolt",    cls: "bg-critical-bg text-critical" },
 };
 
 const WIDGET_ORDER_KEY = "planora_dashboard_widget_order";
@@ -289,7 +289,7 @@ export default function DashboardPage() {
                       {p.completion_percent}%
                     </Badge>
                     {isLate && (
-                      <Badge className="px-1.5 py-0 text-[9px] bg-accent-200 text-accent-800">Késik</Badge>
+                      <Badge className="px-1.5 py-0 text-[9px] bg-critical-bg text-critical">Késik</Badge>
                     )}
                   </div>
                 </Link>
@@ -308,7 +308,7 @@ export default function DashboardPage() {
           </Link>
         </div>
         {overdueTasks.length > 0 && (
-          <div className="border-b border-accent-200 bg-accent-100/60 px-3 py-1">
+          <div className="border-b border-critical-bg bg-critical-bg/60 px-3 py-1">
             <p className="text-[10px] font-bold uppercase tracking-wide text-destructive">Lejárt · {overdueTasks.length}</p>
           </div>
         )}
@@ -388,7 +388,7 @@ export default function DashboardPage() {
               )}
               {digest.upcoming.length > 0 && (
                 <div>
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-accent-700">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
                     Közelgő előkészítések (7 napon belül) · {digest.upcoming.length}
                   </p>
                   <ul className="space-y-1">
@@ -504,8 +504,8 @@ export default function DashboardPage() {
       {/* ── 4 Stat kártya ── */}
       <div className="mb-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <StatCard label="Aktív projekt"      value={stats?.total_projects ?? null}    sub="Összesen"            icon={Building2}    iconBg="bg-accent"       iconColor="text-accent-foreground" href="/projects" />
-        <StatCard label="Lejárt feladat"     value={stats?.overdue_tasks ?? null}     sub="Azonnal"             icon={Clock}        iconBg="bg-accent-200"   iconColor="text-accent-800"        href="/prep-center?filter=overdue" />
-        <StatCard label="Csúszó projekt"     value={stats?.slipping_projects ?? null} sub="Határidőn túl"       icon={TrendingDown} iconBg="bg-accent-100"   iconColor="text-accent-700"        href="/projects" />
+        <StatCard label="Lejárt feladat"     value={stats?.overdue_tasks ?? null}     sub="Azonnal"             icon={Clock}        iconBg="bg-critical-bg"  iconColor="text-critical"          href="/prep-center?filter=overdue" />
+        <StatCard label="Csúszó projekt"     value={stats?.slipping_projects ?? null} sub="Határidőn túl"       icon={TrendingDown} iconBg="bg-warning-bg"   iconColor="text-warning-foreground" href="/projects" />
         <StatCard label="Átlag teljesítmény" value={avgCompletion !== null ? `${avgCompletion}%` : null} sub="Összesen" icon={Gauge} iconBg="bg-neutral-100" iconColor="text-neutral-700" href="/projects" />
       </div>
 

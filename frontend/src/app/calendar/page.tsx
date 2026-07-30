@@ -122,7 +122,7 @@ export default function CalendarPage() {
       {/* Legend */}
       <div className="mb-2.5 flex items-center gap-4 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2.5 rounded-sm bg-accent-400" />
+          <span className="inline-block size-2.5 rounded-sm bg-warning" />
           Előkészítés
         </span>
         <span className="flex items-center gap-1.5">
@@ -189,7 +189,7 @@ export default function CalendarPage() {
                           className={cn(
                             "block truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight",
                             ev.type === "prep"
-                              ? "bg-accent-200 text-accent-800 hover:bg-accent-300"
+                              ? "bg-warning-bg text-warning-foreground hover:bg-warning-bg/80"
                               : "bg-neutral-200 text-neutral-800 hover:bg-neutral-300",
                           )}
                         >

@@ -411,7 +411,7 @@ export default function ProjectsPage() {
                       <Calendar className="size-3 shrink-0" />
                       {new Date(p.delivery_date).toLocaleDateString("hu-HU")}
                       {late && (
-                        <span className="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-semibold text-accent-foreground">Késik</span>
+                        <span className="rounded-full bg-critical-bg px-1.5 py-0.5 text-[9px] font-semibold text-critical">Késik</span>
                       )}
                     </div>
                   </td>

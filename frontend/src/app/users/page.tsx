@@ -273,7 +273,7 @@ export default function UsersPage() {
                 </TableCell>
                 <TableCell>
                   {user.is_active ? (
-                    <Badge className="bg-neutral-100 text-neutral-700">Aktív</Badge>
+                    <Badge className="bg-accent-100 text-accent-700">Aktív</Badge>
                   ) : (
                     <Badge variant="secondary">Inaktív</Badge>
                   )}

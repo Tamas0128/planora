@@ -78,7 +78,7 @@ function PrepCenterContent() {
             {visibleItems.map((item) => (
               <TableRow
                 key={`${item.project_id}-${item.activity_id}`}
-                className={item.is_overdue ? "border-l-4 border-l-accent-700 bg-accent-100/40" : ""}
+                className={item.is_overdue ? "border-l-4 border-l-critical bg-critical-bg/40" : ""}
               >
                 <TableCell>
                   <Link href={`/projects/${item.project_id}`} className="font-medium text-primary hover:text-accent-700 hover:underline">
@@ -98,7 +98,7 @@ function PrepCenterContent() {
                 </TableCell>
                 <TableCell>
                   {item.is_overdue ? (
-                    <Badge className="bg-accent-200 text-accent-800">Lejárt</Badge>
+                    <Badge className="bg-critical-bg text-critical">Lejárt</Badge>
                   ) : (
                     <span className="text-muted-foreground">{item.days_until ?? "—"} nap</span>
                   )}

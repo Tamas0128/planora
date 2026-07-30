@@ -107,7 +107,7 @@ function TaskCardBody({ item }: { item: TaskBoardItem }) {
         <span className="truncate">{item.assignee_name ?? "Nincs kijelölve"}</span>
       </div>
       <div className="mt-1.5 flex items-center justify-between">
-        <div className={cn("flex items-center gap-1 text-[11px]", late ? "text-accent-700" : "text-muted-foreground")}>
+        <div className={cn("flex items-center gap-1 text-[11px]", late ? "text-critical" : "text-muted-foreground")}>
           <Calendar className="size-3 shrink-0" />
           <span>{item.end_date ? new Date(item.end_date).toLocaleDateString("hu-HU") : "—"}</span>
         </div>
@@ -343,7 +343,7 @@ function RightPanel({
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Határidő</p>
           <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
             <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className={cn(late && "font-semibold text-accent-700")}>
+            <span className={cn(late && "font-semibold text-critical")}>
               {item.end_date ? new Date(item.end_date).toLocaleDateString("hu-HU") : "—"}
             </span>
           </div>

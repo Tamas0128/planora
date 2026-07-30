@@ -35,9 +35,9 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, string> = {
   pending: "bg-muted text-muted-foreground border-border",
-  in_progress: "bg-accent-100 text-accent-700 border-accent-200",
+  in_progress: "bg-warning-bg text-warning-foreground border-warning",
   done: "bg-neutral-100 text-neutral-700 border-neutral-300",
-  blocked: "bg-accent-200 text-accent-800 border-accent-300",
+  blocked: "bg-critical-bg text-critical border-critical",
 };
 
 const ROLE_COLOR: Record<string, string> = {
@@ -55,7 +55,7 @@ function roleInitials(role: string): string {
 
 const STATUS_GROUPS: { key: string; label: string; icon: LucideIcon; iconColor: string }[] = [
   { key: "pending", label: "Várakozik", icon: Circle, iconColor: "text-muted-foreground" },
-  { key: "in_progress", label: "Folyamatban", icon: Clock, iconColor: "text-accent-600" },
+  { key: "in_progress", label: "Folyamatban", icon: Clock, iconColor: "text-warning" },
   { key: "blocked", label: "Blokkolt", icon: Ban, iconColor: "text-destructive" },
 ];
 
@@ -166,7 +166,7 @@ function TaskTableRow({ item, selected, onClick }: { item: PrepTask; selected: b
       onClick={onClick}
       className={cn(
         "cursor-pointer",
-        item.is_overdue && "bg-accent-100/50",
+        item.is_overdue && "bg-critical-bg/50",
         selected && "bg-accent-200/50 hover:bg-accent-200/50",
       )}
     >
@@ -190,7 +190,7 @@ function TaskTableRow({ item, selected, onClick }: { item: PrepTask; selected: b
               {new Date(date).toLocaleDateString("hu-HU")}
             </span>
             {item.days_until !== undefined && item.days_until !== null && (
-              <Badge variant="outline" className={cn("text-[10px]", item.is_overdue ? "border-accent-300 bg-accent-100 text-accent-800" : "border-border text-muted-foreground")}>
+              <Badge variant="outline" className={cn("text-[10px]", item.is_overdue ? "border-critical bg-critical-bg text-critical" : "border-border text-muted-foreground")}>
                 {item.is_overdue ? `${Math.abs(item.days_until)}n lejárt` : `${item.days_until}n múlva`}
               </Badge>
             )}
@@ -230,7 +230,7 @@ function TaskDetailPanel({
                   {STATUS_LABEL[item.status] ?? item.status}
                 </Badge>
                 {item.is_overdue && (
-                  <span className="rounded-full bg-accent-200 px-2 py-0.5 text-[10px] font-semibold text-accent-800">Lejárt</span>
+                  <span className="rounded-full bg-critical-bg px-2 py-0.5 text-[10px] font-semibold text-critical">Lejárt</span>
                 )}
               </div>
               <SheetTitle className="text-[14px] font-bold leading-snug text-foreground">{item.activity_name}</SheetTitle>
@@ -265,7 +265,7 @@ function TaskDetailPanel({
                     <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
                       <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
                       <span className="text-muted-foreground">Előkészítés:</span>
-                      <span className={cn(item.is_overdue && "font-semibold text-accent-700")}>
+                      <span className={cn(item.is_overdue && "font-semibold text-critical")}>
                         {new Date(item.prep_date).toLocaleDateString("hu-HU")}
                       </span>
                     </div>

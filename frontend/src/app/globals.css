@@ -5,9 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Modernist design system — flat, architectural, near-mono red on white.
-     See docs/Planora design review2.zip (_ds/modernist.../readme.md) for
-     the source tokens this palette was derived from. */
+  /* Modernist design system, PLANora brand pass — flat, architectural,
+     Archivo type, zero radius. Brand accent is PLANora's forest green
+     (matches the logo), with two dedicated exception colors — amber for
+     warning/medium-urgency and red for critical/late — confirmed against
+     the real per-page exports in docs/Planora design review2.zip (every
+     Dashboard/Kanban/Naptár/... .dc.html overrides --color-accent to
+     #2f6b4a; the Naptár mockup's event chips confirmed the amber/red
+     exception colors below). */
   --color-neutral-100: #f8f4f4;
   --color-neutral-200: #eae7e7;
   --color-neutral-300: #d7d3d3;
@@ -18,15 +23,24 @@
   --color-neutral-800: #444141;
   --color-neutral-900: #2d2b2b;
 
-  --color-accent-100: #fff2ef;
-  --color-accent-200: #ffe0d9;
-  --color-accent-300: #ffc4b8;
-  --color-accent-400: #ff9783;
-  --color-accent-500: #ec3013;
-  --color-accent-600: #dd2b0f;
-  --color-accent-700: #ae1800;
-  --color-accent-800: #7c1405;
-  --color-accent-900: #4d170e;
+  --color-accent-100: #eef4f0;
+  --color-accent-200: #d7e6dc;
+  --color-accent-300: #b0d0bd;
+  --color-accent-400: #7fb494;
+  --color-accent-500: #4c8f68;
+  --color-accent-600: #2a5f3f;
+  --color-accent-700: #1f4a32;
+  --color-accent-800: #163825;
+  --color-accent-900: #0f2a1b;
+
+  /* Warning (amber) and critical (red) are one-off exception colors, not
+     full ramps — used only for medium-urgency / late-or-blocked signals,
+     never as the brand color. */
+  --color-warning: #c98a00;
+  --color-warning-foreground: #8a5a00;
+  --color-warning-bg: #fff4de;
+  --color-critical: #a3281c;
+  --color-critical-bg: #fdecea;
 
   --background: #f3f2f2;
   --foreground: #201e1d;
@@ -35,46 +49,47 @@
   --popover: #eae9e9;
   --popover-foreground: #201e1d;
 
-  --primary: var(--color-accent-500);
+  --primary: #2f6b4a;
   --primary-foreground: #f3f2f2;
   --secondary: var(--color-neutral-200);
   --secondary-foreground: #201e1d;
   --muted: var(--color-neutral-100);
   --muted-foreground: var(--color-neutral-600);
-  --accent: var(--color-accent-200);
+  --accent: var(--color-accent-100);
   --accent-foreground: var(--color-accent-700);
-  --destructive: var(--color-accent-600);
+  --destructive: var(--color-critical);
 
   --border: var(--color-neutral-300);
   --input: var(--color-neutral-300);
-  --ring: var(--color-accent-500);
+  --ring: #2f6b4a;
 
-  --chart-1: var(--color-accent-500);
+  --chart-1: #2f6b4a;
   --chart-2: var(--color-neutral-700);
-  --chart-3: var(--color-accent-700);
+  --chart-3: var(--color-accent-400);
   --chart-4: var(--color-neutral-500);
   --chart-5: var(--color-neutral-900);
 
   --radius: 0rem;
 
-  /* Sidebar — near-black neutral, accent red for the active item */
-  --sidebar: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-300);
-  --sidebar-primary: var(--color-accent-500);
+  /* Sidebar — PLANora's actual dark-green logo palette */
+  --sidebar: var(--color-accent-900);
+  --sidebar-foreground: var(--color-accent-200);
+  --sidebar-primary: var(--color-accent-600);
   --sidebar-primary-foreground: #f3f2f2;
-  --sidebar-accent: var(--color-neutral-800);
+  --sidebar-accent: var(--color-accent-800);
   --sidebar-accent-foreground: var(--color-neutral-100);
-  --sidebar-border: var(--color-neutral-800);
-  --sidebar-ring: var(--color-accent-500);
+  --sidebar-border: var(--color-accent-800);
+  --sidebar-ring: #2f6b4a;
 
-  /* Project-phase status — progressive neutral darkening, accent for the
-     final (turnkey) phase, so it stays in the mono palette while still
-     being readable at a glance across the Kanban board. */
-  --status-planning: var(--color-neutral-500);
-  --status-foundation: var(--color-neutral-600);
-  --status-structure: var(--color-neutral-700);
-  --status-exterior_done: var(--color-neutral-800);
-  --status-turnkey: var(--color-accent-500);
+  /* Project-phase status — progressive green shading (mirrors the
+     Dashboard donut's "Tervezés alatt" pale-mint -> "Folyamatban" green
+     progression), red reserved separately for a project that's actually
+     late (see HEALTH_CFG/delay-risk, not this phase ramp). */
+  --status-planning: var(--color-accent-300);
+  --status-foundation: var(--color-accent-400);
+  --status-structure: var(--color-accent-500);
+  --status-exterior_done: var(--color-accent-600);
+  --status-turnkey: var(--color-accent-700);
 }
 
 @theme inline {
@@ -98,6 +113,11 @@
   --color-accent-700: var(--color-accent-700);
   --color-accent-800: var(--color-accent-800);
   --color-accent-900: var(--color-accent-900);
+  --color-warning: var(--color-warning);
+  --color-warning-foreground: var(--color-warning-foreground);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-critical: var(--color-critical);
+  --color-critical-bg: var(--color-critical-bg);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -158,7 +178,7 @@
   --muted-foreground: var(--color-neutral-400);
   --accent: var(--color-neutral-700);
   --accent-foreground: var(--color-neutral-100);
-  --destructive: var(--color-accent-400);
+  --destructive: var(--color-critical);
   --border: color-mix(in oklch, white 12%, transparent);
   --input: color-mix(in oklch, white 16%, transparent);
   --ring: var(--color-accent-400);
@@ -167,13 +187,13 @@
   --chart-3: var(--color-accent-300);
   --chart-4: var(--color-neutral-500);
   --chart-5: var(--color-neutral-200);
-  --sidebar: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-300);
-  --sidebar-primary: var(--color-accent-500);
+  --sidebar: var(--color-accent-900);
+  --sidebar-foreground: var(--color-accent-200);
+  --sidebar-primary: var(--color-accent-600);
   --sidebar-primary-foreground: var(--color-neutral-900);
-  --sidebar-accent: var(--color-neutral-800);
+  --sidebar-accent: var(--color-accent-800);
   --sidebar-accent-foreground: var(--color-neutral-100);
-  --sidebar-border: var(--color-neutral-800);
+  --sidebar-border: var(--color-accent-800);
   --sidebar-ring: var(--color-accent-500);
 }
 
