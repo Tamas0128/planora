@@ -112,10 +112,10 @@ const ACTIVITY_STATUS_OPTIONS: [string, string][] = [
 const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
 
 const ACTIVITY_STATUS_COLOR: Record<string, string> = {
-  pending: "text-slate-600",
-  in_progress: "text-amber-600",
-  done: "text-emerald-600",
-  blocked: "text-orange-600",
+  pending: "text-muted-foreground",
+  in_progress: "text-accent-700",
+  done: "text-neutral-800",
+  blocked: "text-primary",
 };
 
 function formatBytes(bytes: number): string {
@@ -175,15 +175,15 @@ function ProjectThumbnail({
         onClick={() => inputRef.current?.click()}
         title={canEdit ? "Bélyegkép módosítása" : undefined}
         className={cn(
-          "flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50",
-          canEdit && "cursor-pointer hover:border-blue-400",
+          "flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted",
+          canEdit && "cursor-pointer hover:border-primary",
         )}
       >
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL, not a static/local asset
           <img src={url} alt="" className="size-full object-cover" />
         ) : (
-          <ImageIcon className="size-5 text-slate-300" />
+          <ImageIcon className="size-5 text-muted-foreground/60" />
         )}
       </button>
     </div>
@@ -218,7 +218,7 @@ function PhotoUploadForm({ onUpload }: { onUpload: (file: File, takenAt: string,
           type="date"
           value={takenAt}
           onChange={(e) => setTakenAt(e.target.value)}
-          className="block h-8 rounded border border-slate-200 bg-transparent px-2 text-xs focus:border-blue-500 focus:outline-none"
+          className="block h-8 rounded border border-border bg-transparent px-2 text-xs focus:border-primary focus:outline-none"
         />
       </div>
       <div className="space-y-1">
@@ -261,7 +261,7 @@ function SortableActivityRow({
     <button
       type="button"
       aria-label="Sorrend módosítása húzással"
-      className="cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+      className="cursor-grab touch-none text-muted-foreground/60 hover:text-muted-foreground active:cursor-grabbing"
       {...attributes}
       {...listeners}
     >
@@ -273,7 +273,7 @@ function SortableActivityRow({
     <TableRow
       ref={setNodeRef}
       style={style}
-      className={cn(!activity.is_active && "bg-slate-50 opacity-50", isDragging && "relative z-10 shadow-md")}
+      className={cn(!activity.is_active && "bg-muted opacity-50", isDragging && "relative z-10 shadow-md")}
     >
       {children(dragHandle)}
     </TableRow>
@@ -655,17 +655,17 @@ export default function ProjectDetailPage() {
             onUploaded={loadProject}
           />
           <div>
-            <h1 className="text-lg font-bold text-slate-900">{project.name}</h1>
-            <p className="text-xs text-slate-500">
+            <h1 className="text-lg font-bold text-foreground">{project.name}</h1>
+            <p className="text-xs text-muted-foreground">
               {project.project_code} · {project.settlement}
             </p>
           </div>
         </div>
         {/* Inline delivery date */}
         <Card className="flex items-center gap-3 px-3 py-2 shadow-sm">
-          <Calendar className="size-4 shrink-0 text-slate-400" />
+          <Calendar className="size-4 shrink-0 text-muted-foreground" />
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Átadási határidő
             </p>
             {canEdit ? (
@@ -685,17 +685,17 @@ export default function ProjectDetailPage() {
                     setDeliveryDate(project.delivery_date);
                   }
                 }}
-                className="mt-0.5 block rounded border border-slate-200 bg-transparent px-1 py-0.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none"
+                className="mt-0.5 block rounded border border-border bg-transparent px-1 py-0.5 text-sm font-semibold text-foreground focus:border-primary focus:outline-none"
               />
             ) : (
-              <p className="mt-0.5 text-sm font-semibold text-slate-900">
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
                 {new Date(project.delivery_date).toLocaleDateString("hu-HU")}
               </p>
             )}
           </div>
           <div className="ml-4 text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Készültség</p>
-            <p className="mt-0.5 text-sm font-bold text-blue-600">{project.completion_percent}%</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Készültség</p>
+            <p className="mt-0.5 text-sm font-bold text-primary">{project.completion_percent}%</p>
           </div>
         </Card>
       </div>
@@ -721,7 +721,7 @@ export default function ProjectDetailPage() {
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger
-                      render={<Button variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50" />}
+                      render={<Button variant="outline" className="border-accent-300 text-accent-800 hover:bg-accent-100" />}
                     >
                       Törlés
                     </AlertDialogTrigger>
@@ -749,23 +749,23 @@ export default function ProjectDetailPage() {
               <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <Card className="p-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Készültség</p>
-                  <p className="mt-0.5 text-lg font-bold text-slate-900">{project.completion_percent}%</p>
+                  <p className="mt-0.5 text-lg font-bold text-foreground">{project.completion_percent}%</p>
                 </Card>
                 <Card className="p-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Mai feladatok</p>
-                  <p className="mt-0.5 text-lg font-bold text-slate-900">
+                  <p className="mt-0.5 text-lg font-bold text-foreground">
                     {activities.filter((a) => a.is_active && a.start_date?.slice(0, 10) === new Date().toISOString().split("T")[0]).length}
                   </p>
                 </Card>
                 <Card className="p-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Késő feladatok</p>
-                  <p className="mt-0.5 text-lg font-bold text-slate-900">
+                  <p className="mt-0.5 text-lg font-bold text-foreground">
                     {activities.filter((a) => a.is_active && a.prep_date && a.prep_date < new Date().toISOString().split("T")[0] && a.status !== "done").length}
                   </p>
                 </Card>
                 <Card className="p-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Dok. / Fotó</p>
-                  <p className="mt-0.5 text-lg font-bold text-slate-900">{documents.length} / {photos.length}</p>
+                  <p className="mt-0.5 text-lg font-bold text-foreground">{documents.length} / {photos.length}</p>
                 </Card>
               </div>
 
@@ -1002,7 +1002,7 @@ export default function ProjectDetailPage() {
 
         <TabsContent value="schedule" className="mt-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs text-slate-500">{activities.length} tevékenység</p>
+            <p className="text-xs text-muted-foreground">{activities.length} tevékenység</p>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={handleGanttPdf}>
                 <Download className="size-3.5" />
@@ -1180,7 +1180,7 @@ export default function ProjectDetailPage() {
                               loadActivities();
                             }
                           }}
-                          className="rounded border border-slate-200 bg-transparent px-1 py-0.5 text-xs focus:border-blue-500 focus:outline-none"
+                          className="rounded border border-border bg-transparent px-1 py-0.5 text-xs focus:border-primary focus:outline-none"
                         />
                       ) : (
                         <span className="text-xs text-muted-foreground">
@@ -1259,7 +1259,7 @@ export default function ProjectDetailPage() {
                               Letiltás
                             </Button>
                           ) : (
-                            <Badge className="bg-emerald-100 text-emerald-700">Aktív</Badge>
+                            <Badge className="bg-neutral-100 text-neutral-700">Aktív</Badge>
                           )
                         ) : (
                           <div className="flex items-center gap-1.5">
@@ -1485,17 +1485,17 @@ export default function ProjectDetailPage() {
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {photos.map((photo) => (
-                  <div key={photo.id} className="group relative overflow-hidden rounded-lg border border-slate-200">
+                  <div key={photo.id} className="group relative overflow-hidden rounded-lg border border-border">
                     <button
                       type="button"
                       onClick={() => handlePhotoDownload(photo.id)}
-                      className="flex aspect-square w-full items-center justify-center bg-slate-50"
+                      className="flex aspect-square w-full items-center justify-center bg-muted"
                       title="Megnyitás"
                     >
-                      <ImageIcon className="size-8 text-slate-300" />
+                      <ImageIcon className="size-8 text-muted-foreground/60" />
                     </button>
                     <div className="p-2">
-                      <p className="text-[11px] font-semibold text-slate-700">
+                      <p className="text-[11px] font-semibold text-foreground/80">
                         {new Date(photo.taken_at).toLocaleDateString("hu-HU")}
                       </p>
                       {photo.comment && <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{photo.comment}</p>}
@@ -1506,7 +1506,7 @@ export default function ProjectDetailPage() {
                         type="button"
                         onClick={() => handleDeletePhoto(photo.id)}
                         aria-label="Fotó törlése"
-                        className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-slate-500 opacity-0 shadow-sm hover:text-destructive group-hover:opacity-100"
+                        className="absolute right-1 top-1 rounded-full bg-card/90 p-1 text-muted-foreground opacity-0 shadow-sm hover:text-destructive group-hover:opacity-100"
                       >
                         <X className="size-3.5" />
                       </button>
@@ -1567,7 +1567,7 @@ export default function ProjectDetailPage() {
                       <TableRow key={a.id}>
                         <TableCell className="font-medium text-xs">{a.name}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{ROLE_LABELS[a.responsible_role] || a.responsible_role}</TableCell>
-                        <TableCell className={cn("text-xs", a.prep_date && a.prep_date.slice(0, 10) < today && "font-semibold text-red-500")}>
+                        <TableCell className={cn("text-xs", a.prep_date && a.prep_date.slice(0, 10) < today && "font-semibold text-destructive")}>
                           {a.prep_date ? new Date(a.prep_date).toLocaleDateString("hu-HU") : "—"}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">

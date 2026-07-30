@@ -77,12 +77,12 @@ function CardThumbnail({ projectId, hasThumbnail }: { projectId: number; hasThum
 
   if (!hasThumbnail) return null;
   return (
-    <div className="size-9 shrink-0 overflow-hidden rounded-md border border-slate-100 bg-slate-50">
+    <div className="size-9 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL, not a static/local asset
         <img src={url} alt="" className="size-full object-cover" />
       ) : (
-        <ImageIcon className="size-3.5 text-slate-300" />
+        <ImageIcon className="size-3.5 text-muted-foreground/60" />
       )}
     </div>
   );
@@ -95,19 +95,19 @@ function TaskCardBody({ item }: { item: TaskBoardItem }) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-l-[3px] bg-white p-2.5 shadow-sm transition-all duration-150",
-        "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50",
+        "rounded-lg border border-l-[3px] bg-card p-2.5 shadow-sm transition-all duration-150",
+        "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
         cfg.leftBorder,
-        "border-slate-100/80",
+        "border-border/80",
       )}
     >
-      <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">{item.project_name}</p>
-      <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
-        <UserIcon className="size-3 shrink-0 text-slate-400" />
+      <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{item.project_name}</p>
+      <div className="flex items-center gap-1.5 text-[11px] text-foreground/80">
+        <UserIcon className="size-3 shrink-0 text-muted-foreground" />
         <span className="truncate">{item.assignee_name ?? "Nincs kijelölve"}</span>
       </div>
       <div className="mt-1.5 flex items-center justify-between">
-        <div className={cn("flex items-center gap-1 text-[11px]", late ? "text-red-400" : "text-slate-400")}>
+        <div className={cn("flex items-center gap-1 text-[11px]", late ? "text-accent-700" : "text-muted-foreground")}>
           <Calendar className="size-3 shrink-0" />
           <span>{item.end_date ? new Date(item.end_date).toLocaleDateString("hu-HU") : "—"}</span>
         </div>
@@ -134,7 +134,7 @@ function DraggableTaskCard({
   return (
     <div
       ref={setDropRef}
-      className={cn("rounded-lg transition-shadow", isOver && "ring-2 ring-blue-400")}
+      className={cn("rounded-lg transition-shadow", isOver && "ring-2 ring-primary/60")}
     >
       <div
         ref={setDragRef}
@@ -147,7 +147,7 @@ function DraggableTaskCard({
         className={cn(
           "cursor-grab touch-none active:cursor-grabbing",
           isDragging && "opacity-30",
-          selected && "ring-2 ring-blue-500/25 rounded-lg",
+          selected && "ring-2 ring-primary/25 rounded-lg",
         )}
       >
         <TaskCardBody item={item} />
@@ -159,7 +159,7 @@ function DraggableTaskCard({
 function KanbanColumn({ status, children }: { status: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
-    <div ref={setNodeRef} className={cn("flex flex-col gap-2 rounded-lg p-1 transition-colors", isOver && "bg-blue-50/60")}>
+    <div ref={setNodeRef} className={cn("flex flex-col gap-2 rounded-lg p-1 transition-colors", isOver && "bg-accent")}>
       {children}
     </div>
   );
@@ -238,7 +238,7 @@ function RightPanel({
         <SheetTitle>{item.activity_name}</SheetTitle>
         <SheetDescription>Feladat részletei</SheetDescription>
       </SheetHeader>
-      <div className="flex shrink-0 items-start justify-between border-b border-slate-100 p-3">
+      <div className="flex shrink-0 items-start justify-between border-b border-border p-3">
         <div className="min-w-0 flex-1 pr-2">
           <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
             <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", cfg.badge)}>
@@ -256,14 +256,14 @@ function RightPanel({
               className="h-7 text-[13px] font-bold"
             />
           ) : (
-            <h2 className="text-[14px] font-bold leading-snug text-slate-900">{item.activity_name}</h2>
+            <h2 className="text-[14px] font-bold leading-snug text-foreground">{item.activity_name}</h2>
           )}
-          <p className="mt-0.5 text-[11px] text-slate-400">{item.project_code}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{item.project_code}</p>
         </div>
         <button
           onClick={onClose}
           aria-label="Bezárás"
-          className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <X className="size-3.5" />
         </button>
@@ -273,15 +273,15 @@ function RightPanel({
         <div className="flex items-center gap-2.5">
           <CardThumbnail projectId={item.project_id} hasThumbnail={item.has_thumbnail} />
           <div className="min-w-0">
-            <p className="truncate text-[13px] font-semibold text-slate-800">{item.project_name}</p>
-            <p className="truncate text-[11px] text-slate-500">{item.client_name}</p>
+            <p className="truncate text-[13px] font-semibold text-foreground">{item.project_name}</p>
+            <p className="truncate text-[11px] text-muted-foreground">{item.client_name}</p>
           </div>
         </div>
 
         {editing ? (
           <>
             <div>
-              <Label className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Kijelölve</Label>
+              <Label className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Kijelölve</Label>
               <Select value={form.assignee_id} onValueChange={(v) => setForm((f) => ({ ...f, assignee_id: v as string }))}>
                 <SelectTrigger size="sm" className="w-full">
                   <SelectValue>
@@ -297,7 +297,7 @@ function RightPanel({
               </Select>
             </div>
             <div>
-              <Label className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős szerepkör</Label>
+              <Label className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Felelős szerepkör</Label>
               <Select value={form.responsible_role} onValueChange={(v) => setForm((f) => ({ ...f, responsible_role: v as string }))}>
                 <SelectTrigger size="sm" className="w-full">
                   <SelectValue>{(v: string) => ROLE_LABELS[v] || v}</SelectValue>
@@ -310,7 +310,7 @@ function RightPanel({
               </Select>
             </div>
             <div>
-              <Label htmlFor="kanban-edit-duration" className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              <Label htmlFor="kanban-edit-duration" className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Futási idő (nap)
               </Label>
               <Input
@@ -324,26 +324,26 @@ function RightPanel({
           </>
         ) : (
           <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős</p>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Felelős</p>
             <div className="flex items-center gap-2">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">{initials}</div>
-              <span className="text-[13px] font-medium text-slate-800">{item.assignee_name ?? "Nincs kijelölve"}</span>
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{initials}</div>
+              <span className="text-[13px] font-medium text-foreground">{item.assignee_name ?? "Nincs kijelölve"}</span>
             </div>
           </div>
         )}
 
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Helyszín</p>
-          <div className="flex items-center gap-1 text-[11px] text-slate-500">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Helyszín</p>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <MapPin className="size-3 shrink-0" /><span>{item.settlement}</span>
           </div>
         </div>
 
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Határidő</p>
-          <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
-            <Calendar className="size-3.5 shrink-0 text-slate-400" />
-            <span className={cn(late && "font-semibold text-red-500")}>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Határidő</p>
+          <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
+            <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className={cn(late && "font-semibold text-accent-700")}>
               {item.end_date ? new Date(item.end_date).toLocaleDateString("hu-HU") : "—"}
             </span>
           </div>
@@ -351,14 +351,14 @@ function RightPanel({
 
         {!editing && (item.project_manager_name || item.site_manager_name) && (
           <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projekt kapcsolattartók</p>
-            {item.project_manager_name && <p className="text-[12px] text-slate-700">PV: {item.project_manager_name}</p>}
-            {item.site_manager_name && <p className="text-[12px] text-slate-700">ÉV: {item.site_manager_name}</p>}
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Projekt kapcsolattartók</p>
+            {item.project_manager_name && <p className="text-[12px] text-foreground/80">PV: {item.project_manager_name}</p>}
+            {item.site_manager_name && <p className="text-[12px] text-foreground/80">ÉV: {item.site_manager_name}</p>}
           </div>
         )}
       </div>
 
-      <div className="shrink-0 space-y-2 border-t border-slate-100 p-3">
+      <div className="shrink-0 space-y-2 border-t border-border p-3">
         {editing ? (
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setEditing(false)} disabled={saving}>
@@ -395,7 +395,7 @@ function RightPanel({
             </AlertDialog>
           </div>
         )}
-        <button onClick={onOpen} className="w-full rounded-lg bg-blue-600 py-2 text-[13px] font-semibold text-white hover:bg-blue-700">
+        <button onClick={onOpen} className="w-full rounded-lg bg-primary py-2 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90">
           Projekt megnyitása
         </button>
       </div>
@@ -550,10 +550,10 @@ export default function KanbanPage() {
   const draggedItem = activeId ? findItem(Number(activeId))?.item : null;
 
   const pageHeader = (
-    <header className="sticky top-0 z-20 flex h-auto min-h-12 shrink-0 flex-wrap items-center gap-2.5 border-b border-slate-100 bg-white px-4 py-2">
-      <SidebarTrigger className="text-slate-400 hover:text-slate-700" />
-      <div className="h-5 w-px bg-slate-100" />
-      <h1 className="text-[14px] font-bold tracking-tight text-slate-900">Kanban tábla</h1>
+    <header className="sticky top-0 z-20 flex h-auto min-h-12 shrink-0 flex-wrap items-center gap-2.5 border-b border-border bg-card px-4 py-2">
+      <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+      <div className="h-5 w-px bg-border" />
+      <h1 className="text-[14px] font-bold tracking-tight text-foreground">Kanban tábla</h1>
       <div className="hidden flex-1 sm:block" />
       <Button size="sm" onClick={() => setShowNewTask(true)}>
         <Plus className="size-3.5" /> Új feladat
@@ -572,13 +572,13 @@ export default function KanbanPage() {
         </SelectContent>
       </Select>
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           placeholder="Projekt keresése…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-8 w-32 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none sm:w-52"
+          className="h-8 w-32 rounded-lg border border-border bg-muted/80 pl-8 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card focus:outline-none sm:w-52"
         />
       </div>
     </header>
@@ -588,10 +588,10 @@ export default function KanbanPage() {
     <AppLayout header={pageHeader} mainClassName="flex flex-1 overflow-hidden p-0">
       <div className="flex h-full overflow-hidden">
         {/* Board */}
-        <div className="flex-1 overflow-x-auto overflow-y-auto bg-slate-50/60">
+        <div className="flex-1 overflow-x-auto overflow-y-auto bg-muted/60">
           {loading ? (
             <div className="flex h-full items-center justify-center">
-              <span className="text-[13px] text-slate-400">Betöltés…</span>
+              <span className="text-[13px] text-muted-foreground">Betöltés…</span>
             </div>
           ) : (
             <DndContext
@@ -606,12 +606,12 @@ export default function KanbanPage() {
                   return (
                     <div key={status} className="flex w-[240px] shrink-0 flex-col">
                       <div className="mb-2 flex items-center gap-2">
-                        <h3 className="flex-1 text-[12px] font-semibold text-slate-700">{ACTIVITY_STATUS_LABELS[status]}</h3>
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-50 px-1.5 text-[11px] font-bold text-emerald-700">
+                        <h3 className="flex-1 text-[12px] font-semibold text-foreground/80">{ACTIVITY_STATUS_LABELS[status]}</h3>
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral-100 px-1.5 text-[11px] font-bold text-neutral-700">
                           {items.length}
                         </span>
                       </div>
-                      <div className="mb-2.5 h-px bg-slate-200/70" />
+                      <div className="mb-2.5 h-px bg-border/70" />
                       <KanbanColumn status={status}>
                         {items.map((item) => (
                           <DraggableTaskCard
@@ -622,8 +622,8 @@ export default function KanbanPage() {
                           />
                         ))}
                         {items.length === 0 && (
-                          <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-10">
-                            <p className="text-[12px] text-slate-400">Nincs feladat</p>
+                          <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-border py-10">
+                            <p className="text-[12px] text-muted-foreground">Nincs feladat</p>
                           </div>
                         )}
                       </KanbanColumn>

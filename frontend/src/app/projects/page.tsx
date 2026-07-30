@@ -24,7 +24,7 @@ import { NewProjectDialog } from "@/components/NewProjectDialog";
 // server — load it only in the browser.
 const ProjectsMap = dynamic(() => import("@/components/ProjectsMap"), {
   ssr: false,
-  loading: () => <div className="flex h-[560px] items-center justify-center text-xs text-slate-400">Térkép betöltése…</div>,
+  loading: () => <div className="flex h-[560px] items-center justify-center text-xs text-muted-foreground">Térkép betöltése…</div>,
 });
 import { api, BUILDING_LABELS, downloadFile, ProjectCard, STATUS_LABELS } from "@/lib/api";
 import { clampPercent, DEFAULT_CFG, isLate, pmInitials, STATUS_CFG, STATUS_ORDER } from "@/lib/project-utils";
@@ -45,12 +45,12 @@ function ProjectThumbnailPreview({ projectId, hasThumbnail }: { projectId: numbe
   }, [projectId, hasThumbnail]);
 
   return (
-    <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-100 bg-slate-50">
+    <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL, not a static/local asset
         <img src={url} alt="" className="size-full object-cover" />
       ) : (
-        <ImageIcon className="size-3.5 text-slate-300" />
+        <ImageIcon className="size-3.5 text-muted-foreground/60" />
       )}
     </div>
   );
@@ -69,13 +69,13 @@ function ProjectBoxThumbnail({ projectId, hasThumbnail }: { projectId: number; h
   }, [projectId, hasThumbnail]);
 
   return (
-    <div className="relative h-36 w-full shrink-0 overflow-hidden bg-slate-100">
+    <div className="relative h-36 w-full shrink-0 overflow-hidden bg-muted">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL, not a static/local asset
         <img src={url} alt="" className="size-full object-cover" />
       ) : (
         <div className="flex size-full items-center justify-center">
-          <ImageIcon className="size-8 text-slate-300" />
+          <ImageIcon className="size-8 text-muted-foreground/60" />
         </div>
       )}
     </div>
@@ -96,7 +96,7 @@ function ProjectBox({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
-      className="cursor-pointer overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+      className="cursor-pointer overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative">
         <ProjectBoxThumbnail projectId={project.id} hasThumbnail={project.has_thumbnail} />
@@ -107,20 +107,20 @@ function ProjectBox({
           type="button"
           aria-label={project.is_favorite ? "Kedvenc eltávolítása" : "Kedvencnek jelölés"}
           onClick={onToggleFavorite}
-          className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-slate-400 shadow-sm hover:text-amber-400"
+          className="absolute right-2 top-2 rounded-full bg-card/90 p-1.5 text-muted-foreground shadow-sm hover:text-primary"
         >
-          <Star className={cn("size-3.5", project.is_favorite && "fill-amber-400 text-amber-400")} />
+          <Star className={cn("size-3.5", project.is_favorite && "fill-primary text-primary")} />
         </button>
       </div>
       <div className="p-3">
-        <h3 className="truncate text-[14px] font-bold text-slate-900">{project.name}</h3>
-        <p className="mt-0.5 truncate text-[12px] text-slate-500">{project.client_name} · {project.settlement}</p>
-        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500">
+        <h3 className="truncate text-[14px] font-bold text-foreground">{project.name}</h3>
+        <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{project.client_name} · {project.settlement}</p>
+        <div className="mt-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1">
             <Package className="size-3 shrink-0" />
             {project.floor_area_sqm} m²
           </span>
-          <span className={cn("flex items-center gap-1", late && "font-semibold text-red-500")}>
+          <span className={cn("flex items-center gap-1", late && "font-semibold text-destructive")}>
             <Calendar className="size-3 shrink-0" />
             {new Date(project.delivery_date).toLocaleDateString("hu-HU")}
           </span>
@@ -208,17 +208,17 @@ export default function ProjectsPage() {
   );
 
   const pageHeader = (
-    <header className="sticky top-0 z-20 flex h-auto min-h-12 shrink-0 flex-wrap items-center gap-2.5 border-b border-slate-100 bg-white px-4 py-2">
-      <SidebarTrigger className="text-slate-400 hover:text-slate-700" />
-      <div className="h-5 w-px bg-slate-100" />
-      <h1 className="text-[14px] font-bold tracking-tight text-slate-900">Projektek</h1>
-      <div className="flex items-center rounded-lg border border-slate-200 p-0.5">
+    <header className="sticky top-0 z-20 flex h-auto min-h-12 shrink-0 flex-wrap items-center gap-2.5 border-b border-border bg-card px-4 py-2">
+      <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+      <div className="h-5 w-px bg-border" />
+      <h1 className="text-[14px] font-bold tracking-tight text-foreground">Projektek</h1>
+      <div className="flex items-center rounded-lg border border-border p-0.5">
         <button
           type="button"
           onClick={() => setView("list")}
           className={cn(
             "flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
-            view === "list" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800",
+            view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
           <List className="size-3.5" /> Lista
@@ -228,7 +228,7 @@ export default function ProjectsPage() {
           onClick={() => setView("cards")}
           className={cn(
             "flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
-            view === "cards" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800",
+            view === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
           <LayoutGrid className="size-3.5" /> Kártyák
@@ -238,7 +238,7 @@ export default function ProjectsPage() {
           onClick={() => setView("map")}
           className={cn(
             "flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
-            view === "map" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800",
+            view === "map" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
           <MapPin className="size-3.5" /> Térkép
@@ -246,13 +246,13 @@ export default function ProjectsPage() {
       </div>
       <div className="hidden flex-1 sm:block" />
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           placeholder="Keresés…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-8 w-32 rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none sm:w-56"
+          className="h-8 w-32 rounded-lg border border-border bg-muted/80 pl-8 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card focus:outline-none sm:w-56"
         />
       </div>
       {selected.size > 0 && (
@@ -280,8 +280,8 @@ export default function ProjectsPage() {
         {STATUS_ORDER.map((s) => {
           const cfg = STATUS_CFG[s];
           return (
-            <div key={s} className="rounded-lg border border-slate-100 bg-white p-2.5 shadow-sm">
-              <p className="text-[10px] font-medium text-slate-500">{STATUS_LABELS[s]}</p>
+            <div key={s} className="rounded-lg border border-border bg-card p-2.5 shadow-sm">
+              <p className="text-[10px] font-medium text-muted-foreground">{STATUS_LABELS[s]}</p>
               <p className={cn("text-lg font-bold leading-tight", cfg.statText)}>{counts[s] ?? 0}</p>
             </div>
           );
@@ -292,9 +292,9 @@ export default function ProjectsPage() {
         <ProjectsMap projects={filtered} />
       ) : view === "cards" ? (
         loading ? (
-          <div className="flex items-center justify-center py-20 text-[13px] text-slate-400">Betöltés…</div>
+          <div className="flex items-center justify-center py-20 text-[13px] text-muted-foreground">Betöltés…</div>
         ) : filtered.length === 0 ? (
-          <div className="flex items-center justify-center py-20 text-[13px] text-slate-400">
+          <div className="flex items-center justify-center py-20 text-[13px] text-muted-foreground">
             {search ? "Nincs találat" : "Még nincs projekt"}
           </div>
         ) : (
@@ -310,38 +310,38 @@ export default function ProjectsPage() {
           </div>
         )
       ) : (
-      <div className="overflow-x-auto rounded-lg border border-slate-100 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/60">
+            <tr className="border-b border-border bg-muted/60">
               <th className="w-8 px-3 py-1.5">
                 <input
                   type="checkbox"
                   aria-label="Összes kijelölése"
                   checked={filtered.length > 0 && selected.size === filtered.length}
                   onChange={toggleSelectAll}
-                  className="size-3.5 cursor-pointer accent-blue-600"
+                  className="size-3.5 cursor-pointer accent-primary"
                 />
               </th>
               <th className="w-8" />
-              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Státusz</th>
-              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projekt</th>
-              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ügyfél / helyszín</th>
-              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projektvezető</th>
-              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Határidő</th>
-              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Haladás</th>
+              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Státusz</th>
+              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Projekt</th>
+              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Ügyfél / helyszín</th>
+              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Projektvezető</th>
+              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Határidő</th>
+              <th className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Haladás</th>
               <th className="w-8" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-border">
             {loading && (
               <tr>
-                <td colSpan={9} className="px-3 py-10 text-center text-xs text-slate-400">Betöltés…</td>
+                <td colSpan={9} className="px-3 py-10 text-center text-xs text-muted-foreground">Betöltés…</td>
               </tr>
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-10 text-center text-xs text-slate-400">
+                <td colSpan={9} className="px-3 py-10 text-center text-xs text-muted-foreground">
                   {search ? "Nincs találat" : "Még nincs projekt"}
                 </td>
               </tr>
@@ -355,7 +355,7 @@ export default function ProjectsPage() {
                 <tr
                   key={p.id}
                   onClick={() => router.push(`/projects/${p.id}`)}
-                  className="cursor-pointer transition-colors hover:bg-slate-50"
+                  className="cursor-pointer transition-colors hover:bg-muted"
                 >
                   <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
                     <input
@@ -363,7 +363,7 @@ export default function ProjectsPage() {
                       aria-label={`${p.name} kijelölése`}
                       checked={selected.has(p.id)}
                       onChange={() => toggleSelected(p.id)}
-                      className="size-3.5 cursor-pointer accent-blue-600"
+                      className="size-3.5 cursor-pointer accent-primary"
                     />
                   </td>
                   <td className="px-1 py-1.5">
@@ -371,9 +371,9 @@ export default function ProjectsPage() {
                       type="button"
                       aria-label={p.is_favorite ? "Kedvenc eltávolítása" : "Kedvencnek jelölés"}
                       onClick={(e) => toggleFavorite(e, p)}
-                      className="text-slate-300 hover:text-amber-400"
+                      className="text-muted-foreground/60 hover:text-primary"
                     >
-                      <Star className={cn("size-4", p.is_favorite && "fill-amber-400 text-amber-400")} />
+                      <Star className={cn("size-4", p.is_favorite && "fill-primary text-primary")} />
                     </button>
                   </td>
                   <td className="px-3 py-1.5">
@@ -385,46 +385,46 @@ export default function ProjectsPage() {
                     <div className="flex items-center gap-2.5">
                       <ProjectThumbnailPreview projectId={p.id} hasThumbnail={p.has_thumbnail} />
                       <div>
-                        <p className="text-[12px] font-semibold text-slate-900">{p.name}</p>
-                        <p className="text-[10px] text-slate-400">{p.project_code}</p>
+                        <p className="text-[12px] font-semibold text-foreground">{p.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{p.project_code}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-3 py-1.5">
-                    <p className="text-[12px] text-slate-700">{p.client_name}</p>
-                    <p className="text-[10px] text-slate-400">{p.settlement} · {BUILDING_LABELS[p.building_type] ?? p.building_type}</p>
+                    <p className="text-[12px] text-foreground">{p.client_name}</p>
+                    <p className="text-[10px] text-muted-foreground">{p.settlement} · {BUILDING_LABELS[p.building_type] ?? p.building_type}</p>
                   </td>
                   <td className="px-3 py-1.5">
                     {p.project_manager_name ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white">
+                        <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
                           {initials}
                         </div>
-                        <span className="text-[11px] text-slate-700">{p.project_manager_name}</span>
+                        <span className="text-[11px] text-foreground">{p.project_manager_name}</span>
                       </div>
                     ) : (
-                      <span className="text-[11px] text-slate-300">—</span>
+                      <span className="text-[11px] text-muted-foreground/60">—</span>
                     )}
                   </td>
                   <td className="px-3 py-1.5">
-                    <div className={cn("flex items-center gap-1.5 text-[11px]", late ? "text-red-500" : "text-slate-600")}>
+                    <div className={cn("flex items-center gap-1.5 text-[11px]", late ? "text-destructive" : "text-foreground/80")}>
                       <Calendar className="size-3 shrink-0" />
                       {new Date(p.delivery_date).toLocaleDateString("hu-HU")}
                       {late && (
-                        <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-500">Késik</span>
+                        <span className="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-semibold text-accent-foreground">Késik</span>
                       )}
                     </div>
                   </td>
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
                         <div className={cn("h-full rounded-full", cfg.progressBar)} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="min-w-[2.5rem] text-right text-[10px] font-medium text-slate-500">{pct}%</span>
+                      <span className="min-w-[2.5rem] text-right text-[10px] font-medium text-muted-foreground">{pct}%</span>
                     </div>
                   </td>
                   <td className="px-3 py-1.5">
-                    <ChevronRight className="size-4 text-slate-300" />
+                    <ChevronRight className="size-4 text-muted-foreground/60" />
                   </td>
                 </tr>
               );

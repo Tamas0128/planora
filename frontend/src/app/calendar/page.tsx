@@ -83,8 +83,8 @@ export default function CalendarPage() {
     <AppLayout>
       <div className="mb-3 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Naptár</h1>
-          <p className="text-xs text-slate-500">{year}. {MONTH_NAMES[month]}</p>
+          <h1 className="text-lg font-bold text-foreground">Naptár</h1>
+          <p className="text-xs text-muted-foreground">{year}. {MONTH_NAMES[month]}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
@@ -120,26 +120,26 @@ export default function CalendarPage() {
       </div>
 
       {/* Legend */}
-      <div className="mb-2.5 flex items-center gap-4 text-[11px] text-slate-500">
+      <div className="mb-2.5 flex items-center gap-4 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2.5 rounded-sm bg-amber-400" />
+          <span className="inline-block size-2.5 rounded-sm bg-accent-400" />
           Előkészítés
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2.5 rounded-sm bg-blue-500" />
+          <span className="inline-block size-2.5 rounded-sm bg-neutral-700" />
           Kezdés
         </span>
       </div>
 
-      <div className={cn("overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm", loading && "opacity-60")}>
+      <div className={cn("overflow-hidden rounded-xl border border-border bg-card shadow-sm", loading && "opacity-60")}>
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+        <div className="grid grid-cols-7 border-b border-border bg-muted">
           {DAY_NAMES.map((day, i) => (
             <div
               key={day}
               className={cn(
-                "py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500",
-                i >= 5 && "text-slate-400",
+                "py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+                i >= 5 && "text-muted-foreground/60",
               )}
             >
               {day.slice(0, 3)}
@@ -160,10 +160,10 @@ export default function CalendarPage() {
               <div
                 key={i}
                 className={cn(
-                  "min-h-[72px] border-b border-r border-slate-100 p-1",
+                  "min-h-[72px] border-b border-r border-border p-1",
                   dow === 6 && "border-r-0",
-                  !cellDate && "bg-slate-50/60",
-                  isWeekend && cellDate && "bg-slate-50/40",
+                  !cellDate && "bg-muted/60",
+                  isWeekend && cellDate && "bg-muted/40",
                 )}
               >
                 {cellDate && (
@@ -173,8 +173,8 @@ export default function CalendarPage() {
                         className={cn(
                           "flex size-5 items-center justify-center rounded-full text-[11px] font-semibold leading-none",
                           isToday
-                            ? "bg-blue-600 text-white shadow-sm"
-                            : "text-slate-600",
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-foreground/80",
                         )}
                       >
                         {cellDate.getDate()}
@@ -189,15 +189,15 @@ export default function CalendarPage() {
                           className={cn(
                             "block truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight",
                             ev.type === "prep"
-                              ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                              : "bg-blue-100 text-blue-700 hover:bg-blue-200",
+                              ? "bg-accent-200 text-accent-800 hover:bg-accent-300"
+                              : "bg-neutral-200 text-neutral-800 hover:bg-neutral-300",
                           )}
                         >
                           {ev.task.activity_name}
                         </Link>
                       ))}
                       {events.length > 3 && (
-                        <p className="px-1 text-[10px] text-slate-400">
+                        <p className="px-1 text-[10px] text-muted-foreground">
                           +{events.length - 3} további
                         </p>
                       )}

@@ -84,7 +84,7 @@ function SortableTemplateRow({
     <button
       type="button"
       aria-label="Sorrend módosítása húzással"
-      className="cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+      className="cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
       {...attributes}
       {...listeners}
     >
@@ -267,8 +267,8 @@ export default function ActivityTemplatesPage() {
     <AppLayout>
       <div className="mb-3 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Ütemterv sablon</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-lg font-bold text-foreground">Ütemterv sablon</h1>
+          <p className="text-xs text-muted-foreground">
             Az itt megadott tevékenységek kerülnek be minden újonnan létrehozott projekt ütemtervébe.
           </p>
         </div>
@@ -285,7 +285,7 @@ export default function ActivityTemplatesPage() {
         )}
       </div>
 
-      <p className="mb-2 text-xs text-slate-500">{templates.length} tevékenység sablon</p>
+      <p className="mb-2 text-xs text-muted-foreground">{templates.length} tevékenység sablon</p>
 
       <Card className="overflow-x-auto py-0">
         <Table>

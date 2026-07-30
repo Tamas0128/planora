@@ -33,7 +33,7 @@ export default function ProjectsMap({ projects }: { projects: ProjectCard[] }) {
     withCoords.length > 0 ? [withCoords[0].latitude, withCoords[0].longitude] : BUDAPEST_CENTER;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-100 shadow-sm">
+    <div className="overflow-hidden border border-border shadow-sm">
       <MapContainer center={center} zoom={7} style={{ height: "560px", width: "100%" }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> közreműködők'
@@ -44,12 +44,12 @@ export default function ProjectsMap({ projects }: { projects: ProjectCard[] }) {
             <Popup>
               <div className="min-w-[160px] text-sm">
                 <p className="font-semibold">{p.name}</p>
-                <p className="text-xs text-slate-500">{p.project_code} · {p.settlement}</p>
+                <p className="text-xs text-muted-foreground">{p.project_code} · {p.settlement}</p>
                 <p className="mt-1 text-xs">{STATUS_LABELS[p.status] ?? p.status}</p>
                 <p className="text-xs">{HEALTH_CFG[p.health]?.label ?? p.health}</p>
                 <button
                   onClick={() => router.push(`/projects/${p.id}`)}
-                  className="mt-1.5 text-xs font-medium text-blue-600 hover:underline"
+                  className="mt-1.5 text-xs font-medium text-primary hover:underline"
                 >
                   Megnyitás →
                 </button>
@@ -59,7 +59,7 @@ export default function ProjectsMap({ projects }: { projects: ProjectCard[] }) {
         ))}
       </MapContainer>
       {projects.length > withCoords.length && (
-        <p className="border-t border-slate-100 bg-slate-50 px-3 py-1.5 text-[11px] text-slate-500">
+        <p className="border-t border-border bg-muted px-3 py-1.5 text-[11px] text-muted-foreground">
           {projects.length - withCoords.length} projekthez nincs térképi koordináta — ezek csak a listanézetben látszanak.
         </p>
       )}

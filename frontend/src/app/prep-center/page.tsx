@@ -78,10 +78,10 @@ function PrepCenterContent() {
             {visibleItems.map((item) => (
               <TableRow
                 key={`${item.project_id}-${item.activity_id}`}
-                className={item.is_overdue ? "border-l-4 border-l-red-500 bg-red-50/40" : ""}
+                className={item.is_overdue ? "border-l-4 border-l-accent-700 bg-accent-100/40" : ""}
               >
                 <TableCell>
-                  <Link href={`/projects/${item.project_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                  <Link href={`/projects/${item.project_id}`} className="font-medium text-primary hover:text-accent-700 hover:underline">
                     {item.project_name}
                   </Link>
                 </TableCell>
@@ -98,7 +98,7 @@ function PrepCenterContent() {
                 </TableCell>
                 <TableCell>
                   {item.is_overdue ? (
-                    <Badge className="bg-orange-100 text-orange-700">Lejárt</Badge>
+                    <Badge className="bg-accent-200 text-accent-800">Lejárt</Badge>
                   ) : (
                     <span className="text-muted-foreground">{item.days_until ?? "—"} nap</span>
                   )}
@@ -149,8 +149,8 @@ export default function PrepCenterPage() {
   return (
     <AppLayout>
       <div className="mb-3">
-        <h1 className="text-lg font-bold text-slate-900">Előkészítési központ</h1>
-        <p className="text-xs text-slate-500">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
+        <h1 className="text-lg font-bold text-foreground">Előkészítési központ</h1>
+        <p className="text-xs text-muted-foreground">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Betöltés...</p>}>
         <PrepCenterContent />

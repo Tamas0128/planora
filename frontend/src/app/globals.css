@@ -5,56 +5,99 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: var(--color-slate-50);
-  --foreground: var(--color-slate-900);
-  --card: var(--color-white);
-  --card-foreground: var(--color-slate-900);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-slate-900);
+  /* Modernist design system — flat, architectural, near-mono red on white.
+     See docs/Planora design review2.zip (_ds/modernist.../readme.md) for
+     the source tokens this palette was derived from. */
+  --color-neutral-100: #f8f4f4;
+  --color-neutral-200: #eae7e7;
+  --color-neutral-300: #d7d3d3;
+  --color-neutral-400: #bab6b6;
+  --color-neutral-500: #9b9797;
+  --color-neutral-600: #7d7979;
+  --color-neutral-700: #605d5d;
+  --color-neutral-800: #444141;
+  --color-neutral-900: #2d2b2b;
 
-  --primary: var(--color-blue-600);
-  --primary-foreground: var(--color-white);
-  --secondary: var(--color-blue-50);
-  --secondary-foreground: var(--color-blue-700);
-  --muted: var(--color-slate-100);
-  --muted-foreground: var(--color-slate-500);
-  --accent: var(--color-blue-50);
-  --accent-foreground: var(--color-blue-700);
-  --destructive: var(--color-red-600);
+  --color-accent-100: #fff2ef;
+  --color-accent-200: #ffe0d9;
+  --color-accent-300: #ffc4b8;
+  --color-accent-400: #ff9783;
+  --color-accent-500: #ec3013;
+  --color-accent-600: #dd2b0f;
+  --color-accent-700: #ae1800;
+  --color-accent-800: #7c1405;
+  --color-accent-900: #4d170e;
 
-  --border: var(--color-slate-200);
-  --input: var(--color-slate-200);
-  --ring: var(--color-blue-500);
+  --background: #f3f2f2;
+  --foreground: #201e1d;
+  --card: #eae9e9;
+  --card-foreground: #201e1d;
+  --popover: #eae9e9;
+  --popover-foreground: #201e1d;
 
-  --chart-1: var(--color-blue-600);
-  --chart-2: var(--color-sky-500);
-  --chart-3: var(--color-indigo-500);
-  --chart-4: var(--color-amber-500);
-  --chart-5: var(--color-teal-500);
+  --primary: var(--color-accent-500);
+  --primary-foreground: #f3f2f2;
+  --secondary: var(--color-neutral-200);
+  --secondary-foreground: #201e1d;
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-600);
+  --accent: var(--color-accent-200);
+  --accent-foreground: var(--color-accent-700);
+  --destructive: var(--color-accent-600);
 
-  --radius: 0.75rem;
+  --border: var(--color-neutral-300);
+  --input: var(--color-neutral-300);
+  --ring: var(--color-accent-500);
 
-  /* Dark forest-green sidebar – matches PLANora logo palette */
-  --sidebar: oklch(0.115 0.038 148);
-  --sidebar-foreground: oklch(0.78 0.04 148);
-  --sidebar-primary: oklch(0.48 0.13 148);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: oklch(0.17 0.04 148);
-  --sidebar-accent-foreground: oklch(0.92 0.02 148);
-  --sidebar-border: oklch(0.19 0.04 148);
-  --sidebar-ring: oklch(0.55 0.14 148);
+  --chart-1: var(--color-accent-500);
+  --chart-2: var(--color-neutral-700);
+  --chart-3: var(--color-accent-700);
+  --chart-4: var(--color-neutral-500);
+  --chart-5: var(--color-neutral-900);
 
-  /* Vivid kanban status colors */
-  --status-planning: var(--color-sky-500);
-  --status-foundation: var(--color-amber-500);
-  --status-structure: var(--color-orange-500);
-  --status-exterior_done: var(--color-teal-500);
-  --status-turnkey: var(--color-emerald-500);
+  --radius: 0rem;
+
+  /* Sidebar — near-black neutral, accent red for the active item */
+  --sidebar: var(--color-neutral-900);
+  --sidebar-foreground: var(--color-neutral-300);
+  --sidebar-primary: var(--color-accent-500);
+  --sidebar-primary-foreground: #f3f2f2;
+  --sidebar-accent: var(--color-neutral-800);
+  --sidebar-accent-foreground: var(--color-neutral-100);
+  --sidebar-border: var(--color-neutral-800);
+  --sidebar-ring: var(--color-accent-500);
+
+  /* Project-phase status — progressive neutral darkening, accent for the
+     final (turnkey) phase, so it stays in the mono palette while still
+     being readable at a glance across the Kanban board. */
+  --status-planning: var(--color-neutral-500);
+  --status-foundation: var(--color-neutral-600);
+  --status-structure: var(--color-neutral-700);
+  --status-exterior_done: var(--color-neutral-800);
+  --status-turnkey: var(--color-accent-500);
 }
 
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
+  --color-neutral-100: var(--color-neutral-100);
+  --color-neutral-200: var(--color-neutral-200);
+  --color-neutral-300: var(--color-neutral-300);
+  --color-neutral-400: var(--color-neutral-400);
+  --color-neutral-500: var(--color-neutral-500);
+  --color-neutral-600: var(--color-neutral-600);
+  --color-neutral-700: var(--color-neutral-700);
+  --color-neutral-800: var(--color-neutral-800);
+  --color-neutral-900: var(--color-neutral-900);
+  --color-accent-100: var(--color-accent-100);
+  --color-accent-200: var(--color-accent-200);
+  --color-accent-300: var(--color-accent-300);
+  --color-accent-400: var(--color-accent-400);
+  --color-accent-500: var(--color-accent-500);
+  --color-accent-600: var(--color-accent-600);
+  --color-accent-700: var(--color-accent-700);
+  --color-accent-800: var(--color-accent-800);
+  --color-accent-900: var(--color-accent-900);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -101,37 +144,37 @@
 }
 
 .dark {
-  --background: var(--color-slate-950);
-  --foreground: var(--color-slate-50);
-  --card: var(--color-slate-900);
-  --card-foreground: var(--color-slate-50);
-  --popover: var(--color-slate-900);
-  --popover-foreground: var(--color-slate-50);
-  --primary: var(--color-blue-500);
-  --primary-foreground: var(--color-white);
-  --secondary: var(--color-slate-800);
-  --secondary-foreground: var(--color-slate-50);
-  --muted: var(--color-slate-800);
-  --muted-foreground: var(--color-slate-400);
-  --accent: var(--color-slate-800);
-  --accent-foreground: var(--color-slate-50);
-  --destructive: var(--color-red-500);
-  --border: color-mix(in oklch, white 10%, transparent);
-  --input: color-mix(in oklch, white 15%, transparent);
-  --ring: var(--color-blue-400);
-  --chart-1: var(--color-blue-400);
-  --chart-2: var(--color-sky-400);
-  --chart-3: var(--color-indigo-400);
-  --chart-4: var(--color-amber-400);
-  --chart-5: var(--color-teal-400);
-  --sidebar: oklch(0.115 0.038 148);
-  --sidebar-foreground: oklch(0.78 0.04 148);
-  --sidebar-primary: oklch(0.48 0.13 148);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: oklch(0.17 0.04 148);
-  --sidebar-accent-foreground: oklch(0.92 0.02 148);
-  --sidebar-border: oklch(0.19 0.04 148);
-  --sidebar-ring: oklch(0.55 0.14 148);
+  --background: var(--color-neutral-900);
+  --foreground: var(--color-neutral-100);
+  --card: var(--color-neutral-800);
+  --card-foreground: var(--color-neutral-100);
+  --popover: var(--color-neutral-800);
+  --popover-foreground: var(--color-neutral-100);
+  --primary: var(--color-accent-400);
+  --primary-foreground: var(--color-neutral-900);
+  --secondary: var(--color-neutral-700);
+  --secondary-foreground: var(--color-neutral-100);
+  --muted: var(--color-neutral-800);
+  --muted-foreground: var(--color-neutral-400);
+  --accent: var(--color-neutral-700);
+  --accent-foreground: var(--color-neutral-100);
+  --destructive: var(--color-accent-400);
+  --border: color-mix(in oklch, white 12%, transparent);
+  --input: color-mix(in oklch, white 16%, transparent);
+  --ring: var(--color-accent-400);
+  --chart-1: var(--color-accent-400);
+  --chart-2: var(--color-neutral-400);
+  --chart-3: var(--color-accent-300);
+  --chart-4: var(--color-neutral-500);
+  --chart-5: var(--color-neutral-200);
+  --sidebar: var(--color-neutral-900);
+  --sidebar-foreground: var(--color-neutral-300);
+  --sidebar-primary: var(--color-accent-500);
+  --sidebar-primary-foreground: var(--color-neutral-900);
+  --sidebar-accent: var(--color-neutral-800);
+  --sidebar-accent-foreground: var(--color-neutral-100);
+  --sidebar-border: var(--color-neutral-800);
+  --sidebar-ring: var(--color-accent-500);
 }
 
 @layer base {

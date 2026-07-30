@@ -85,7 +85,7 @@ function UserAvatarCell({ user, onUploaded }: { user: User; onUploaded: () => vo
       >
         <Avatar size="sm">
           {url && <AvatarImage src={url} alt={user.full_name} />}
-          <AvatarFallback className="bg-blue-600 text-[10px] font-semibold text-white">
+          <AvatarFallback className="bg-primary text-[10px] font-semibold text-primary-foreground">
             {pmInitials(user.full_name)}
           </AvatarFallback>
         </Avatar>
@@ -273,7 +273,7 @@ export default function UsersPage() {
                 </TableCell>
                 <TableCell>
                   {user.is_active ? (
-                    <Badge className="bg-emerald-100 text-emerald-700">Aktív</Badge>
+                    <Badge className="bg-neutral-100 text-neutral-700">Aktív</Badge>
                   ) : (
                     <Badge variant="secondary">Inaktív</Badge>
                   )}

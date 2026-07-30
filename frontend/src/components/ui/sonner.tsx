@@ -34,10 +34,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
-          // Override sonner's default red error palette -- this app avoids red entirely.
-          "--error-bg": "var(--color-orange-50)",
-          "--error-border": "var(--color-orange-200)",
-          "--error-text": "var(--color-orange-800)",
+          "--error-bg": "var(--color-accent-100)",
+          "--error-border": "var(--color-accent-300)",
+          "--error-text": "var(--color-accent-800)",
         } as React.CSSProperties
       }
       toastOptions={{

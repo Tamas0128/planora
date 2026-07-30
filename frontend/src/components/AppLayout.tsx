@@ -164,41 +164,41 @@ function NotificationBell() {
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
-          <Button variant="ghost" size="icon-sm" className="relative text-slate-400 hover:bg-slate-100 hover:text-slate-700" />
+          <Button variant="ghost" size="icon-sm" className="relative text-muted-foreground hover:bg-muted hover:text-foreground" />
         }
       >
         <Bell className="size-4" />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-          <span className="text-[13px] font-semibold text-slate-800">Értesítések</span>
+        <div className="flex items-center justify-between border-b border-border px-3 py-2">
+          <span className="text-[13px] font-semibold text-foreground">Értesítések</span>
           {unreadCount > 0 && (
-            <button onClick={markAllRead} className="text-[11px] text-green-700 hover:underline">
+            <button onClick={markAllRead} className="text-[11px] text-primary hover:underline">
               Mind olvasottnak jelöl
             </button>
           )}
         </div>
         <div className="max-h-80 overflow-y-auto">
           {notifications.length === 0 ? (
-            <p className="py-6 text-center text-xs text-slate-400">Nincs értesítés</p>
+            <p className="py-6 text-center text-xs text-muted-foreground">Nincs értesítés</p>
           ) : (
             notifications.map((n) => (
               <button
                 key={n.id}
                 onClick={() => markRead(n)}
                 className={cn(
-                  "block w-full border-b border-slate-50 px-3 py-2 text-left hover:bg-slate-50",
-                  !n.read_at && "bg-blue-50/50",
+                  "block w-full border-b border-border px-3 py-2 text-left hover:bg-muted",
+                  !n.read_at && "bg-accent/60",
                 )}
               >
-                <p className="text-[12px] font-medium text-slate-800">{n.title}</p>
-                <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{n.body}</p>
-                <p className="mt-0.5 text-[10px] text-slate-400">
+                <p className="text-[12px] font-medium text-foreground">{n.title}</p>
+                <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{n.body}</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
                   {new Date(n.created_at).toLocaleString("hu-HU", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </button>
@@ -413,7 +413,7 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
               >
                 <Avatar size="sm">
                   {avatarUrl && <AvatarImage src={avatarUrl} alt={user.full_name} />}
-                  <AvatarFallback className="bg-green-600 text-xs font-semibold text-white">
+                  <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
@@ -439,22 +439,22 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
       <SidebarInset>
         {/* Header – custom or default */}
         {header ?? (
-          <header className="sticky top-0 z-20 flex h-12 items-center gap-3 border-b border-slate-100 bg-white px-4">
-            <SidebarTrigger className="text-slate-400 hover:text-slate-700" />
-            <div className="h-5 w-px bg-slate-100" />
-            <span className="text-sm font-semibold text-slate-700 md:hidden">PLANora</span>
+          <header className="sticky top-0 z-20 flex h-12 items-center gap-3 border-b-2 border-border bg-card px-4">
+            <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+            <div className="h-5 w-px bg-border" />
+            <span className="text-sm font-semibold text-foreground md:hidden">PLANora</span>
             <div className="flex-1" />
             {user && (
               <div className="flex items-center gap-2.5">
-                <span className="hidden text-sm text-slate-500 sm:block">{user.full_name}</span>
+                <span className="hidden text-sm text-muted-foreground sm:block">{user.full_name}</span>
                 <Avatar size="sm">
-                  <AvatarFallback className="bg-green-700 text-xs font-bold text-white">{initials}</AvatarFallback>
+                  <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">{initials}</AvatarFallback>
                 </Avatar>
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   onClick={logout}
-                  className="text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <LogOut className="size-4" />
                 </Button>

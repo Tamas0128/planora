@@ -22,7 +22,7 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-neutral-900 via-accent-900 to-neutral-900 p-4">
       <Card className="w-full max-w-sm shadow-2xl">
         <CardHeader className="items-center pb-2 text-center">
           <Image
@@ -65,9 +65,9 @@ function PilotLogin({ router }: { router: ReturnType<typeof useRouter> }) {
 
   return (
     <div className="space-y-4 text-center">
-      <p className="text-lg font-medium text-slate-700">Üdvözöljük a PLANorában!</p>
+      <p className="text-lg font-medium text-foreground">Üdvözöljük a PLANorában!</p>
       {error && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 ring-1 ring-red-200">
+        <div className="bg-destructive/10 px-4 py-3 text-sm text-destructive ring-1 ring-destructive/20">
           {error}
         </div>
       )}
@@ -103,7 +103,7 @@ function CredentialsLogin({ router }: { router: ReturnType<typeof useRouter> }) 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 ring-1 ring-red-200">
+        <div className="bg-destructive/10 px-4 py-3 text-sm text-destructive ring-1 ring-destructive/20">
           {error}
         </div>
       )}

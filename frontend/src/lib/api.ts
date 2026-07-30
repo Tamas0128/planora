@@ -509,11 +509,11 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  planning: "bg-sky-500",
-  foundation: "bg-amber-500",
-  structure: "bg-orange-500",
-  exterior_done: "bg-teal-500",
-  turnkey: "bg-emerald-500",
+  planning: "bg-neutral-400",
+  foundation: "bg-neutral-500",
+  structure: "bg-neutral-600",
+  exterior_done: "bg-neutral-800",
+  turnkey: "bg-accent-500",
 };
 
 export const BUILDING_LABELS: Record<string, string> = {

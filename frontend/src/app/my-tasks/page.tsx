@@ -34,18 +34,18 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: "bg-slate-100 text-slate-600 border-slate-200",
-  in_progress: "bg-amber-100 text-amber-700 border-amber-200",
-  done: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  blocked: "bg-red-100 text-red-700 border-red-200",
+  pending: "bg-muted text-muted-foreground border-border",
+  in_progress: "bg-accent-100 text-accent-700 border-accent-200",
+  done: "bg-neutral-100 text-neutral-700 border-neutral-300",
+  blocked: "bg-accent-200 text-accent-800 border-accent-300",
 };
 
 const ROLE_COLOR: Record<string, string> = {
-  project_manager: "bg-blue-600",
-  management: "bg-purple-600",
-  procurement: "bg-amber-600",
-  billing: "bg-emerald-600",
-  admin: "bg-slate-600",
+  project_manager: "bg-primary",
+  management: "bg-neutral-900",
+  procurement: "bg-accent-700",
+  billing: "bg-neutral-700",
+  admin: "bg-neutral-600",
 };
 
 function roleInitials(role: string): string {
@@ -54,9 +54,9 @@ function roleInitials(role: string): string {
 }
 
 const STATUS_GROUPS: { key: string; label: string; icon: LucideIcon; iconColor: string }[] = [
-  { key: "pending", label: "Várakozik", icon: Circle, iconColor: "text-slate-400" },
-  { key: "in_progress", label: "Folyamatban", icon: Clock, iconColor: "text-amber-500" },
-  { key: "blocked", label: "Blokkolt", icon: Ban, iconColor: "text-red-500" },
+  { key: "pending", label: "Várakozik", icon: Circle, iconColor: "text-muted-foreground" },
+  { key: "in_progress", label: "Folyamatban", icon: Clock, iconColor: "text-accent-600" },
+  { key: "blocked", label: "Blokkolt", icon: Ban, iconColor: "text-destructive" },
 ];
 
 function taskKey(item: PrepTask) {
@@ -145,14 +145,14 @@ function SortableHead({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
-      className="cursor-pointer select-none hover:text-slate-700"
+      className="cursor-pointer select-none hover:text-foreground"
     >
       <span className="inline-flex items-center gap-1">
         {label}
         {active ? (
           sortDir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
         ) : (
-          <ArrowUpDown className="size-3 text-slate-300" />
+          <ArrowUpDown className="size-3 text-muted-foreground/60" />
         )}
       </span>
     </TableHead>
@@ -166,45 +166,45 @@ function TaskTableRow({ item, selected, onClick }: { item: PrepTask; selected: b
       onClick={onClick}
       className={cn(
         "cursor-pointer",
-        item.is_overdue && "bg-red-50/30",
-        selected && "bg-blue-50/60 hover:bg-blue-50/60",
+        item.is_overdue && "bg-accent-100/50",
+        selected && "bg-accent-200/50 hover:bg-accent-200/50",
       )}
     >
       <TableCell className="font-medium">
-        <span className="text-[13px] text-slate-900">{item.activity_name}</span>
+        <span className="text-[13px] text-foreground">{item.activity_name}</span>
       </TableCell>
       <TableCell>
         <Link
           href={`/projects/${item.project_id}`}
           onClick={(e) => e.stopPropagation()}
-          className="text-[13px] font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          className="text-[13px] font-medium text-primary hover:text-accent-700 hover:underline"
         >
           {item.project_name}
         </Link>
-        <p className="text-[11px] text-slate-400">{item.client_name}</p>
+        <p className="text-[11px] text-muted-foreground">{item.client_name}</p>
       </TableCell>
       <TableCell>
         {date ? (
           <div className="flex items-center gap-1.5">
-            <span className={cn("text-[12px]", item.is_overdue ? "font-semibold text-red-600" : "text-slate-600")}>
+            <span className={cn("text-[12px]", item.is_overdue ? "font-semibold text-destructive" : "text-foreground/80")}>
               {new Date(date).toLocaleDateString("hu-HU")}
             </span>
             {item.days_until !== undefined && item.days_until !== null && (
-              <Badge variant="outline" className={cn("text-[10px]", item.is_overdue ? "border-red-200 bg-red-50 text-red-600" : "border-slate-200 text-slate-400")}>
+              <Badge variant="outline" className={cn("text-[10px]", item.is_overdue ? "border-accent-300 bg-accent-100 text-accent-800" : "border-border text-muted-foreground")}>
                 {item.is_overdue ? `${Math.abs(item.days_until)}n lejárt` : `${item.days_until}n múlva`}
               </Badge>
             )}
           </div>
         ) : (
-          <span className="text-[12px] text-slate-300">—</span>
+          <span className="text-[12px] text-muted-foreground/60">—</span>
         )}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1.5">
-          <div className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white", ROLE_COLOR[item.responsible_role] ?? "bg-slate-500")}>
+          <div className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-primary-foreground", ROLE_COLOR[item.responsible_role] ?? "bg-neutral-500")}>
             {roleInitials(item.responsible_role)}
           </div>
-          <span className="text-[12px] text-slate-500">{ROLE_LABELS[item.responsible_role] ?? item.responsible_role}</span>
+          <span className="text-[12px] text-muted-foreground">{ROLE_LABELS[item.responsible_role] ?? item.responsible_role}</span>
         </div>
       </TableCell>
     </TableRow>
@@ -221,63 +221,63 @@ function TaskDetailPanel({
       <SheetContent side="right" className="flex w-80 flex-col gap-0 p-0">
         {item && (
           <>
-            <SheetHeader className="shrink-0 gap-1 border-b border-slate-100 p-3 pr-10">
+            <SheetHeader className="shrink-0 gap-1 border-b border-border p-3 pr-10">
               <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
                 <Badge
                   variant="outline"
-                  className={cn("text-[10px] font-medium", STATUS_COLOR[item.status] ?? "bg-slate-100 text-slate-600")}
+                  className={cn("text-[10px] font-medium", STATUS_COLOR[item.status] ?? "bg-muted text-muted-foreground")}
                 >
                   {STATUS_LABEL[item.status] ?? item.status}
                 </Badge>
                 {item.is_overdue && (
-                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">Lejárt</span>
+                  <span className="rounded-full bg-accent-200 px-2 py-0.5 text-[10px] font-semibold text-accent-800">Lejárt</span>
                 )}
               </div>
-              <SheetTitle className="text-[14px] font-bold leading-snug text-slate-900">{item.activity_name}</SheetTitle>
-              <SheetDescription className="text-[11px] text-slate-400">{item.project_name}</SheetDescription>
+              <SheetTitle className="text-[14px] font-bold leading-snug text-foreground">{item.activity_name}</SheetTitle>
+              <SheetDescription className="text-[11px] text-muted-foreground">{item.project_name}</SheetDescription>
             </SheetHeader>
 
             <div className="flex-1 space-y-3.5 overflow-y-auto p-3">
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ügyfél</p>
-                <p className="text-[13px] font-medium text-slate-800">{item.client_name}</p>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Ügyfél</p>
+                <p className="text-[13px] font-medium text-foreground">{item.client_name}</p>
               </div>
 
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős</p>
-                <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
-                  <UserIcon className="size-3.5 shrink-0 text-slate-400" />
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Felelős</p>
+                <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
+                  <UserIcon className="size-3.5 shrink-0 text-muted-foreground" />
                   <span>{ROLE_LABELS[item.responsible_role] ?? item.responsible_role}</span>
                 </div>
               </div>
 
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Dátumok</p>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Dátumok</p>
                 <div className="space-y-1.5">
                   {item.start_date && (
-                    <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
-                      <Calendar className="size-3.5 shrink-0 text-slate-400" />
-                      <span className="text-slate-400">Kezdés:</span>
+                    <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
+                      <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="text-muted-foreground">Kezdés:</span>
                       <span>{new Date(item.start_date).toLocaleDateString("hu-HU")}</span>
                     </div>
                   )}
                   {item.prep_date && (
-                    <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
-                      <Calendar className="size-3.5 shrink-0 text-slate-400" />
-                      <span className="text-slate-400">Előkészítés:</span>
-                      <span className={cn(item.is_overdue && "font-semibold text-red-500")}>
+                    <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
+                      <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="text-muted-foreground">Előkészítés:</span>
+                      <span className={cn(item.is_overdue && "font-semibold text-accent-700")}>
                         {new Date(item.prep_date).toLocaleDateString("hu-HU")}
                       </span>
                     </div>
                   )}
                   {!item.start_date && !item.prep_date && (
-                    <p className="text-[13px] text-slate-400">Nincs megadva</p>
+                    <p className="text-[13px] text-muted-foreground">Nincs megadva</p>
                   )}
                 </div>
               </div>
 
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Státusz</p>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Státusz</p>
                 <Select value={item.status} onValueChange={(v) => v && onStatusChange(v)}>
                   <SelectTrigger size="sm" className="w-full">
                     <SelectValue>{(v: string) => STATUS_LABEL[v] ?? v}</SelectValue>
@@ -291,10 +291,10 @@ function TaskDetailPanel({
               </div>
             </div>
 
-            <div className="shrink-0 border-t border-slate-100 p-3">
+            <div className="shrink-0 border-t border-border p-3">
               <Link
                 href={`/projects/${item.project_id}`}
-                className="block w-full rounded-lg bg-blue-600 py-2 text-center text-[13px] font-semibold text-white hover:bg-blue-700"
+                className="block w-full rounded-lg bg-primary py-2 text-center text-[13px] font-semibold text-primary-foreground hover:bg-accent-600"
               >
                 Projekt megnyitása
               </Link>
@@ -412,8 +412,8 @@ export default function MyTasksPage() {
     <AppLayout>
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Saját feladatok</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-lg font-bold text-foreground">Saját feladatok</h1>
+          <p className="text-xs text-muted-foreground">
             A szerepkörödhöz rendelt nyitott tevékenységek
           </p>
         </div>
@@ -426,7 +426,7 @@ export default function MyTasksPage() {
       {!loading && items.length > 0 && (
         <div className="mb-3 space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Időszak</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Időszak</span>
             <Input
               type="date"
               value={dateFrom}
@@ -434,7 +434,7 @@ export default function MyTasksPage() {
               className="h-7 w-[150px] text-[12px]"
               aria-label="Tól"
             />
-            <span className="text-[12px] text-slate-400">–</span>
+            <span className="text-[12px] text-muted-foreground">–</span>
             <Input
               type="date"
               value={dateTo}
@@ -449,7 +449,7 @@ export default function MyTasksPage() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Állapot</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Állapot</span>
             {STATUS_FILTERS.map((f) => (
               <Button
                 key={f.key}
@@ -463,7 +463,7 @@ export default function MyTasksPage() {
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Tevékenység</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tevékenység</span>
             <Input
               type="text"
               value={nameFilter}
@@ -471,7 +471,7 @@ export default function MyTasksPage() {
               placeholder="Keresés…"
               className="h-7 w-[160px] text-[12px]"
             />
-            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Projekt</span>
+            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Projekt</span>
             <Input
               type="text"
               value={projectFilter}
@@ -479,7 +479,7 @@ export default function MyTasksPage() {
               placeholder="Keresés…"
               className="h-7 w-[160px] text-[12px]"
             />
-            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Felelős</span>
+            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Felelős</span>
             <Select value={roleFilter} onValueChange={(v) => v && changeRoleFilter(v)}>
               <SelectTrigger size="sm" className="h-7 w-[160px] text-[12px]">
                 <SelectValue>{(v: string) => (v === "all" ? "Összes" : ROLE_LABELS[v] ?? v)}</SelectValue>
@@ -496,23 +496,23 @@ export default function MyTasksPage() {
       )}
 
           {loading ? (
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center gap-3 border-b border-slate-100 px-3 py-1.5 last:border-0">
-                  <div className="size-1.5 rounded-full bg-slate-200" />
+                <div key={i} className="flex items-center gap-3 border-b border-border px-3 py-1.5 last:border-0">
+                  <div className="size-1.5 rounded-full bg-neutral-200" />
                   <div className="flex-1 space-y-1">
-                    <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200" />
-                    <div className="h-2.5 w-1/2 animate-pulse rounded bg-slate-100" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-neutral-200" />
+                    <div className="h-2.5 w-1/2 animate-pulse rounded bg-muted" />
                   </div>
-                  <div className="h-4 w-16 animate-pulse rounded bg-slate-100" />
+                  <div className="h-4 w-16 animate-pulse rounded bg-muted" />
                 </div>
               ))}
             </div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <CheckSquare className="mb-4 size-12 text-slate-200" />
-              <p className="text-lg font-semibold text-slate-600">Nincs nyitott feladat</p>
-              <p className="mt-2 max-w-sm text-sm text-slate-400">
+              <CheckSquare className="mb-4 size-12 text-muted-foreground/40" />
+              <p className="text-lg font-semibold text-foreground/80">Nincs nyitott feladat</p>
+              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
                 A feladatok automatikusan keletkeznek a projekt ütemtervéből, a szerepkörödhöz
                 rendelt tevékenységekből.
               </p>
@@ -526,8 +526,8 @@ export default function MyTasksPage() {
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <CheckSquare className="mb-4 size-12 text-slate-200" />
-              <p className="text-lg font-semibold text-slate-600">Nincs a szűrésnek megfelelő feladat</p>
+              <CheckSquare className="mb-4 size-12 text-muted-foreground/40" />
+              <p className="text-lg font-semibold text-foreground/80">Nincs a szűrésnek megfelelő feladat</p>
               <Button
                 size="sm"
                 variant="outline"
@@ -552,18 +552,18 @@ export default function MyTasksPage() {
                 const visible = visibleCounts[group.key] ?? PAGE_SIZE;
                 const Icon = group.icon;
                 return (
-                  <div key={group.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div key={group.key} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                     <button
                       onClick={() => toggleCollapsed(group.key)}
-                      className="flex w-full items-center gap-2 border-b border-slate-100 bg-slate-50/60 px-3 py-2 text-left hover:bg-slate-100/60"
+                      className="flex w-full items-center gap-2 border-b border-border bg-muted/60 px-3 py-2 text-left hover:bg-muted"
                     >
                       <Icon className={cn("size-3.5 shrink-0", group.iconColor)} />
-                      <span className="text-[12px] font-semibold text-slate-700">{group.label}</span>
-                      <span className="rounded-full bg-slate-200/80 px-1.5 text-[10px] font-bold text-slate-500">
+                      <span className="text-[12px] font-semibold text-foreground/80">{group.label}</span>
+                      <span className="rounded-full bg-neutral-200/80 px-1.5 text-[10px] font-bold text-muted-foreground">
                         {groupItems.length}
                       </span>
                       <div className="flex-1" />
-                      <ChevronDown className={cn("size-3.5 text-slate-400 transition-transform", isCollapsed && "-rotate-90")} />
+                      <ChevronDown className={cn("size-3.5 text-muted-foreground transition-transform", isCollapsed && "-rotate-90")} />
                     </button>
                     {!isCollapsed && (
                       <>
@@ -594,7 +594,7 @@ export default function MyTasksPage() {
                           </TableBody>
                         </Table>
                         {visible < groupItems.length && (
-                          <div className="border-t border-slate-100 px-3 py-1.5">
+                          <div className="border-t border-border px-3 py-1.5">
                             <Button
                               size="sm"
                               variant="outline"
