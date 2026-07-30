@@ -382,6 +382,8 @@ def create_activity(
         responsible_role=body.responsible_role,
         assignee_id=body.assignee_id,
         sort_order=max_sort,
+        category=body.category,
+        documentation_subtype=body.documentation_subtype,
     )
     db.add(activity)
     db.flush()
@@ -404,6 +406,8 @@ def create_activity(
         is_active=activity.is_active,
         sort_order=activity.sort_order,
         prerequisite_ids=[],
+        category=activity.category,
+        documentation_subtype=activity.documentation_subtype,
     )
 
 
@@ -444,6 +448,8 @@ def list_activities(
                 is_active=a.is_active,
                 sort_order=a.sort_order,
                 prerequisite_ids=[d.prerequisite_id for d in deps],
+                category=a.category,
+                documentation_subtype=a.documentation_subtype,
             )
         )
     return result
@@ -562,6 +568,8 @@ def update_activity(
         is_active=activity.is_active,
         sort_order=activity.sort_order,
         prerequisite_ids=[d.prerequisite_id for d in deps],
+        category=activity.category,
+        documentation_subtype=activity.documentation_subtype,
     )
 
 

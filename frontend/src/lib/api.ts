@@ -63,6 +63,8 @@ export interface Activity {
   is_active: boolean;
   sort_order: number;
   prerequisite_ids: number[];
+  category: string;
+  documentation_subtype?: string;
 }
 
 export interface ActivityTemplate {
@@ -74,6 +76,8 @@ export interface ActivityTemplate {
   responsible_role: string;
   prerequisite_template_ids: number[];
   include_by_default: boolean;
+  category: string;
+  documentation_subtype?: string;
 }
 
 export interface PrepTask {
@@ -96,6 +100,8 @@ export interface TaskBoardItem {
   status: string;
   responsible_role: string;
   duration_days: number;
+  category: string;
+  documentation_subtype?: string;
   assignee_id?: number;
   assignee_name?: string;
   start_date?: string;
@@ -531,4 +537,32 @@ export const ROLE_LABELS: Record<string, string> = {
   billing: "Számlázás",
   site_manager: "Építésvezető",
   subcontractor: "Alvállalkozó",
+};
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  foundation: "Alapozás",
+  timber_frame: "Favázszerkezet",
+  roofing: "Tetőszerkezet",
+  exterior_openings: "Külső nyílászárók",
+  electrical: "Villanyszerelés",
+  mechanical: "Gépészet",
+  insulation: "Szigetelés",
+  flooring: "Burkolás",
+  interior: "Beltéri munkák",
+  finishing: "Festés",
+  facade: "Homlokzat",
+  landscaping: "Kertészet",
+  procurement: "Beszerzés",
+  planning: "Tervezés",
+  documentation: "Dokumentáció",
+  other: "Egyéb",
+};
+
+export const DOCUMENTATION_SUBTYPE_LABELS: Record<string, string> = {
+  contract: "Szerződés",
+  purchase_order: "Megrendelés",
+  completion_certificate: "Teljesítés igazolás",
+  invoice: "Számla",
+  plan: "Terv",
+  letter_of_intent: "Szándéknyilatkozat",
 };

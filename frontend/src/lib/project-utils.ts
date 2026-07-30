@@ -1,3 +1,22 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Building2,
+  CircleDot,
+  DoorOpen,
+  FileText,
+  Grid2x2,
+  Hammer,
+  Layers,
+  PaintRoller,
+  PencilRuler,
+  Shield,
+  TreePine,
+  Trees,
+  Truck,
+  Wrench,
+  Zap,
+  Home as HomeIcon,
+} from "lucide-react";
 import { BUILDING_LABELS } from "@/lib/api";
 
 export function pmInitials(name: string | null | undefined): string {
@@ -53,3 +72,32 @@ export const HEALTH_CFG: Record<string, { label: string; badge: string; dot: str
   warning:  { label: "Figyelendő", badge: "bg-warning-bg text-warning-foreground", dot: "bg-warning" },
   critical: { label: "Kritikus",   badge: "bg-critical-bg text-critical",      dot: "bg-critical" },
 };
+
+export const CATEGORY_ORDER = [
+  "foundation", "timber_frame", "roofing", "exterior_openings", "electrical",
+  "mechanical", "insulation", "flooring", "interior", "finishing", "facade",
+  "landscaping", "procurement", "planning", "documentation", "other",
+] as const;
+
+export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  foundation: Layers,
+  timber_frame: TreePine,
+  roofing: HomeIcon,
+  exterior_openings: DoorOpen,
+  electrical: Zap,
+  mechanical: Wrench,
+  insulation: Shield,
+  flooring: Grid2x2,
+  interior: Hammer,
+  finishing: PaintRoller,
+  facade: Building2,
+  landscaping: Trees,
+  procurement: Truck,
+  planning: PencilRuler,
+  documentation: FileText,
+  other: CircleDot,
+};
+
+export const DOCUMENTATION_SUBTYPE_ORDER = [
+  "contract", "purchase_order", "completion_certificate", "invoice", "plan", "letter_of_intent",
+] as const;

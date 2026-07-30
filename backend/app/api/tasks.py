@@ -102,6 +102,8 @@ def task_kanban(
                 status=activity.status,
                 responsible_role=activity.responsible_role,
                 duration_days=activity.duration_days,
+                category=activity.category,
+                documentation_subtype=activity.documentation_subtype,
                 assignee_id=activity.assignee_id,
                 assignee_name=activity.assignee.full_name if activity.assignee else None,
                 start_date=activity.start_date,

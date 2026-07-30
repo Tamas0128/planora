@@ -3,7 +3,15 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.models import ActivityStatus, BuildingType, NotificationType, ProjectStatus, UserRole
+from app.models import (
+    ActivityCategory,
+    ActivityStatus,
+    BuildingType,
+    DocumentationSubtype,
+    NotificationType,
+    ProjectStatus,
+    UserRole,
+)
 
 
 class TokenResponse(BaseModel):
@@ -147,6 +155,8 @@ class ActivityResponse(BaseModel):
     is_active: bool = True
     sort_order: int = 0
     prerequisite_ids: list[int] = []
+    category: ActivityCategory = ActivityCategory.OTHER
+    documentation_subtype: Optional[DocumentationSubtype] = None
 
     model_config = {"from_attributes": True}
 
@@ -157,6 +167,8 @@ class ActivityCreate(BaseModel):
     prep_days: int = 14
     responsible_role: UserRole = UserRole.PROJECT_MANAGER
     assignee_id: Optional[int] = None
+    category: ActivityCategory = ActivityCategory.OTHER
+    documentation_subtype: Optional[DocumentationSubtype] = None
 
 
 class ActivityUpdate(BaseModel):
@@ -170,6 +182,8 @@ class ActivityUpdate(BaseModel):
     end_date: Optional[date] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
+    category: Optional[ActivityCategory] = None
+    documentation_subtype: Optional[DocumentationSubtype] = None
 
 
 class DependencyCreate(BaseModel):
@@ -185,6 +199,8 @@ class ActivityTemplateResponse(BaseModel):
     responsible_role: UserRole
     prerequisite_template_ids: list[int] = []
     include_by_default: bool = True
+    category: ActivityCategory = ActivityCategory.OTHER
+    documentation_subtype: Optional[DocumentationSubtype] = None
 
     model_config = {"from_attributes": True}
 
@@ -195,6 +211,8 @@ class ActivityTemplateCreate(BaseModel):
     default_prep_days: int = 14
     responsible_role: UserRole = UserRole.PROJECT_MANAGER
     include_by_default: bool = True
+    category: ActivityCategory = ActivityCategory.OTHER
+    documentation_subtype: Optional[DocumentationSubtype] = None
 
 
 class ActivityTemplateUpdate(BaseModel):
@@ -204,6 +222,8 @@ class ActivityTemplateUpdate(BaseModel):
     responsible_role: Optional[UserRole] = None
     sort_order: Optional[int] = None
     include_by_default: Optional[bool] = None
+    category: Optional[ActivityCategory] = None
+    documentation_subtype: Optional[DocumentationSubtype] = None
 
 
 class ActivityTemplateIncludeAll(BaseModel):
@@ -234,6 +254,8 @@ class TaskBoardItem(BaseModel):
     status: ActivityStatus
     responsible_role: UserRole
     duration_days: int
+    category: ActivityCategory = ActivityCategory.OTHER
+    documentation_subtype: Optional[DocumentationSubtype] = None
     assignee_id: Optional[int] = None
     assignee_name: Optional[str] = None
     start_date: Optional[date] = None

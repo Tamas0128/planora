@@ -27,6 +27,8 @@ import {
   api,
   AuditLogEntry,
   BUILDING_LABELS,
+  CATEGORY_LABELS,
+  DOCUMENTATION_SUBTYPE_LABELS,
   downloadFile,
   getCachedUser,
   ProjectDetail,
@@ -37,7 +39,7 @@ import {
   User,
   UserBrief,
 } from "@/lib/api";
-import { HEALTH_CFG } from "@/lib/project-utils";
+import { CATEGORY_ORDER, DOCUMENTATION_SUBTYPE_ORDER, HEALTH_CFG } from "@/lib/project-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,6 +112,10 @@ const ACTIVITY_STATUS_OPTIONS: [string, string][] = [
 ];
 
 const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
+const CATEGORY_OPTIONS = CATEGORY_ORDER.map((c) => [c, CATEGORY_LABELS[c]] as [string, string]);
+const DOCUMENTATION_SUBTYPE_OPTIONS = DOCUMENTATION_SUBTYPE_ORDER.map(
+  (s) => [s, DOCUMENTATION_SUBTYPE_LABELS[s]] as [string, string],
+);
 
 const ACTIVITY_STATUS_COLOR: Record<string, string> = {
   pending: "text-muted-foreground",
@@ -312,6 +318,7 @@ export default function ProjectDetailPage() {
   const [creatingActivity, setCreatingActivity] = useState(false);
   const [newActivityForm, setNewActivityForm] = useState({
     name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none",
+    category: "other", documentation_subtype: undefined as string | undefined,
   });
 
   function loadProject() {
@@ -586,7 +593,7 @@ export default function ProjectDetailPage() {
         assignee_id: newActivityForm.assignee_id === "none" ? null : Number(newActivityForm.assignee_id),
       });
       setShowNewActivity(false);
-      setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none" });
+      setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined });
       loadActivities();
       loadProject();
       toast.success("Feladat létrehozva");
@@ -1316,7 +1323,7 @@ export default function ProjectDetailPage() {
             </Table>
           </Card>
 
-          <Dialog open={showNewActivity} onOpenChange={(v) => { setShowNewActivity(v); if (!v) setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none" }); }}>
+          <Dialog open={showNewActivity} onOpenChange={(v) => { setShowNewActivity(v); if (!v) setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined }); }}>
             <DialogContent>
               <form onSubmit={createActivity}>
                 <DialogHeader>
@@ -1332,6 +1339,40 @@ export default function ProjectDetailPage() {
                       onChange={(e) => setNewActivityForm((f) => ({ ...f, name: e.target.value }))}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Kategória</Label>
+                    <Select
+                      value={newActivityForm.category}
+                      onValueChange={(v) => setNewActivityForm((f) => ({ ...f, category: v as string, documentation_subtype: v === "documentation" ? f.documentation_subtype : undefined }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue>{(v: string) => CATEGORY_LABELS[v] || v}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORY_OPTIONS.map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {newActivityForm.category === "documentation" && (
+                    <div className="space-y-1.5">
+                      <Label>Dokumentáció altípusa</Label>
+                      <Select
+                        value={newActivityForm.documentation_subtype ?? ""}
+                        onValueChange={(v) => setNewActivityForm((f) => ({ ...f, documentation_subtype: v as string }))}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue>{(v: string) => DOCUMENTATION_SUBTYPE_LABELS[v] || "Válassz altípust"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DOCUMENTATION_SUBTYPE_OPTIONS.map(([value, label]) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                     <Label>Felelős</Label>
                     <Select

@@ -12,30 +12,30 @@ from app.models import (
 
 
 DEFAULT_ACTIVITIES: list[dict] = [
-    {"name": "Terület rendezése", "duration_days": 2, "role": "project_manager"},
-    {"name": "Fogadószint építése", "duration_days": 15, "role": "project_manager"},
-    {"name": "Daruzás", "duration_days": 5, "role": "project_manager"},
-    {"name": "Bádogos munkák", "duration_days": 3, "role": "project_manager"},
-    {"name": "Tetőfedés", "duration_days": 6, "role": "project_manager"},
-    {"name": "Kémény szerelés", "duration_days": 3, "role": "project_manager", "deps": ["Bádogos munkák", "Tetőfedés"]},
-    {"name": "Külső nyílászárók", "duration_days": 5, "role": "project_manager"},
-    {"name": "Villanyszerelési alapszerelés", "duration_days": 5, "role": "project_manager"},
-    {"name": "Gépészeti alapszerelés", "duration_days": 5, "role": "project_manager"},
-    {"name": "Padlószigetelés", "duration_days": 7, "role": "project_manager"},
-    {"name": "Padlófűtés szerelés", "duration_days": 4, "role": "project_manager"},
-    {"name": "Nyomáspróba", "duration_days": 2, "role": "project_manager"},
-    {"name": "Estrich készítés", "duration_days": 2, "role": "project_manager"},
-    {"name": "Falak kifújása", "duration_days": 2, "role": "project_manager"},
-    {"name": "Gipszkartonozás", "duration_days": 4, "role": "project_manager"},
-    {"name": "Vakolás/Glettelés", "duration_days": 3, "role": "project_manager"},
-    {"name": "Festés", "duration_days": 1, "role": "project_manager"},
-    {"name": "Gépészeti szerelések", "duration_days": 4, "role": "project_manager"},
-    {"name": "Villanyszerelések", "duration_days": 2, "role": "project_manager"},
-    {"name": "Burkolás", "duration_days": 5, "role": "project_manager"},
-    {"name": "Végfestés", "duration_days": 1, "role": "project_manager"},
-    {"name": "Terasz építés", "duration_days": 5, "role": "project_manager"},
-    {"name": "Épület szigetelés", "duration_days": 3, "role": "project_manager"},
-    {"name": "Épület színezés", "duration_days": 8, "role": "project_manager"},
+    {"name": "Terület rendezése", "duration_days": 2, "role": "project_manager", "category": "foundation"},
+    {"name": "Fogadószint építése", "duration_days": 15, "role": "project_manager", "category": "foundation"},
+    {"name": "Daruzás", "duration_days": 5, "role": "project_manager", "category": "timber_frame"},
+    {"name": "Bádogos munkák", "duration_days": 3, "role": "project_manager", "category": "roofing"},
+    {"name": "Tetőfedés", "duration_days": 6, "role": "project_manager", "category": "roofing"},
+    {"name": "Kémény szerelés", "duration_days": 3, "role": "project_manager", "category": "roofing", "deps": ["Bádogos munkák", "Tetőfedés"]},
+    {"name": "Külső nyílászárók", "duration_days": 5, "role": "project_manager", "category": "exterior_openings"},
+    {"name": "Villanyszerelési alapszerelés", "duration_days": 5, "role": "project_manager", "category": "electrical"},
+    {"name": "Gépészeti alapszerelés", "duration_days": 5, "role": "project_manager", "category": "mechanical"},
+    {"name": "Padlószigetelés", "duration_days": 7, "role": "project_manager", "category": "insulation"},
+    {"name": "Padlófűtés szerelés", "duration_days": 4, "role": "project_manager", "category": "mechanical"},
+    {"name": "Nyomáspróba", "duration_days": 2, "role": "project_manager", "category": "mechanical"},
+    {"name": "Estrich készítés", "duration_days": 2, "role": "project_manager", "category": "flooring"},
+    {"name": "Falak kifújása", "duration_days": 2, "role": "project_manager", "category": "insulation"},
+    {"name": "Gipszkartonozás", "duration_days": 4, "role": "project_manager", "category": "interior"},
+    {"name": "Vakolás/Glettelés", "duration_days": 3, "role": "project_manager", "category": "interior"},
+    {"name": "Festés", "duration_days": 1, "role": "project_manager", "category": "finishing"},
+    {"name": "Gépészeti szerelések", "duration_days": 4, "role": "project_manager", "category": "mechanical"},
+    {"name": "Villanyszerelések", "duration_days": 2, "role": "project_manager", "category": "electrical"},
+    {"name": "Burkolás", "duration_days": 5, "role": "project_manager", "category": "flooring"},
+    {"name": "Végfestés", "duration_days": 1, "role": "project_manager", "category": "finishing"},
+    {"name": "Terasz építés", "duration_days": 5, "role": "project_manager", "category": "landscaping"},
+    {"name": "Épület szigetelés", "duration_days": 3, "role": "project_manager", "category": "insulation"},
+    {"name": "Épület színezés", "duration_days": 8, "role": "project_manager", "category": "facade"},
 ]
 
 ROLE_MAP = {
@@ -78,19 +78,21 @@ def add_workdays(start: date, days: int) -> date:
 def seed_activity_templates(db: Session) -> None:
     if db.query(ActivityTemplate).count() > 0:
         return
-    from app.models import UserRole
+    from app.models import ActivityCategory, UserRole
 
     name_to_template: dict[str, ActivityTemplate] = {}
     for i, item in enumerate(DEFAULT_ACTIVITIES):
         role = UserRole.PROJECT_MANAGER
         if item.get("role") == "procurement":
             role = UserRole.PROCUREMENT
+        category = ActivityCategory(item.get("category", "other"))
         tmpl = ActivityTemplate(
             name=item["name"],
             duration_days=item["duration_days"],
             sort_order=i,
             default_prep_days=14,
             responsible_role=role,
+            category=category,
         )
         db.add(tmpl)
         name_to_template[item["name"]] = tmpl
@@ -133,6 +135,8 @@ def create_project_activities(db: Session, project: Project) -> list[Activity]:
             sort_order=tmpl.sort_order,
             prep_days=tmpl.default_prep_days,
             responsible_role=tmpl.responsible_role,
+            category=tmpl.category,
+            documentation_subtype=tmpl.documentation_subtype,
         )
         db.add(activity)
         activities.append(activity)

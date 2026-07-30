@@ -5,14 +5,16 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Modernist design system, PLANora brand pass — flat, architectural,
-     Archivo type, zero radius. Brand accent is PLANora's forest green
-     (matches the logo), with two dedicated exception colors — amber for
-     warning/medium-urgency and red for critical/late — confirmed against
-     the real per-page exports in docs/Planora design review2.zip (every
-     Dashboard/Kanban/Naptár/... .dc.html overrides --color-accent to
-     #2f6b4a; the Naptár mockup's event chips confirmed the amber/red
-     exception colors below). */
+  /* PLANora brand pass of the Modernist design system — Archivo type,
+     soft rounded cards/buttons/inputs (the base system's "zero radius"
+     rule was NOT carried over here — confirmed against the user's own
+     reference screenshots, which show normal rounded corners). Brand
+     accent is PLANora's forest green (matches the logo), with two
+     dedicated exception colors — amber for warning/medium-urgency and
+     red for critical/late — confirmed against the real per-page exports
+     in docs/Planora design review2.zip (every Dashboard/Kanban/Naptár/...
+     .dc.html overrides --color-accent to #2f6b4a; the Naptár mockup's
+     event chips confirmed the amber/red exception colors below). */
   --color-neutral-100: #f8f4f4;
   --color-neutral-200: #eae7e7;
   --color-neutral-300: #d7d3d3;

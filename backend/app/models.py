@@ -52,6 +52,34 @@ class ActivityStatus(str, enum.Enum):
     BLOCKED = "blocked"
 
 
+class ActivityCategory(str, enum.Enum):
+    FOUNDATION = "foundation"
+    TIMBER_FRAME = "timber_frame"
+    ROOFING = "roofing"
+    EXTERIOR_OPENINGS = "exterior_openings"
+    ELECTRICAL = "electrical"
+    MECHANICAL = "mechanical"
+    INSULATION = "insulation"
+    FLOORING = "flooring"
+    INTERIOR = "interior"
+    FINISHING = "finishing"
+    FACADE = "facade"
+    LANDSCAPING = "landscaping"
+    PROCUREMENT = "procurement"
+    PLANNING = "planning"
+    DOCUMENTATION = "documentation"
+    OTHER = "other"
+
+
+class DocumentationSubtype(str, enum.Enum):
+    CONTRACT = "contract"
+    PURCHASE_ORDER = "purchase_order"
+    COMPLETION_CERTIFICATE = "completion_certificate"
+    INVOICE = "invoice"
+    PLAN = "plan"
+    LETTER_OF_INTENT = "letter_of_intent"
+
+
 PROJECT_STATUS_LABELS = {
     ProjectStatus.PLANNING: "Tervezés alatt",
     ProjectStatus.FOUNDATION: "Alapozás",
@@ -194,6 +222,12 @@ class ActivityTemplate(Base):
         Enum(UserRole), default=UserRole.PROJECT_MANAGER
     )
     include_by_default: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    category: Mapped[ActivityCategory] = mapped_column(
+        Enum(ActivityCategory), default=ActivityCategory.OTHER, nullable=False
+    )
+    documentation_subtype: Mapped[DocumentationSubtype | None] = mapped_column(
+        Enum(DocumentationSubtype), nullable=True
+    )
 
 
 class ActivityTemplateDependency(Base):
@@ -238,6 +272,12 @@ class Activity(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    category: Mapped[ActivityCategory] = mapped_column(
+        Enum(ActivityCategory), default=ActivityCategory.OTHER, nullable=False
+    )
+    documentation_subtype: Mapped[DocumentationSubtype | None] = mapped_column(
+        Enum(DocumentationSubtype), nullable=True
+    )
 
     project: Mapped["Project"] = relationship(back_populates="activities")
     template: Mapped["ActivityTemplate | None"] = relationship()

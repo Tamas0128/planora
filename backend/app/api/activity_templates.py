@@ -28,6 +28,8 @@ def _to_response(db: Session, t: ActivityTemplate) -> ActivityTemplateResponse:
         responsible_role=t.responsible_role,
         prerequisite_template_ids=[d.prerequisite_template_id for d in deps],
         include_by_default=t.include_by_default,
+        category=t.category,
+        documentation_subtype=t.documentation_subtype,
     )
 
 
@@ -67,6 +69,8 @@ def create_template(
         default_prep_days=body.default_prep_days,
         responsible_role=body.responsible_role,
         include_by_default=body.include_by_default,
+        category=body.category,
+        documentation_subtype=body.documentation_subtype,
     )
     db.add(template)
     db.commit()

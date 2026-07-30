@@ -8,7 +8,6 @@ import {
   MapPin,
   Plus,
   Search,
-  User as UserIcon,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -48,11 +47,23 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { api, ProjectCard, ROLE_LABELS, STATUS_LABELS, TaskBoardItem, UserBrief } from "@/lib/api";
+import {
+  api,
+  CATEGORY_LABELS,
+  DOCUMENTATION_SUBTYPE_LABELS,
+  ProjectCard,
+  ROLE_LABELS,
+  STATUS_LABELS,
+  TaskBoardItem,
+  UserBrief,
+} from "@/lib/api";
 import {
   ACTIVITY_STATUS_CFG,
   ACTIVITY_STATUS_LABELS,
   ACTIVITY_STATUS_ORDER,
+  CATEGORY_ICONS,
+  CATEGORY_ORDER,
+  DOCUMENTATION_SUBTYPE_ORDER,
   isLate,
   pmInitials,
   STATUS_CFG,
@@ -62,6 +73,20 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
+const CATEGORY_OPTIONS = CATEGORY_ORDER.map((c) => [c, CATEGORY_LABELS[c]] as [string, string]);
+const DOCUMENTATION_SUBTYPE_OPTIONS = DOCUMENTATION_SUBTYPE_ORDER.map(
+  (s) => [s, DOCUMENTATION_SUBTYPE_LABELS[s]] as [string, string],
+);
+
+const PROGRESS_RING_RADIUS = 10.25;
+const PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS;
+
+function statusToPercent(status: string): number {
+  if (status === "done") return 100;
+  if (status === "in_progress") return 50;
+  if (status === "blocked") return 25;
+  return 0;
+}
 
 function CardThumbnail({ projectId, hasThumbnail }: { projectId: number; hasThumbnail: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -90,30 +115,44 @@ function CardThumbnail({ projectId, hasThumbnail }: { projectId: number; hasThum
 
 function TaskCardBody({ item }: { item: TaskBoardItem }) {
   const late = isLate(item.end_date ?? "9999-12-31");
-  const cfg = ACTIVITY_STATUS_CFG[item.status] ?? ACTIVITY_STATUS_CFG.pending;
+  const Icon = CATEGORY_ICONS[item.category] ?? CATEGORY_ICONS.other;
+  const initials = pmInitials(item.assignee_name);
+  const pct = statusToPercent(item.status);
+  const dashoffset = PROGRESS_RING_CIRCUMFERENCE - (PROGRESS_RING_CIRCUMFERENCE * pct) / 100;
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-l-[3px] bg-card p-2.5 shadow-sm transition-all duration-150",
-        "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-        cfg.leftBorder,
-        "border-border/80",
-      )}
-    >
-      <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{item.project_name}</p>
-      <div className="flex items-center gap-1.5 text-[11px] text-foreground/80">
-        <UserIcon className="size-3 shrink-0 text-muted-foreground" />
-        <span className="truncate">{item.assignee_name ?? "Nincs kijelölve"}</span>
+    <div className="flex border border-border bg-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+      <div className="flex w-10 shrink-0 items-center justify-center bg-neutral-200 text-neutral-800">
+        <Icon className="size-[18px]" />
       </div>
-      <div className="mt-1.5 flex items-center justify-between">
-        <div className={cn("flex items-center gap-1 text-[11px]", late ? "text-critical" : "text-muted-foreground")}>
-          <Calendar className="size-3 shrink-0" />
-          <span>{item.end_date ? new Date(item.end_date).toLocaleDateString("hu-HU") : "—"}</span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
+        <div className="flex items-start gap-2">
+          <p className="min-w-0 flex-1 text-[13.5px] font-semibold leading-tight text-foreground">{item.activity_name}</p>
+          <div className="relative size-6 shrink-0">
+            <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
+              <circle cx="12" cy="12" r={PROGRESS_RING_RADIUS} fill="none" stroke="var(--color-neutral-200)" strokeWidth="3.5" />
+              <circle
+                cx="12" cy="12" r={PROGRESS_RING_RADIUS} fill="none" stroke="var(--color-accent-500)" strokeWidth="3.5"
+                strokeDasharray={PROGRESS_RING_CIRCUMFERENCE} strokeDashoffset={dashoffset} strokeLinecap="round"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-[7.5px] font-extrabold text-foreground">{pct}</span>
+          </div>
         </div>
-        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", cfg.badge)}>
-          {ACTIVITY_STATUS_LABELS[item.status]}
-        </span>
+        <p className="truncate text-[11px] text-muted-foreground">{item.project_name}</p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-accent-100 text-[8.5px] font-extrabold text-accent-700">
+              {initials}
+            </span>
+            <span className="truncate text-[10.5px] uppercase tracking-wide text-muted-foreground/70">
+              {CATEGORY_LABELS[item.category] || item.category}
+            </span>
+          </div>
+          <span className={cn("shrink-0 text-[10.5px] font-medium", late ? "text-critical" : "text-muted-foreground")}>
+            {item.end_date ? new Date(item.end_date).toLocaleDateString("hu-HU") : "—"}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -134,7 +173,7 @@ function DraggableTaskCard({
   return (
     <div
       ref={setDropRef}
-      className={cn("rounded-lg transition-shadow", isOver && "ring-2 ring-primary/60")}
+      className={cn("transition-shadow", isOver && "ring-2 ring-primary/60")}
     >
       <div
         ref={setDragRef}
@@ -147,7 +186,7 @@ function DraggableTaskCard({
         className={cn(
           "cursor-grab touch-none active:cursor-grabbing",
           isDragging && "opacity-30",
-          selected && "ring-2 ring-primary/25 rounded-lg",
+          selected && "ring-2 ring-primary/25",
         )}
       >
         <TaskCardBody item={item} />
@@ -159,7 +198,7 @@ function DraggableTaskCard({
 function KanbanColumn({ status, children }: { status: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
-    <div ref={setNodeRef} className={cn("flex flex-col gap-2 rounded-lg p-1 transition-colors", isOver && "bg-accent")}>
+    <div ref={setNodeRef} className={cn("flex flex-col gap-2 p-1 transition-colors", isOver && "bg-accent")}>
       {children}
     </div>
   );
@@ -186,6 +225,8 @@ function RightPanel({
     responsible_role: item.responsible_role,
     assignee_id: item.assignee_id ? String(item.assignee_id) : "none",
     duration_days: item.duration_days,
+    category: item.category,
+    documentation_subtype: item.documentation_subtype,
   });
 
   useEffect(() => {
@@ -194,6 +235,8 @@ function RightPanel({
       responsible_role: item.responsible_role,
       assignee_id: item.assignee_id ? String(item.assignee_id) : "none",
       duration_days: item.duration_days,
+      category: item.category,
+      documentation_subtype: item.documentation_subtype,
     });
     setEditing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,6 +250,8 @@ function RightPanel({
         responsible_role: form.responsible_role,
         assignee_id: form.assignee_id === "none" ? null : Number(form.assignee_id),
         duration_days: Number(form.duration_days),
+        category: form.category,
+        documentation_subtype: form.category === "documentation" ? form.documentation_subtype : null,
       });
       setEditing(false);
       onUpdated();
@@ -321,6 +366,40 @@ function RightPanel({
                 onChange={(e) => setForm((f) => ({ ...f, duration_days: Number(e.target.value) }))}
               />
             </div>
+            <div>
+              <Label className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Kategória</Label>
+              <Select
+                value={form.category}
+                onValueChange={(v) => setForm((f) => ({ ...f, category: v as string, documentation_subtype: v === "documentation" ? f.documentation_subtype : undefined }))}
+              >
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue>{(v: string) => CATEGORY_LABELS[v] || v}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {form.category === "documentation" && (
+              <div>
+                <Label className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Dokumentáció altípusa</Label>
+                <Select
+                  value={form.documentation_subtype ?? ""}
+                  onValueChange={(v) => setForm((f) => ({ ...f, documentation_subtype: v as string }))}
+                >
+                  <SelectTrigger size="sm" className="w-full">
+                    <SelectValue>{(v: string) => DOCUMENTATION_SUBTYPE_LABELS[v] || "Válassz altípust"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DOCUMENTATION_SUBTYPE_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </>
         ) : (
           <div>
@@ -328,6 +407,24 @@ function RightPanel({
             <div className="flex items-center gap-2">
               <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{initials}</div>
               <span className="text-[13px] font-medium text-foreground">{item.assignee_name ?? "Nincs kijelölve"}</span>
+            </div>
+          </div>
+        )}
+
+        {!editing && (
+          <div>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Kategória</p>
+            <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
+              {(() => {
+                const Icon = CATEGORY_ICONS[item.category] ?? CATEGORY_ICONS.other;
+                return <Icon className="size-3.5 shrink-0 text-muted-foreground" />;
+              })()}
+              <span>
+                {CATEGORY_LABELS[item.category] || item.category}
+                {item.category === "documentation" && item.documentation_subtype && (
+                  <span className="text-muted-foreground"> · {DOCUMENTATION_SUBTYPE_LABELS[item.documentation_subtype]}</span>
+                )}
+              </span>
             </div>
           </div>
         )}
@@ -409,7 +506,8 @@ const NEW_TASK_STATUS_OPTIONS = ACTIVITY_STATUS_ORDER.map((s) => [s, ACTIVITY_ST
 function makeNewTaskForm() {
   return {
     project_id: "", name: "", responsible_role: "project_manager", assignee_id: "none",
-    duration_days: 1, prep_days: 14, status: "pending",
+    duration_days: 1, prep_days: 14, status: "pending", category: "other",
+    documentation_subtype: undefined as string | undefined,
   };
 }
 
@@ -467,6 +565,8 @@ export default function KanbanPage() {
         assignee_id: newTaskForm.assignee_id === "none" ? null : Number(newTaskForm.assignee_id),
         duration_days: Number(newTaskForm.duration_days),
         prep_days: Number(newTaskForm.prep_days),
+        category: newTaskForm.category,
+        documentation_subtype: newTaskForm.category === "documentation" ? newTaskForm.documentation_subtype : null,
       });
       if (newTaskForm.status !== "pending") {
         await api.updateActivity(projectId, created.id, { status: newTaskForm.status });
@@ -605,13 +705,13 @@ export default function KanbanPage() {
                   const items = (board[status] ?? []).filter(matches);
                   return (
                     <div key={status} className="flex w-[240px] shrink-0 flex-col">
-                      <div className="mb-2 flex items-center gap-2">
-                        <h3 className="flex-1 text-[12px] font-semibold text-foreground/80">{ACTIVITY_STATUS_LABELS[status]}</h3>
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral-100 px-1.5 text-[11px] font-bold text-neutral-700">
+                      <div className="mb-2 flex items-baseline justify-between">
+                        <h3 className="flex-1 text-[12.5px] font-extrabold uppercase tracking-wide text-foreground">{ACTIVITY_STATUS_LABELS[status]}</h3>
+                        <span className="text-[11px] font-bold text-muted-foreground">
                           {items.length}
                         </span>
                       </div>
-                      <div className="mb-2.5 h-px bg-border/70" />
+                      <div className="mb-2.5 h-0.5 bg-border" />
                       <KanbanColumn status={status}>
                         {items.map((item) => (
                           <DraggableTaskCard
@@ -622,7 +722,7 @@ export default function KanbanPage() {
                           />
                         ))}
                         {items.length === 0 && (
-                          <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-border py-10">
+                          <div className="flex items-center justify-center border-2 border-dashed border-border py-10">
                             <p className="text-[12px] text-muted-foreground">Nincs feladat</p>
                           </div>
                         )}
@@ -685,6 +785,40 @@ export default function KanbanPage() {
                   onChange={(e) => setNewTaskForm((f) => ({ ...f, name: e.target.value }))}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label>Kategória</Label>
+                <Select
+                  value={newTaskForm.category}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, category: v as string, documentation_subtype: v === "documentation" ? f.documentation_subtype : undefined }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => CATEGORY_LABELS[v] || v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORY_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {newTaskForm.category === "documentation" && (
+                <div className="space-y-1.5">
+                  <Label>Dokumentáció altípusa</Label>
+                  <Select
+                    value={newTaskForm.documentation_subtype ?? ""}
+                    onValueChange={(v) => setNewTaskForm((f) => ({ ...f, documentation_subtype: v as string }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>{(v: string) => DOCUMENTATION_SUBTYPE_LABELS[v] || "Válassz altípust"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENTATION_SUBTYPE_OPTIONS.map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Felelős szerepkör</Label>
                 <Select

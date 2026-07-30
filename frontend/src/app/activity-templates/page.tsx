@@ -20,7 +20,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
-import { ActivityTemplate, api, getCachedUser, ROLE_LABELS, User } from "@/lib/api";
+import {
+  ActivityTemplate,
+  api,
+  CATEGORY_LABELS,
+  DOCUMENTATION_SUBTYPE_LABELS,
+  getCachedUser,
+  ROLE_LABELS,
+  User,
+} from "@/lib/api";
+import { CATEGORY_ICONS, CATEGORY_ORDER, DOCUMENTATION_SUBTYPE_ORDER } from "@/lib/project-utils";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -69,6 +78,10 @@ import {
 } from "@/components/ui/table";
 
 const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
+const CATEGORY_OPTIONS = CATEGORY_ORDER.map((c) => [c, CATEGORY_LABELS[c]] as [string, string]);
+const DOCUMENTATION_SUBTYPE_OPTIONS = DOCUMENTATION_SUBTYPE_ORDER.map(
+  (s) => [s, DOCUMENTATION_SUBTYPE_LABELS[s]] as [string, string],
+);
 
 function SortableTemplateRow({
   template, dragEnabled, children,
@@ -110,6 +123,8 @@ export default function ActivityTemplatesPage() {
     duration_days: 1,
     default_prep_days: 14,
     responsible_role: "project_manager",
+    category: "other",
+    documentation_subtype: undefined as string | undefined,
   });
   const templateSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -169,6 +184,26 @@ export default function ActivityTemplatesPage() {
   async function commitRole(id: number, role: string) {
     try {
       await api.updateActivityTemplate(id, { responsible_role: role });
+      loadTemplates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
+  }
+
+  async function commitCategory(id: number, category: string) {
+    try {
+      const patch: Record<string, unknown> = { category };
+      if (category !== "documentation") patch.documentation_subtype = null;
+      await api.updateActivityTemplate(id, patch);
+      loadTemplates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
+  }
+
+  async function commitDocumentationSubtype(id: number, subtype: string) {
+    try {
+      await api.updateActivityTemplate(id, { documentation_subtype: subtype });
       loadTemplates();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
@@ -253,7 +288,7 @@ export default function ActivityTemplatesPage() {
     try {
       await api.createActivityTemplate(form);
       setShowNew(false);
-      setForm({ name: "", duration_days: 1, default_prep_days: 14, responsible_role: "project_manager" });
+      setForm({ name: "", duration_days: 1, default_prep_days: 14, responsible_role: "project_manager", category: "other", documentation_subtype: undefined });
       loadTemplates();
       toast.success("Tevékenység sablon létrehozva");
     } catch (err) {
@@ -293,6 +328,7 @@ export default function ActivityTemplatesPage() {
             <TableRow>
               <TableHead className="min-w-[70px]">Sorszám</TableHead>
               <TableHead className="min-w-[160px]">Tevékenység</TableHead>
+              <TableHead className="min-w-[150px]">Kategória</TableHead>
               <TableHead className="min-w-[120px]">Felelős</TableHead>
               <TableHead className="min-w-[90px]">Futási idő (nap)</TableHead>
               <TableHead className="min-w-[90px]">Előkészítési idő (nap)</TableHead>
@@ -352,6 +388,52 @@ export default function ActivityTemplatesPage() {
                   ) : (
                     <span className="text-xs">{t.name}</span>
                   )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {canEdit && editing ? (
+                      <>
+                        <Select value={t.category} onValueChange={(v) => commitCategory(t.id, v as string)}>
+                          <SelectTrigger size="sm" className="min-w-[130px]">
+                            <SelectValue>{(v: string) => CATEGORY_LABELS[v] || v}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CATEGORY_OPTIONS.map(([value, label]) => (
+                              <SelectItem key={value} value={value}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {t.category === "documentation" && (
+                          <Select
+                            value={t.documentation_subtype ?? ""}
+                            onValueChange={(v) => commitDocumentationSubtype(t.id, v as string)}
+                          >
+                            <SelectTrigger size="sm" className="min-w-[130px]">
+                              <SelectValue>{(v: string) => DOCUMENTATION_SUBTYPE_LABELS[v] || "Altípus"}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DOCUMENTATION_SUBTYPE_OPTIONS.map(([value, label]) => (
+                                <SelectItem key={value} value={value}>{label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        {(() => {
+                          const Icon = CATEGORY_ICONS[t.category] ?? CATEGORY_ICONS.other;
+                          return <Icon className="size-3.5 shrink-0" />;
+                        })()}
+                        {CATEGORY_LABELS[t.category] || t.category}
+                        {t.category === "documentation" && t.documentation_subtype && (
+                          <span className="text-muted-foreground/70">
+                            · {DOCUMENTATION_SUBTYPE_LABELS[t.documentation_subtype]}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {canEdit && editing ? (
@@ -485,7 +567,7 @@ export default function ActivityTemplatesPage() {
             </DndContext>
             {templates.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                   Nincs tevékenység sablon
                 </TableCell>
               </TableRow>
@@ -510,6 +592,40 @@ export default function ActivityTemplatesPage() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label>Kategória</Label>
+                <Select
+                  value={form.category}
+                  onValueChange={(v) => setForm({ ...form, category: v as string, documentation_subtype: v === "documentation" ? form.documentation_subtype : undefined })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => CATEGORY_LABELS[v] || v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORY_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {form.category === "documentation" && (
+                <div className="space-y-1.5">
+                  <Label>Dokumentáció altípusa</Label>
+                  <Select
+                    value={form.documentation_subtype ?? ""}
+                    onValueChange={(v) => setForm({ ...form, documentation_subtype: v as string })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>{(v: string) => DOCUMENTATION_SUBTYPE_LABELS[v] || "Válassz altípust"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENTATION_SUBTYPE_OPTIONS.map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Felelős</Label>
                 <Select
