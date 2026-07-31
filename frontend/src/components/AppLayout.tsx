@@ -9,6 +9,7 @@ import {
   AlarmClock,
   Bell,
   BarChart2,
+  Building2,
   CalendarDays,
   CheckSquare,
   FolderOpen,
@@ -16,10 +17,11 @@ import {
   LayoutGrid,
   ListChecks,
   LogOut,
+  PieChart,
   Search,
   Users,
 } from "lucide-react";
-import { api, clearToken, Notification as NotificationItem, ProjectCard, ROLE_LABELS, User } from "@/lib/api";
+import { api, clearToken, CrmSearchResult, Notification as NotificationItem, ProjectCard, ROLE_LABELS, User } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,26 +70,33 @@ function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (op
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ProjectCard[]>([]);
+  const [crmResults, setCrmResults] = useState<CrmSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!query.trim()) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- sync reset, no async step needed
       setResults([]);
+      setCrmResults([]);
       return;
     }
     setSearching(true);
     const handle = setTimeout(() => {
-      api.search(query.trim())
-        .then(setResults)
-        .catch(() => setResults([]))
+      Promise.all([
+        api.search(query.trim()).catch(() => []),
+        api.crmSearch(query.trim()).catch(() => []),
+      ])
+        .then(([projects, crm]) => {
+          setResults(projects);
+          setCrmResults(crm);
+        })
         .finally(() => setSearching(false));
     }, 250);
     return () => clearTimeout(handle);
   }, [query]);
 
   function handleOpenChange(next: boolean) {
-    if (!next) { setQuery(""); setResults([]); }
+    if (!next) { setQuery(""); setResults([]); setCrmResults([]); }
     onOpenChange(next);
   }
 
@@ -96,12 +105,18 @@ function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (op
     router.push(`/projects/${project.id}`);
   }
 
+  function selectCrm(item: CrmSearchResult) {
+    handleOpenChange(false);
+    const tab = item.type === "contract" ? "?tab=contracts" : "";
+    router.push(`/crm/customers/${item.customer_id}${tab}`);
+  }
+
   return (
-    <CommandDialog open={open} onOpenChange={handleOpenChange} title="Keresés" description="Projekt keresése">
+    <CommandDialog open={open} onOpenChange={handleOpenChange} title="Keresés" description="Projekt vagy CRM keresése">
       <Command shouldFilter={false}>
         <CommandInput placeholder="Keresés projekt, ügyfél, település vagy azonosító szerint…" value={query} onValueChange={setQuery} />
         <CommandList>
-          {!searching && query.trim() && results.length === 0 && (
+          {!searching && query.trim() && results.length === 0 && crmResults.length === 0 && (
             <CommandEmpty>Nincs találat</CommandEmpty>
           )}
           {results.length > 0 && (
@@ -113,6 +128,18 @@ function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (op
                     <span className="truncate text-xs text-muted-foreground">
                       {p.project_code} · {p.settlement} · {p.client_name}
                     </span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          {crmResults.length > 0 && (
+            <CommandGroup heading="Ügyfélkapcsolatok (CRM)">
+              {crmResults.map((r) => (
+                <CommandItem key={`${r.type}-${r.id}`} value={`crm-${r.type}-${r.id}-${r.label}`} onSelect={() => selectCrm(r)}>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-medium">{r.label}</span>
+                    {r.sublabel && <span className="truncate text-xs text-muted-foreground">{r.sublabel}</span>}
                   </div>
                 </CommandItem>
               ))}
@@ -211,6 +238,22 @@ function NotificationBell() {
 }
 
 const NAV_SECONDARY: NavItem[] = [
+  {
+    href: "/crm/dashboard",
+    label: "CRM Dashboard",
+    icon: PieChart,
+    roles: ["admin", "management", "project_manager", "site_manager", "billing"],
+  },
+  {
+    href: "/crm/customers",
+    label: "Ügyfelek (CRM)",
+    icon: Building2,
+    // Role mapping per docs/CRM_modul_fejlesztesi_terv.md 11.1: Értékesítő ->
+    // project_manager, Ügyintéző -> site_manager, Operáció -> billing.
+    // Ajánlatok/Szerződések nincsenek önálló menüpontként — az ügyfél
+    // adatlapján, tabként érhetők el (Kanban helyett a részletnézetben).
+    roles: ["admin", "management", "project_manager", "site_manager", "billing"],
+  },
   { href: "/users",             label: "Felhasználók",   icon: Users,      roles: ["admin"] },
   { href: "/audit-log",         label: "Audit napló",    icon: BarChart2,  roles: ["admin", "management"] },
   { href: "/activity-templates", label: "Ütemterv sablon", icon: ListChecks, roles: ["admin", "management"] },

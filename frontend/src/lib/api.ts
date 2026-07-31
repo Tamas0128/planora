@@ -195,6 +195,129 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
+export interface CrmCustomer {
+  id: number;
+  customer_number: string;
+  type: string;
+  relationship_type: string;
+  name: string;
+  status: string;
+  owner_id: number;
+  phone?: string;
+  email?: string;
+  tax_number?: string;
+  billing_address?: string;
+  created_at: string;
+}
+
+export interface CrmCustomerCreateResult extends CrmCustomer {
+  duplicate_name_warning: boolean;
+}
+
+export interface CrmCustomerRelation {
+  id: number;
+  company_customer_id: number;
+  person_customer_id: number;
+  role_label?: string;
+  is_primary: boolean;
+}
+
+export interface CrmImportRowResult {
+  row: number;
+  success: boolean;
+  customer_number?: string;
+  name?: string;
+  error?: string;
+}
+
+export interface CrmQuoteVersion {
+  id: number;
+  version: number;
+  content_json: Record<string, unknown>;
+  created_at: string;
+  created_by_id: number;
+}
+
+export interface CrmQuote {
+  id: number;
+  customer_id: number;
+  quote_number: string;
+  date: string;
+  status: string;
+  current_version: number;
+  versions: CrmQuoteVersion[];
+}
+
+export interface ProjectCreationFields {
+  project_code?: string;
+  settlement?: string;
+  address?: string;
+  floor_area_sqm?: number;
+  delivery_date?: string;
+  lot_number?: string;
+}
+
+export interface CrmContract {
+  id: number;
+  customer_id: number;
+  quote_id?: number;
+  contract_number: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
+
+export interface CrmCommunicationEvent {
+  id: number;
+  customer_id: number;
+  type: string;
+  date: string;
+  agent_id: number;
+  summary: string;
+  created_at: string;
+}
+
+export interface CrmTask {
+  id: number;
+  name: string;
+  customer_id: number;
+  due_date: string;
+  owner_id: number;
+  status: string;
+  priority: string;
+  created_at: string;
+}
+
+export interface CrmDashboardStats {
+  total_customers: number;
+  active_customers: number;
+  new_customers_30d: number;
+  customers_by_type: Record<string, number>;
+  open_tasks: number;
+  active_contracts: number;
+  expiring_contracts_30d: number;
+  pending_quotes: number;
+}
+
+export interface CrmSearchResult {
+  type: string;
+  id: number;
+  label: string;
+  sublabel?: string;
+  customer_id: number;
+}
+
+export interface CrmDocumentItem {
+  id: number;
+  original_filename: string;
+  content_type: string;
+  file_size: number;
+  document_type: string;
+  version: number;
+  uploaded_by_id: number;
+  created_at: string;
+}
+
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return sessionStorage.getItem("planora_token");
@@ -506,6 +629,144 @@ export const api = {
   search: (q: string) => request<ProjectCard[]>(`/search?q=${encodeURIComponent(q)}`),
 
   digestPreview: () => request<DigestPreview>("/notifications/digest-preview"),
+
+  crmCustomers: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request<CrmCustomer[]>(`/crm/customers${qs ? `?${qs}` : ""}`);
+  },
+
+  crmCustomer: (id: number) => request<CrmCustomer>(`/crm/customers/${id}`),
+
+  createCrmCustomer: (data: Record<string, unknown>) =>
+    request<CrmCustomerCreateResult>("/crm/customers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateCrmCustomer: (id: number, data: Record<string, unknown>) =>
+    request<CrmCustomer>(`/crm/customers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteCrmCustomer: (id: number) =>
+    request<{ ok: boolean }>(`/crm/customers/${id}`, { method: "DELETE" }),
+
+  exportCrmCustomers: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return downloadFile(`/crm/customers/export${qs ? `?${qs}` : ""}`, "ugyfelek.csv");
+  },
+
+  importCrmCustomers: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<{ results: CrmImportRowResult[] }>("/crm/customers/import", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  crmCustomerRelations: (customerId: number) =>
+    request<CrmCustomerRelation[]>(`/crm/customer-relations?customer_id=${customerId}`),
+
+  createCrmCustomerRelation: (data: Record<string, unknown>) =>
+    request<CrmCustomerRelation>("/crm/customer-relations", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  deleteCrmCustomerRelation: (id: number) =>
+    request<{ ok: boolean }>(`/crm/customer-relations/${id}`, { method: "DELETE" }),
+
+  crmQuotesForCustomer: (customerId: number) =>
+    request<CrmQuote[]>(`/crm/quotes?customer_id=${customerId}`),
+
+  createCrmQuote: (customerId: number, contentJson: Record<string, unknown>) =>
+    request<CrmQuote>("/crm/quotes", {
+      method: "POST",
+      body: JSON.stringify({ customer_id: customerId, content_json: contentJson }),
+    }),
+
+  addCrmQuoteVersion: (id: number, contentJson: Record<string, unknown>) =>
+    request<CrmQuote>(`/crm/quotes/${id}/versions`, {
+      method: "POST",
+      body: JSON.stringify({ content_json: contentJson }),
+    }),
+
+  updateCrmQuoteStatus: (id: number, status: string) =>
+    request<CrmQuote>(`/crm/quotes/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+
+  createContractFromQuote: (
+    quoteId: number,
+    startDate: string,
+    endDate: string,
+    projectFields?: ProjectCreationFields
+  ) =>
+    request<CrmContract>(`/crm/quotes/${quoteId}/create-contract`, {
+      method: "POST",
+      body: JSON.stringify({ start_date: startDate, end_date: endDate, ...projectFields }),
+    }),
+
+  crmContractsForCustomer: (customerId: number) =>
+    request<CrmContract[]>(`/crm/contracts?customer_id=${customerId}`),
+
+  crmContracts: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request<CrmContract[]>(`/crm/contracts${qs ? `?${qs}` : ""}`);
+  },
+
+  createCrmContract: (data: Record<string, unknown>) =>
+    request<CrmContract>("/crm/contracts", { method: "POST", body: JSON.stringify(data) }),
+
+  updateCrmContractStatus: (id: number, status: string, projectFields?: ProjectCreationFields) =>
+    request<CrmContract>(`/crm/contracts/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, ...projectFields }),
+    }),
+
+  crmCommunications: (customerId: number) =>
+    request<CrmCommunicationEvent[]>(`/crm/communications?customer_id=${customerId}`),
+
+  createCrmCommunication: (data: Record<string, unknown>) =>
+    request<CrmCommunicationEvent>("/crm/communications", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  crmTasksForCustomer: (customerId: number) =>
+    request<CrmTask[]>(`/crm/tasks?customer_id=${customerId}`),
+
+  crmTasks: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request<CrmTask[]>(`/crm/tasks${qs ? `?${qs}` : ""}`);
+  },
+
+  createCrmTask: (data: Record<string, unknown>) =>
+    request<CrmTask>("/crm/tasks", { method: "POST", body: JSON.stringify(data) }),
+
+  updateCrmTask: (id: number, data: Record<string, unknown>) =>
+    request<CrmTask>(`/crm/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  crmDocumentsFor: (entityType: string, entityId: number) =>
+    request<CrmDocumentItem[]>(`/crm/documents?entity_type=${entityType}&entity_id=${entityId}`),
+
+  uploadCrmDocument: (entityType: string, entityId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("entity_type", entityType);
+    formData.append("entity_id", String(entityId));
+    formData.append("file", file);
+    return request<CrmDocumentItem>("/crm/documents", { method: "POST", body: formData });
+  },
+
+  downloadCrmDocument: (id: number) =>
+    request<{ url: string }>(`/crm/documents/${id}/download`),
+
+  deleteCrmDocument: (id: number) =>
+    request<{ ok: boolean }>(`/crm/documents/${id}`, { method: "DELETE" }),
+
+  crmDashboardStats: () => request<CrmDashboardStats>("/crm/dashboard/stats"),
+
+  crmSearch: (q: string) => request<CrmSearchResult[]>(`/crm/search?q=${encodeURIComponent(q)}`),
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -558,6 +819,86 @@ export const CATEGORY_LABELS: Record<string, string> = {
   planning: "Tervezés",
   documentation: "Dokumentáció",
   other: "Egyéb",
+};
+
+export const CRM_CUSTOMER_TYPE_LABELS: Record<string, string> = {
+  person: "Magánszemély",
+  company: "Cég",
+  sole_proprietor: "Egyéni vállalkozó",
+};
+
+// The customer's own status IS the sales pipeline (no separate Lead/
+// Opportunity entity) — reaching "ordered" auto-creates the project.
+export const CRM_CUSTOMER_STATUS_LABELS: Record<string, string> = {
+  new: "Új",
+  inquiring: "Érdeklődő",
+  quote_sent: "Ajánlatadás",
+  ordered: "Megrendelő",
+  archived: "Archivált",
+};
+
+export const CRM_CUSTOMER_STATUS_ORDER = ["new", "inquiring", "quote_sent", "ordered", "archived"];
+
+export const CRM_CUSTOMER_STATUS_COLORS: Record<string, string> = {
+  new: "bg-neutral-100 text-neutral-700",
+  inquiring: "bg-accent-100 text-accent-700",
+  quote_sent: "bg-warning-bg text-warning-foreground",
+  ordered: "bg-accent-200 text-accent-800",
+  archived: "bg-muted text-muted-foreground",
+};
+
+export const CRM_RELATIONSHIP_TYPE_LABELS: Record<string, string> = {
+  customer: "Ügyfél",
+  supplier: "Beszállító",
+  both: "Ügyfél / Beszállító",
+};
+
+export const CRM_QUOTE_STATUS_LABELS: Record<string, string> = {
+  draft: "Tervezet",
+  approval_pending: "Jóváhagyás alatt",
+  sent: "Kiküldve",
+  accepted: "Elfogadva",
+  rejected: "Elutasítva",
+  expired: "Lejárt",
+};
+
+export const CRM_CONTRACT_STATUS_LABELS: Record<string, string> = {
+  draft: "Tervezet",
+  active: "Aktív",
+  expired: "Lejárt",
+  terminated: "Felmondott",
+  archived: "Archivált",
+};
+
+export const CRM_COMMUNICATION_TYPE_LABELS: Record<string, string> = {
+  phone: "Telefon",
+  email: "E-mail",
+  sms: "SMS",
+  in_person: "Személyes találkozó",
+  online_meeting: "Online meeting",
+  other: "Egyéb",
+};
+
+export const CRM_TASK_STATUS_LABELS: Record<string, string> = {
+  open: "Nyitott",
+  in_progress: "Folyamatban",
+  waiting: "Várakozik",
+  done: "Kész",
+};
+
+export const CRM_TASK_PRIORITY_LABELS: Record<string, string> = {
+  low: "Alacsony",
+  normal: "Normál",
+  high: "Magas",
+  critical: "Kritikus",
+};
+
+export const CRM_CONTRACT_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  active: "bg-accent-100 text-accent-700",
+  expired: "bg-warning-bg text-warning-foreground",
+  terminated: "bg-destructive/10 text-destructive",
+  archived: "bg-muted text-muted-foreground",
 };
 
 export const DOCUMENTATION_SUBTYPE_LABELS: Record<string, string> = {

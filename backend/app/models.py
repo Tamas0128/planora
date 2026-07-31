@@ -155,6 +155,14 @@ class Project(Base):
     billing_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), nullable=True
     )
+    # Additive CRM link (see docs/CRM_modul_fejlesztesi_terv.md 0/6, 2.2.1):
+    # only ever set by the CRM contract-signed auto-project-creation flow
+    # (services/crm_project_bridge.py). The free-text client_name/
+    # client_phone/client_email fields above stay untouched for every other
+    # project, so nothing here can regress them.
+    customer_id: Mapped[int | None] = mapped_column(
+        ForeignKey("customers.id", ondelete="SET NULL"), nullable=True
+    )
     subcontractors: Mapped[str | None] = mapped_column(Text, nullable=True)
     thumbnail_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -171,6 +179,7 @@ class Project(Base):
     site_manager: Mapped["User | None"] = relationship(foreign_keys=[site_manager_id])
     procurement: Mapped["User | None"] = relationship(foreign_keys=[procurement_id])
     billing: Mapped["User | None"] = relationship(foreign_keys=[billing_id])
+    customer: Mapped["Customer | None"] = relationship(foreign_keys=[customer_id])
     activities: Mapped[list["Activity"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
@@ -348,6 +357,7 @@ class NotificationType(str, enum.Enum):
     OVERDUE_TASK = "overdue_task"
     UPCOMING_PREP = "upcoming_prep"
     SLIPPING_PROJECT = "slipping_project"
+    CONTRACT_EXPIRING = "contract_expiring"
 
 
 class Notification(Base):
