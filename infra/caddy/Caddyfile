@@ -25,5 +25,19 @@ https://localhost:443 {
 	}
 }
 
+
+https://localhost:9443 {
+	tls internal
+
+	# MinIO presigned URLs (avatars, CRM/project documents) proxied over HTTPS
+	# on their own port — the app itself is served from :443 above, so this
+	# stays a separate origin rather than a path prefix (MinIO's S3 API has
+	# no notion of a path prefix; bucket/key must sit right after the host).
+	# Host header is passed through unchanged (Caddy's default), which is
+	# required for SigV4 verification since S3_PUBLIC_ENDPOINT signs the
+	# presigned URL against this exact host:port.
+	reverse_proxy minio:9000
+}
+
 # HTTP redirect nem lehetséges (port 80 a Docker host foglalja)
 # Közvetlenül használd: https://localhost
