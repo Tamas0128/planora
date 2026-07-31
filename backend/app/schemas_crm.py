@@ -1,0 +1,250 @@
+from datetime import date, datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
+from app.models_crm import (
+    CommunicationType,
+    ContractStatus,
+    CrmDocumentType,
+    CrmTaskPriority,
+    CrmTaskStatus,
+    CustomerStatus,
+    CustomerType,
+    QuoteStatus,
+    RelationshipType,
+)
+
+
+class CustomerCreate(BaseModel):
+    type: CustomerType
+    relationship_type: RelationshipType = RelationshipType.CUSTOMER
+    name: str
+    owner_id: Optional[int] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    tax_number: Optional[str] = None
+    billing_address: Optional[str] = None
+    confirm_duplicate: bool = False
+
+
+class ProjectCreationFields(BaseModel):
+    """Only required when the customer doesn't have a project yet — reaching
+    CustomerStatus.ORDERED ("Megrendelő") is the "deal is signed" moment that
+    auto-creates the construction project (dev plan's original Lead->WON
+    trigger, simplified by the user 2026-07-31 onto Customer.status directly
+    instead of a separate Contract-activation step). Project has no
+    CRM-derivable equivalent for these, they're construction-specific fields
+    the BRS doesn't cover.
+    """
+
+    project_code: Optional[str] = None
+    settlement: Optional[str] = None
+    address: Optional[str] = None
+    floor_area_sqm: Optional[float] = None
+    delivery_date: Optional[date] = None
+    lot_number: Optional[str] = None
+
+
+class CustomerUpdate(ProjectCreationFields):
+    type: Optional[CustomerType] = None
+    relationship_type: Optional[RelationshipType] = None
+    name: Optional[str] = None
+    status: Optional[CustomerStatus] = None
+    owner_id: Optional[int] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    tax_number: Optional[str] = None
+    billing_address: Optional[str] = None
+
+
+class CustomerResponse(BaseModel):
+    id: int
+    customer_number: str
+    type: CustomerType
+    relationship_type: RelationshipType
+    name: str
+    status: CustomerStatus
+    owner_id: int
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    tax_number: Optional[str] = None
+    billing_address: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CustomerCreateResponse(CustomerResponse):
+    duplicate_name_warning: bool = False
+
+
+class CustomerRelationCreate(BaseModel):
+    company_customer_id: int
+    person_customer_id: int
+    role_label: Optional[str] = None
+    is_primary: bool = False
+
+
+class CustomerRelationResponse(BaseModel):
+    id: int
+    company_customer_id: int
+    person_customer_id: int
+    role_label: Optional[str] = None
+    is_primary: bool
+
+    model_config = {"from_attributes": True}
+
+
+class CustomerImportRowResult(BaseModel):
+    row: int
+    success: bool
+    customer_number: Optional[str] = None
+    name: Optional[str] = None
+    error: Optional[str] = None
+
+
+class CustomerImportResult(BaseModel):
+    results: list[CustomerImportRowResult]
+
+
+# --- Quote / Contract ------------------------------------------------------
+
+
+class QuoteVersionCreate(BaseModel):
+    content_json: dict
+
+
+class QuoteVersionResponse(BaseModel):
+    id: int
+    version: int
+    content_json: dict
+    created_at: datetime
+    created_by_id: int
+
+    model_config = {"from_attributes": True}
+
+
+class QuoteCreate(BaseModel):
+    customer_id: int
+    content_json: dict
+
+
+class QuoteStatusUpdate(BaseModel):
+    status: QuoteStatus
+
+
+class QuoteResponse(BaseModel):
+    id: int
+    customer_id: int
+    quote_number: str
+    date: date
+    status: QuoteStatus
+    current_version: int
+    versions: list[QuoteVersionResponse] = []
+
+    model_config = {"from_attributes": True}
+
+
+class ContractCreate(BaseModel):
+    customer_id: int
+    quote_id: Optional[int] = None
+    start_date: date
+    end_date: date
+
+
+class ContractFromQuoteBody(BaseModel):
+    start_date: date
+    end_date: date
+
+
+class ContractStatusUpdate(BaseModel):
+    status: ContractStatus
+
+
+class ContractResponse(BaseModel):
+    id: int
+    customer_id: int
+    quote_id: Optional[int] = None
+    contract_number: str
+    start_date: date
+    end_date: date
+    status: ContractStatus
+
+    model_config = {"from_attributes": True}
+
+
+# --- Communication / CrmTask / CrmDocument (Fázis 4) ----------------------
+
+
+class CommunicationEventCreate(BaseModel):
+    customer_id: int
+    type: CommunicationType
+    date: date
+    agent_id: Optional[int] = None
+    summary: str
+
+
+class CommunicationEventResponse(BaseModel):
+    id: int
+    customer_id: int
+    type: CommunicationType
+    date: date
+    agent_id: int
+    summary: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CrmTaskCreate(BaseModel):
+    name: str
+    customer_id: int
+    due_date: date
+    owner_id: Optional[int] = None
+    priority: CrmTaskPriority = CrmTaskPriority.NORMAL
+
+
+class CrmTaskUpdate(BaseModel):
+    name: Optional[str] = None
+    due_date: Optional[date] = None
+    owner_id: Optional[int] = None
+    status: Optional[CrmTaskStatus] = None
+    priority: Optional[CrmTaskPriority] = None
+
+
+class CrmTaskResponse(BaseModel):
+    id: int
+    name: str
+    customer_id: int
+    due_date: date
+    owner_id: int
+    status: CrmTaskStatus
+    priority: CrmTaskPriority
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CrmDashboardStats(BaseModel):
+    total_customers: int
+    active_customers: int
+    new_customers_30d: int
+    customers_by_type: dict[str, int]
+    open_tasks: int
+    active_contracts: int
+    expiring_contracts_30d: int
+    pending_quotes: int
+
+
+class CrmDocumentResponse(BaseModel):
+    id: int
+    original_filename: str
+    content_type: str
+    file_size: int
+    document_type: CrmDocumentType
+    version: int
+    uploaded_by_id: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

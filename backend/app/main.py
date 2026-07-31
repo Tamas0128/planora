@@ -7,10 +7,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import activity_templates, auth, dashboard, documents, gantt, notifications, photos, projects, search, tasks
+from app.api import (
+    crm_communications,
+    crm_contracts,
+    crm_customers,
+    crm_dashboard,
+    crm_documents,
+    crm_quotes,
+    crm_relations,
+    crm_search,
+    crm_tasks,
+)
 from app.config import settings
 from app.core.security import hash_password
 from app.database import SessionLocal
 from app.models import User, UserRole
+import app.models_crm  # noqa: F401 — register CRM models on Base.metadata
 from app.services.notifications import send_daily_digest
 from app.services.schedule_engine import seed_activity_templates
 
@@ -99,6 +111,15 @@ app.include_router(notifications.router, prefix="/api")
 app.include_router(activity_templates.router, prefix="/api")
 app.include_router(gantt.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
+app.include_router(crm_customers.router, prefix="/api")
+app.include_router(crm_relations.router, prefix="/api")
+app.include_router(crm_quotes.router, prefix="/api")
+app.include_router(crm_contracts.router, prefix="/api")
+app.include_router(crm_communications.router, prefix="/api")
+app.include_router(crm_tasks.router, prefix="/api")
+app.include_router(crm_documents.router, prefix="/api")
+app.include_router(crm_dashboard.router, prefix="/api")
+app.include_router(crm_search.router, prefix="/api")
 
 
 @app.get("/api/health")

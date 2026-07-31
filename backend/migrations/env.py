@@ -15,6 +15,17 @@ from app.models import (  # noqa: F401 — register all models on Base.metadata
     Project,
     User,
 )
+from app.models_crm import (  # noqa: F401 — register CRM models on Base.metadata
+    CommunicationEvent,
+    Contract,
+    CrmDocument,
+    CrmDocumentLink,
+    CrmTask,
+    Customer,
+    CustomerRelation,
+    Quote,
+    QuoteVersion,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

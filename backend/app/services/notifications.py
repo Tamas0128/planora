@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Activity, ActivityStatus, Notification, NotificationType, Project, User
-from app.services.scoping import scoped_activity_query
+from app.models_crm import Contract, ContractStatus
+from app.services.scoping import scoped_activity_query, scoped_contract_query
 
 logger = logging.getLogger("planora.notifications")
 
@@ -77,8 +78,33 @@ def send_email(to_email: str, subject: str, body: str) -> None:
         server.send_message(msg)
 
 
+def get_expiring_contracts_for_user(
+    db: Session, user: User, within_days: int = 30
+) -> list[Contract]:
+    """Contracts nearing end_date — dev plan 4.1 "A rendszer automatikusan
+    jelzi a közelgő lejáratot", modeled the same way as UPCOMING_PREP.
+    """
+    today = date.today()
+    horizon = today + timedelta(days=within_days)
+    return (
+        scoped_contract_query(db, user)
+        .filter(
+            Contract.status == ContractStatus.ACTIVE,
+            Contract.end_date >= today,
+            Contract.end_date <= horizon,
+        )
+        .order_by(Contract.end_date)
+        .all()
+    )
+
+
 def _create_notification_if_new(
-    db: Session, user: User, ntype: NotificationType, title: str, body: str, project_id: int
+    db: Session,
+    user: User,
+    ntype: NotificationType,
+    title: str,
+    body: str,
+    project_id: int | None,
 ) -> None:
     # Avoid re-notifying about the same still-unread item on every digest run
     # (this job fires daily) — only insert if no matching unread notification
@@ -135,6 +161,13 @@ def send_daily_digest(db: Session) -> int:
     for user in users:
         overdue, upcoming = get_user_digest_items(db, user)
         create_digest_notifications(db, user, overdue, upcoming)
+        for contract in get_expiring_contracts_for_user(db, user):
+            _create_notification_if_new(
+                db, user, NotificationType.CONTRACT_EXPIRING,
+                f"Lejáró szerződés: {contract.contract_number}",
+                f"Szerződés {contract.contract_number} lejárati dátuma: {contract.end_date.isoformat()}",
+                None,
+            )
         if not overdue and not upcoming:
             continue
         subject, body = render_digest(user, overdue, upcoming)

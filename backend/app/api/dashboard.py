@@ -1,12 +1,21 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Activity, ActivityStatus, AuditLog, Project, ProjectStatus, User, UserRole
+from app.models_crm import CommunicationEvent, Contract, CrmTask, Customer, Quote
 from app.schemas import AuditLogResponse, DashboardStats, ProjectCard, WeeklyWorkloadItem
+from app.services.scoping import (
+    scoped_communication_event_query,
+    scoped_contract_query,
+    scoped_crm_task_query,
+    scoped_customer_query,
+    scoped_quote_query,
+)
 
 router = APIRouter(tags=["dashboard"])
 
@@ -136,10 +145,35 @@ def audit_logs(
         if not project or not _can_view_project(user, project):
             raise HTTPException(status_code=403, detail="Access denied")
         q = q.filter(AuditLog.project_id == project_id)
-    elif user.role == UserRole.PROJECT_MANAGER:
-        q = q.join(Project, AuditLog.project_id == Project.id).filter(Project.project_manager_id == user.id)
-    elif user.role == UserRole.SITE_MANAGER:
-        q = q.join(Project, AuditLog.project_id == Project.id).filter(Project.site_manager_id == user.id)
+    elif user.role in (UserRole.PROJECT_MANAGER, UserRole.SITE_MANAGER):
+        # Project-scoped entries (project_id set) are matched via an owned
+        # project id list rather than a JOIN, since a JOIN would silently drop
+        # CRM audit entries below (they always have project_id NULL — CRM
+        # ownership is scoped per entity type instead, following each
+        # entity's own owner chain, same as the scoped_*_query helpers).
+        owner_col = (
+            Project.project_manager_id
+            if user.role == UserRole.PROJECT_MANAGER
+            else Project.site_manager_id
+        )
+        owned_project_ids = db.query(Project.id).filter(owner_col == user.id)
+        q = q.filter(
+            or_(
+                AuditLog.project_id.in_(owned_project_ids),
+                (AuditLog.entity_type == "customer")
+                & AuditLog.entity_id.in_(scoped_customer_query(db, user).with_entities(Customer.id)),
+                (AuditLog.entity_type == "quote")
+                & AuditLog.entity_id.in_(scoped_quote_query(db, user).with_entities(Quote.id)),
+                (AuditLog.entity_type == "contract")
+                & AuditLog.entity_id.in_(scoped_contract_query(db, user).with_entities(Contract.id)),
+                (AuditLog.entity_type == "communication_event")
+                & AuditLog.entity_id.in_(
+                    scoped_communication_event_query(db, user).with_entities(CommunicationEvent.id)
+                ),
+                (AuditLog.entity_type == "crm_task")
+                & AuditLog.entity_id.in_(scoped_crm_task_query(db, user).with_entities(CrmTask.id)),
+            )
+        )
     logs = q.limit(limit).all()
     return [
         AuditLogResponse(
