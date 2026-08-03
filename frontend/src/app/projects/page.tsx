@@ -140,7 +140,7 @@ export default function ProjectsPage() {
   const [showNew, setShowNew]   = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
-  const [view, setView] = useState<"list" | "cards" | "map" | "kanban">("cards");
+  const [view, setView] = useState<"list" | "cards" | "map" | "kanban">("kanban");
   const [kanbanBoard, setKanbanBoard] = useState<Record<string, ProjectCard[]>>({});
   const [kanbanLoading, setKanbanLoading] = useState(true);
 
