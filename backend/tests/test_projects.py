@@ -52,6 +52,19 @@ def test_update_project_writes_audit_log(client, admin_headers):
     assert matching[0]["project_name"] == project["name"]
 
 
+def test_project_status_text_is_optional_free_text(client, admin_headers):
+    project = create_project(client, admin_headers)
+    assert project["status_text"] is None
+
+    resp = client.patch(
+        f"/api/projects/{project['id']}",
+        json={"status_text": "Anyagbeszerzés csúszik egy hetet"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status_text"] == "Anyagbeszerzés csúszik egy hetet"
+
+
 def test_project_manager_only_sees_own_projects(client, admin_headers):
     pm = create_user(client, admin_headers, "pmscope", "project_manager")
     own_project = create_project(client, admin_headers, project_manager_id=pm["id"])

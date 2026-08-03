@@ -167,6 +167,9 @@ class Project(Base):
     thumbnail_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Free-text status note alongside the structured `status` enum above —
+    # optional, purely informational (e.g. "installer confirmed for Monday").
+    status_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -288,6 +291,13 @@ class Activity(Base):
         Enum(DocumentationSubtype), nullable=True
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Free-text status note alongside the structured `status` enum above —
+    # optional, purely informational.
+    status_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Optional reminder date — picked up by the daily digest job the same way
+    # prep_date already is (see services/notifications.py), not a separate
+    # real-time scheduler.
+    reminder_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     project: Mapped["Project"] = relationship(back_populates="activities")
     template: Mapped["ActivityTemplate | None"] = relationship()
@@ -358,6 +368,7 @@ class NotificationType(str, enum.Enum):
     UPCOMING_PREP = "upcoming_prep"
     SLIPPING_PROJECT = "slipping_project"
     CONTRACT_EXPIRING = "contract_expiring"
+    TASK_REMINDER = "task_reminder"
 
 
 class Notification(Base):

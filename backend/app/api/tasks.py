@@ -45,6 +45,8 @@ def prep_center(
                 start_date=activity.start_date,
                 responsible_role=activity.responsible_role,
                 status=activity.status,
+                status_text=activity.status_text,
+                reminder_date=activity.reminder_date,
                 is_overdue=is_overdue,
                 days_until=days_until,
             )
@@ -76,6 +78,8 @@ def my_tasks(
                 start_date=activity.start_date,
                 responsible_role=activity.responsible_role,
                 status=activity.status,
+                status_text=activity.status_text,
+                reminder_date=activity.reminder_date,
                 is_overdue=prep < today if prep else False,
                 days_until=days_until,
             )
@@ -105,6 +109,8 @@ def task_kanban(
                 category=activity.category,
                 documentation_subtype=activity.documentation_subtype,
                 notes=activity.notes,
+                status_text=activity.status_text,
+                reminder_date=activity.reminder_date,
                 assignee_id=activity.assignee_id,
                 assignee_name=activity.assignee.full_name if activity.assignee else None,
                 start_date=activity.start_date,

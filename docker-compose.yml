@@ -106,11 +106,15 @@ services:
     depends_on:
       - frontend
       - backend
+    # No 80:80/443:443 here on purpose — those collide with whatever else on
+    # the host already owns the bare ports (e.g. an unrelated project's
+    # container), which used to make `docker compose up` fail outright and
+    # leave every later service unstarted. 8080/8443 are the documented,
+    # conflict-free way in (see user.txt); https-local (Caddy, :4443) covers
+    # the "clean" HTTPS case.
     ports:
       - "8080:80"
       - "8443:443"
-      - "80:80"
-      - "443:443"
 
   https-local:
     image: caddy:2-alpine

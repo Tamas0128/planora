@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Calendar, Download, GripVertical, Image as ImageIcon, NotebookPen, Pencil, Plus, QrCode, TriangleAlert, Upload, X } from "lucide-react";
+import { BellRing, Calendar, Download, GripVertical, Image as ImageIcon, NotebookPen, Pencil, Plus, QrCode, TriangleAlert, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -330,6 +330,75 @@ function ActivityNotesCell({
   );
 }
 
+function ActivityExtrasCell({
+  statusText, reminderDate, canEdit, onSave,
+}: {
+  statusText?: string; reminderDate?: string; canEdit: boolean; onSave: (statusText: string, reminderDate: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draftStatusText, setDraftStatusText] = useState(statusText ?? "");
+  const [draftReminderDate, setDraftReminderDate] = useState(reminderDate ?? "");
+  const hasValue = !!statusText || !!reminderDate;
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (v) {
+          setDraftStatusText(statusText ?? "");
+          setDraftReminderDate(reminderDate ?? "");
+        }
+      }}
+    >
+      <PopoverTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={hasValue ? "Szöveges státusz / emlékeztető megtekintése" : "Szöveges státusz / emlékeztető hozzáadása"}
+            className={cn(hasValue ? "text-primary" : "text-muted-foreground/60")}
+          />
+        }
+      >
+        <BellRing className="size-3.5" />
+      </PopoverTrigger>
+      <PopoverContent className="w-72 space-y-2">
+        {canEdit ? (
+          <>
+            <div className="space-y-1">
+              <Label className="text-xs">Szöveges státusz</Label>
+              <Input
+                value={draftStatusText}
+                onChange={(e) => setDraftStatusText(e.target.value)}
+                placeholder="Opcionális, szabad szöveg…"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Emlékeztető</Label>
+              <Input
+                type="date"
+                value={draftReminderDate}
+                onChange={(e) => setDraftReminderDate(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => { onSave(draftStatusText, draftReminderDate); setOpen(false); }}>Mentés</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-foreground/80">{statusText || "Nincs szöveges státusz"}</p>
+            <p className="text-sm text-foreground/80">
+              Emlékeztető: {reminderDate ? new Date(reminderDate).toLocaleDateString("hu-HU") : "nincs beállítva"}
+            </p>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -363,6 +432,7 @@ export default function ProjectDetailPage() {
   const [newActivityForm, setNewActivityForm] = useState({
     name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none",
     category: "other", documentation_subtype: undefined as string | undefined, notes: "",
+    status_text: "", reminder_date: "",
   });
 
   function loadProject() {
@@ -421,6 +491,7 @@ export default function ProjectDetailPage() {
       procurement_id: project.procurement_id ?? "",
       billing_id: project.billing_id ?? "",
       subcontractors: project.subcontractors || "",
+      status_text: project.status_text || "",
     });
     setEditing(true);
   }
@@ -434,7 +505,7 @@ export default function ProjectDetailPage() {
         payload[key] = payload[key] ? Number(payload[key]) : null;
       }
       payload.floor_area_sqm = Number(payload.floor_area_sqm);
-      for (const key of ["lot_number", "client_phone", "client_email", "subcontractors"]) {
+      for (const key of ["lot_number", "client_phone", "client_email", "subcontractors", "status_text"]) {
         if (payload[key] === "") payload[key] = null;
       }
       await api.updateProject(id, payload);
@@ -583,6 +654,19 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function commitActivityExtras(activityId: number, statusText: string, reminderDate: string) {
+    try {
+      await api.updateActivity(id, activityId, {
+        status_text: statusText || null,
+        reminder_date: reminderDate || null,
+      });
+      loadActivities();
+      toast.success("Mentve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
+  }
+
   async function commitActivityName(activityId: number, name: string) {
     const trimmed = name.trim();
     if (!trimmed) {
@@ -645,9 +729,11 @@ export default function ProjectDetailPage() {
       await api.createActivity(id, {
         ...newActivityForm,
         assignee_id: newActivityForm.assignee_id === "none" ? null : Number(newActivityForm.assignee_id),
+        status_text: newActivityForm.status_text || null,
+        reminder_date: newActivityForm.reminder_date || null,
       });
       setShowNewActivity(false);
-      setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined, notes: "" });
+      setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined, notes: "", status_text: "", reminder_date: "" });
       loadActivities();
       loadProject();
       toast.success("Feladat létrehozva");
@@ -1046,6 +1132,15 @@ export default function ProjectDetailPage() {
                       onChange={(e) => setForm({ ...form, subcontractors: e.target.value })}
                     />
                   </div>
+                  <div className="mt-3 space-y-1.5">
+                    <Label htmlFor="project-status-text">Szöveges státusz</Label>
+                    <Input
+                      id="project-status-text"
+                      placeholder="Opcionális, szabad szöveg…"
+                      value={form.status_text as string}
+                      onChange={(e) => setForm({ ...form, status_text: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex gap-2 border-t pt-3">
@@ -1101,6 +1196,7 @@ export default function ProjectDetailPage() {
                   <TableHead className="min-w-[100px]">Befejezés</TableHead>
                   <TableHead className="min-w-[160px]">Előfeltételek</TableHead>
                   <TableHead className="min-w-[70px]">Jegyzet</TableHead>
+                  <TableHead className="min-w-[70px]">Extra</TableHead>
                   <TableHead className="min-w-[130px]">Státusz</TableHead>
                   <TableHead className="min-w-[90px]">Állapot</TableHead>
                 </TableRow>
@@ -1301,6 +1397,14 @@ export default function ProjectDetailPage() {
                       />
                     </TableCell>
                     <TableCell>
+                      <ActivityExtrasCell
+                        statusText={a.status_text}
+                        reminderDate={a.reminder_date}
+                        canEdit={!!canEdit && scheduleEditing}
+                        onSave={(statusText, reminderDate) => commitActivityExtras(a.id, statusText, reminderDate)}
+                      />
+                    </TableCell>
+                    <TableCell>
                       {canEdit && scheduleEditing ? (
                       <Select value={a.status} onValueChange={(v) => updateStatus(a.id, v as string)}>
                         <SelectTrigger size="sm" className={ACTIVITY_STATUS_COLOR[a.status]}>
@@ -1376,7 +1480,7 @@ export default function ProjectDetailPage() {
                 </DndContext>
                 {activities.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={13} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={14} className="py-8 text-center text-muted-foreground">
                       Nincs feladat ehhez a projekthez
                     </TableCell>
                   </TableRow>
@@ -1385,7 +1489,7 @@ export default function ProjectDetailPage() {
             </Table>
           </Card>
 
-          <Dialog open={showNewActivity} onOpenChange={(v) => { setShowNewActivity(v); if (!v) setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined, notes: "" }); }}>
+          <Dialog open={showNewActivity} onOpenChange={(v) => { setShowNewActivity(v); if (!v) setNewActivityForm({ name: "", duration_days: 1, prep_days: 14, responsible_role: "project_manager", assignee_id: "none", category: "other", documentation_subtype: undefined, notes: "", status_text: "", reminder_date: "" }); }}>
             <DialogContent>
               <form onSubmit={createActivity}>
                 <DialogHeader>
@@ -1490,6 +1594,24 @@ export default function ProjectDetailPage() {
                       required
                       value={newActivityForm.prep_days}
                       onChange={(e) => setNewActivityForm((f) => ({ ...f, prep_days: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-activity-status-text">Szöveges státusz</Label>
+                    <Input
+                      id="new-activity-status-text"
+                      placeholder="Opcionális, szabad szöveg…"
+                      value={newActivityForm.status_text}
+                      onChange={(e) => setNewActivityForm((f) => ({ ...f, status_text: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-activity-reminder">Emlékeztető</Label>
+                    <Input
+                      id="new-activity-reminder"
+                      type="date"
+                      value={newActivityForm.reminder_date}
+                      onChange={(e) => setNewActivityForm((f) => ({ ...f, reminder_date: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1722,6 +1844,12 @@ export default function ProjectDetailPage() {
               <div className="mt-3 border-t pt-3 text-xs">
                 <dt className="text-muted-foreground">Alvállalkozók</dt>
                 <dd className="mt-1 whitespace-pre-wrap">{project.subcontractors}</dd>
+              </div>
+            )}
+            {project.status_text && (
+              <div className="mt-3 border-t pt-3 text-xs">
+                <dt className="text-muted-foreground">Szöveges státusz</dt>
+                <dd className="mt-1 whitespace-pre-wrap">{project.status_text}</dd>
               </div>
             )}
           </Card>
