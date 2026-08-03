@@ -61,7 +61,7 @@ type NavItem = {
 const NAV_PRIMARY: NavItem[] = [
   { href: "/dashboard",   label: "Dashboard",   icon: LayoutDashboard },
   { href: "/projects",    label: "Projektek",   icon: FolderOpen },
-  { href: "/kanban",      label: "Kanban",      icon: LayoutGrid,    exact: true },
+  { href: "/kanban",      label: "Feladatok",   icon: LayoutGrid,    exact: true },
   { href: "/calendar",    label: "Naptár",      icon: CalendarDays },
   { href: "/my-tasks",    label: "Saját feladatok", icon: CheckSquare },
   { href: "/prep-center", label: "Előkészítés", icon: AlarmClock },
