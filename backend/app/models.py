@@ -136,6 +136,8 @@ class Project(Base):
     client_name: Mapped[str] = mapped_column(String(255))
     client_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     client_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    client_phone_2: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    client_email_2: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     building_type: Mapped[BuildingType] = mapped_column(
         Enum(BuildingType), default=BuildingType.LIGHT_STEEL

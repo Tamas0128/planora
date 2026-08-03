@@ -498,6 +498,8 @@ export default function ProjectDetailPage() {
       client_name: project.client_name,
       client_phone: project.client_phone || "",
       client_email: project.client_email || "",
+      client_phone_2: project.client_phone_2 || "",
+      client_email_2: project.client_email_2 || "",
       building_type: project.building_type,
       floor_area_sqm: project.floor_area_sqm,
       delivery_date: project.delivery_date,
@@ -529,7 +531,7 @@ export default function ProjectDetailPage() {
       for (const [key] of PHASE_DEADLINE_FIELDS) {
         if (payload[key] === "") payload[key] = null;
       }
-      for (const key of ["lot_number", "client_phone", "client_email", "subcontractors", "status_text"]) {
+      for (const key of ["lot_number", "client_phone", "client_email", "client_phone_2", "client_email_2", "subcontractors", "status_text"]) {
         if (payload[key] === "") payload[key] = null;
       }
       await api.updateProject(id, payload);
@@ -1021,6 +1023,12 @@ export default function ProjectDetailPage() {
                     <div className="flex justify-between"><dt className="text-muted-foreground">Név</dt><dd>{project.client_name}</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">Telefon</dt><dd>{project.client_phone || "—"}</dd></div>
                     <div className="flex justify-between"><dt className="text-muted-foreground">E-mail</dt><dd>{project.client_email || "—"}</dd></div>
+                    {project.client_phone_2 && (
+                      <div className="flex justify-between"><dt className="text-muted-foreground">Telefon 2</dt><dd>{project.client_phone_2}</dd></div>
+                    )}
+                    {project.client_email_2 && (
+                      <div className="flex justify-between"><dt className="text-muted-foreground">E-mail 2</dt><dd>{project.client_email_2}</dd></div>
+                    )}
                   </dl>
                 </Card>
                 <Card className="p-3">
@@ -1107,6 +1115,23 @@ export default function ProjectDetailPage() {
                       type="email"
                       value={form.client_email as string}
                       onChange={(e) => setForm({ ...form, client_email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="client_phone_2">Ügyfél telefon 2</Label>
+                    <Input
+                      id="client_phone_2"
+                      value={form.client_phone_2 as string}
+                      onChange={(e) => setForm({ ...form, client_phone_2: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="client_email_2">Ügyfél e-mail 2</Label>
+                    <Input
+                      id="client_email_2"
+                      type="email"
+                      value={form.client_email_2 as string}
+                      onChange={(e) => setForm({ ...form, client_email_2: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1.5">

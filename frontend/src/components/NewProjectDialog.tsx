@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 function makeForm() {
   return {
     name: "", project_code: "", settlement: "", address: "", lot_number: "",
-    client_name: "", client_phone: "", client_email: "",
+    client_name: "", client_phone: "", client_email: "", client_phone_2: "", client_email_2: "",
     floor_area_sqm: 145, building_type: "light_steel",
     delivery_date: new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0],
     with_schedule: true,
@@ -81,6 +81,8 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
       if (!payload.lot_number)   payload.lot_number   = null;
       if (!payload.client_phone) payload.client_phone = null;
       if (!payload.client_email) payload.client_email = null;
+      if (!payload.client_phone_2) payload.client_phone_2 = null;
+      if (!payload.client_email_2) payload.client_email_2 = null;
       if (!payload.project_code) payload.project_code = null;
       const created = await api.createProject(payload);
       handleOpenChange(false);
@@ -163,9 +165,11 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
             {step === 1 && (
               <>
                 {([
-                  ["client_name",  "Ügyfél neve",   true,  "text"],
-                  ["client_phone", "Ügyfél telefon", false, "tel"],
-                  ["client_email", "Ügyfél e-mail",  false, "email"],
+                  ["client_name",     "Ügyfél neve",       true,  "text"],
+                  ["client_phone",    "Ügyfél telefon",    false, "tel"],
+                  ["client_email",    "Ügyfél e-mail",     false, "email"],
+                  ["client_phone_2",  "Ügyfél telefon 2",  false, "tel"],
+                  ["client_email_2",  "Ügyfél e-mail 2",   false, "email"],
                 ] as const).map(([key, label, required, inputType]) => (
                   <div key={key} className="space-y-1.5">
                     <Label htmlFor={key}>{label}</Label>

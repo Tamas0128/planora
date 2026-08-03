@@ -67,6 +67,8 @@ class ProjectCreate(BaseModel):
     client_name: str
     client_phone: Optional[str] = None
     client_email: Optional[EmailStr] = None
+    client_phone_2: Optional[str] = None
+    client_email_2: Optional[EmailStr] = None
     building_type: BuildingType = BuildingType.LIGHT_STEEL
     floor_area_sqm: float
     delivery_date: date
@@ -96,6 +98,8 @@ class ProjectUpdate(BaseModel):
     client_name: Optional[str] = None
     client_phone: Optional[str] = None
     client_email: Optional[EmailStr] = None
+    client_phone_2: Optional[str] = None
+    client_email_2: Optional[EmailStr] = None
     building_type: Optional[BuildingType] = None
     floor_area_sqm: Optional[float] = None
     delivery_date: Optional[date] = None
@@ -151,6 +155,8 @@ class ProjectDetail(ProjectCard):
     lot_number: Optional[str] = None
     client_phone: Optional[str] = None
     client_email: Optional[str] = None
+    client_phone_2: Optional[str] = None
+    client_email_2: Optional[str] = None
     project_manager_id: Optional[int] = None
     site_manager_id: Optional[int] = None
     procurement_id: Optional[int] = None

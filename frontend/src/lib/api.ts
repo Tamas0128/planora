@@ -43,6 +43,8 @@ export interface ProjectDetail extends ProjectCard {
   lot_number?: string;
   client_phone?: string;
   client_email?: string;
+  client_phone_2?: string;
+  client_email_2?: string;
   project_manager_id?: number;
   site_manager_id?: number;
   procurement_id?: number;

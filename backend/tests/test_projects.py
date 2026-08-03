@@ -52,6 +52,24 @@ def test_update_project_writes_audit_log(client, admin_headers):
     assert matching[0]["project_name"] == project["name"]
 
 
+def test_project_second_client_contact_round_trip(client, admin_headers):
+    project = create_project(
+        client, admin_headers,
+        client_phone_2="+36301112233", client_email_2="masodik@example.com",
+    )
+    assert project["client_phone_2"] == "+36301112233"
+    assert project["client_email_2"] == "masodik@example.com"
+
+    resp = client.patch(
+        f"/api/projects/{project['id']}",
+        json={"client_phone_2": "+36304445566", "client_email_2": "uj@example.com"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["client_phone_2"] == "+36304445566"
+    assert resp.json()["client_email_2"] == "uj@example.com"
+
+
 def test_project_code_auto_generated_from_building_type(client, admin_headers):
     body = {
         "name": "Auto Code Teszt", "settlement": "Budapest", "address": "Teszt utca 1",
