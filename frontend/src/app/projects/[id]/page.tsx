@@ -102,6 +102,14 @@ const STATUS_OPTIONS: [string, string][] = [
   ["turnkey", "Kulcsrakész"],
 ];
 
+const PHASE_DEADLINE_FIELDS: [string, string][] = [
+  ["planning_deadline", "Tervezés határideje"],
+  ["foundation_deadline", "Alapozás határideje"],
+  ["structure_deadline", "Szerkezetállítás határideje"],
+  ["exterior_done_deadline", "Kívülről kész határideje"],
+  ["turnkey_deadline", "Kulcsrakész határideje"],
+];
+
 const ASSIGNMENT_FIELDS: [string, string][] = [
   ["project_manager_id", "Projektmenedzser"],
   ["site_manager_id", "Építésvezető"],
@@ -494,6 +502,11 @@ export default function ProjectDetailPage() {
       floor_area_sqm: project.floor_area_sqm,
       delivery_date: project.delivery_date,
       status: project.status,
+      planning_deadline: project.planning_deadline || "",
+      foundation_deadline: project.foundation_deadline || "",
+      structure_deadline: project.structure_deadline || "",
+      exterior_done_deadline: project.exterior_done_deadline || "",
+      turnkey_deadline: project.turnkey_deadline || "",
       project_manager_id: project.project_manager_id ?? "",
       site_manager_id: project.site_manager_id ?? "",
       procurement_id: project.procurement_id ?? "",
@@ -513,6 +526,9 @@ export default function ProjectDetailPage() {
         payload[key] = payload[key] ? Number(payload[key]) : null;
       }
       payload.floor_area_sqm = Number(payload.floor_area_sqm);
+      for (const [key] of PHASE_DEADLINE_FIELDS) {
+        if (payload[key] === "") payload[key] = null;
+      }
       for (const key of ["lot_number", "client_phone", "client_email", "subcontractors", "status_text"]) {
         if (payload[key] === "") payload[key] = null;
       }
@@ -1007,6 +1023,23 @@ export default function ProjectDetailPage() {
                     <div className="flex justify-between"><dt className="text-muted-foreground">E-mail</dt><dd>{project.client_email || "—"}</dd></div>
                   </dl>
                 </Card>
+                <Card className="p-3">
+                  <h3 className="mb-2 text-[13px] font-semibold">Fázis határidők</h3>
+                  <dl className="space-y-1.5 text-xs">
+                    {PHASE_DEADLINE_FIELDS.map(([key, label]) => {
+                      const value = (project as unknown as Record<string, string | undefined>)[key];
+                      const late = !!value && value < new Date().toISOString().split("T")[0];
+                      return (
+                        <div key={key} className="flex justify-between">
+                          <dt className="text-muted-foreground">{label}</dt>
+                          <dd className={late ? "font-semibold text-destructive" : undefined}>
+                            {value ? new Date(value).toLocaleDateString("hu-HU") : "—"}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </Card>
               </div>
             </div>
           )}
@@ -1127,6 +1160,23 @@ export default function ProjectDetailPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                <div className="border-t pt-3">
+                  <h3 className="mb-2 text-[13px] font-semibold">Fázis határidők</h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                    {PHASE_DEADLINE_FIELDS.map(([key, label]) => (
+                      <div key={key} className="space-y-1.5">
+                        <Label htmlFor={key}>{label}</Label>
+                        <Input
+                          id={key}
+                          type="date"
+                          value={form[key] as string}
+                          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
 
