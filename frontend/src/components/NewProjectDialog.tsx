@@ -163,14 +163,15 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
             {step === 1 && (
               <>
                 {([
-                  ["client_name",  "Ügyfél neve",   true],
-                  ["client_phone", "Ügyfél telefon", false],
-                  ["client_email", "Ügyfél e-mail",  false],
-                ] as const).map(([key, label, required]) => (
+                  ["client_name",  "Ügyfél neve",   true,  "text"],
+                  ["client_phone", "Ügyfél telefon", false, "tel"],
+                  ["client_email", "Ügyfél e-mail",  false, "email"],
+                ] as const).map(([key, label, required, inputType]) => (
                   <div key={key} className="space-y-1.5">
                     <Label htmlFor={key}>{label}</Label>
                     <Input
                       id={key}
+                      type={inputType}
                       required={required}
                       value={form[key] as string}
                       onChange={(e) => update(key, e.target.value)}

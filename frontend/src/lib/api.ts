@@ -383,6 +383,25 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
+/** FastAPI error bodies are either {detail: string} or, for 422 validation
+ * failures, {detail: [{loc, msg, type}, ...]} — the latter stringifies to
+ * "[object Object]" if thrown as-is, so pull out the actual field messages. */
+function formatErrorDetail(detail: unknown): string | null {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((e) => {
+        if (e && typeof e === "object" && "msg" in e) {
+          const loc = Array.isArray(e.loc) ? e.loc.filter((p: unknown) => p !== "body").join(".") : undefined;
+          return loc ? `${loc}: ${e.msg}` : String(e.msg);
+        }
+        return typeof e === "string" ? e : JSON.stringify(e);
+      })
+      .join("; ");
+  }
+  return null;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -415,7 +434,7 @@ async function request<T>(
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || "Request failed");
+    throw new Error(formatErrorDetail(err.detail) || "Request failed");
   }
   return res.json();
 }
@@ -431,7 +450,7 @@ export async function downloadFile(path: string, filename: string): Promise<void
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || "Letöltés sikertelen");
+    throw new Error(formatErrorDetail(err.detail) || "Letöltés sikertelen");
   }
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
