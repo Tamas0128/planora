@@ -37,6 +37,36 @@ function ProjectCardThumb({ projectId, hasThumbnail }: { projectId: number; hasT
   );
 }
 
+const PHASE_DATE_FIELDS: { field: keyof ProjectCard; label: string }[] = [
+  { field: "planning_deadline", label: "Terv" },
+  { field: "foundation_deadline", label: "Alap" },
+  { field: "structure_deadline", label: "Szerk" },
+  { field: "exterior_done_deadline", label: "Kívül" },
+  { field: "turnkey_deadline", label: "Kulcs" },
+];
+
+function PhaseDatesRow({ project }: { project: ProjectCard }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-border/60 pt-1.5">
+      {PHASE_DATE_FIELDS.map(({ field, label }) => {
+        const value = project[field] as string | undefined;
+        const late = !!value && value < todayIso();
+        return (
+          <span key={field} className="flex items-center gap-0.5 text-[9.5px] leading-none">
+            <span className="font-semibold uppercase text-muted-foreground/60">{label}</span>
+            <span className={cn(
+              value ? (late ? "font-medium text-critical" : "text-foreground/80") : "text-muted-foreground/40",
+            )}
+            >
+              {value ? new Date(value).toLocaleDateString("hu-HU", { month: "2-digit", day: "2-digit" }) : "–"}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProjectKanbanCardBody({ project, deadlineField }: { project: ProjectCard; deadlineField?: string }) {
   const pct = clampPercent(project.completion_percent);
   const initials = pmInitials(project.project_manager_name);
@@ -87,6 +117,7 @@ function ProjectKanbanCardBody({ project, deadlineField }: { project: ProjectCar
             )}
           </span>
         </div>
+        <PhaseDatesRow project={project} />
       </div>
     </div>
   );
