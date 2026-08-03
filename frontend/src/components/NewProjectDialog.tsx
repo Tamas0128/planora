@@ -41,7 +41,7 @@ type Form = ReturnType<typeof makeForm>;
 const STEPS = ["Alapadatok", "Ügyfél", "Épület", "Átadás"] as const;
 
 function stepIsValid(step: number, form: Form): boolean {
-  if (step === 0) return !!(form.name && form.project_code && form.settlement && form.address);
+  if (step === 0) return !!(form.name && form.settlement && form.address);
   if (step === 1) return !!form.client_name;
   if (step === 2) return !!(form.building_type && form.floor_area_sqm > 0);
   if (step === 3) return !!form.delivery_date;
@@ -81,6 +81,7 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
       if (!payload.lot_number)   payload.lot_number   = null;
       if (!payload.client_phone) payload.client_phone = null;
       if (!payload.client_email) payload.client_email = null;
+      if (!payload.project_code) payload.project_code = null;
       const created = await api.createProject(payload);
       handleOpenChange(false);
       toast.success("Projekt létrehozva");
@@ -133,7 +134,6 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
               <>
                 {([
                   ["name",         "Projekt neve",      true],
-                  ["project_code", "Projekt azonosító", true],
                   ["settlement",   "Település",         true],
                   ["address",      "Cím",               true],
                   ["lot_number",   "Helyrajzi szám",    false],
@@ -148,6 +148,15 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
                     />
                   </div>
                 ))}
+                <div className="space-y-1.5">
+                  <Label htmlFor="project_code">Projekt azonosító</Label>
+                  <Input
+                    id="project_code"
+                    placeholder="Automatikus, ha üresen hagyod (pl. LTF-001)"
+                    value={form.project_code}
+                    onChange={(e) => update("project_code", e.target.value)}
+                  />
+                </div>
               </>
             )}
 
@@ -246,7 +255,7 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: Props) {
                   </div>
                 </div>
                 <div className="col-span-full space-y-1.5 rounded-md border border-border bg-muted/40 p-3 text-sm">
-                  <p className="font-medium">{form.name || "—"} ({form.project_code || "—"})</p>
+                  <p className="font-medium">{form.name || "—"} ({form.project_code || "automatikus"})</p>
                   <p className="text-muted-foreground">{form.settlement}, {form.address}</p>
                   <p className="text-muted-foreground">Ügyfél: {form.client_name || "—"}</p>
                   <p className="text-muted-foreground">

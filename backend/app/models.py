@@ -31,11 +31,16 @@ class UserRole(str, enum.Enum):
 
 
 class ProjectStatus(str, enum.Enum):
+    WAITING = "waiting"
     PLANNING = "planning"
     FOUNDATION = "foundation"
     STRUCTURE = "structure"
     EXTERIOR_DONE = "exterior_done"
     TURNKEY = "turnkey"
+    # Terminal, manually-triggered status — a separate "Lezárás" action, not a
+    # kanban column everyone drags into (admin/management/project_manager
+    # only, see projects.py's close_project endpoint).
+    CLOSED = "closed"
 
 
 class BuildingType(str, enum.Enum):
@@ -142,6 +147,17 @@ class Project(Base):
     )
     delivery_date: Mapped[date] = mapped_column(Date)
     completion_percent: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Per-phase target dates for the Projects Kanban board — set the first
+    # time a card is dragged into that column (prompted if missing), not
+    # required up front. Purely informational vs. the schedule engine's own
+    # activity dates; nothing here drives recalculation.
+    waiting_deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    planning_deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    foundation_deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    structure_deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    exterior_done_deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    turnkey_deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     project_manager_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), nullable=True
