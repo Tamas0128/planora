@@ -34,7 +34,13 @@ export function clampPercent(n: number): number {
 
 export const BUILDING_OPTIONS: [string, string][] = Object.entries(BUILDING_LABELS) as [string, string][];
 
-export const STATUS_ORDER = ["planning", "foundation", "structure", "exterior_done", "turnkey"] as const;
+export const STATUS_ORDER = ["waiting", "planning", "foundation", "structure", "exterior_done", "turnkey"] as const;
+
+// "closed" (Lezárva) is deliberately NOT in STATUS_ORDER — a separate,
+// role-gated function (admin/management/project_manager only), not a
+// column everyone sees in the general status breakdowns. The Projects
+// Kanban page appends it itself when the viewer is privileged.
+export const PROJECT_KANBAN_CLOSED_STATUS = "closed";
 
 export const STATUS_CFG: Record<string, {
   leftBorder: string;
@@ -42,11 +48,13 @@ export const STATUS_CFG: Record<string, {
   badge: string;
   statText: string;
 }> = {
+  waiting:       { leftBorder: "border-l-neutral-300", progressBar: "bg-neutral-300", badge: "bg-neutral-100 text-neutral-600",  statText: "text-neutral-600" },
   planning:      { leftBorder: "border-l-accent-300", progressBar: "bg-accent-300", badge: "bg-neutral-100 text-neutral-700",  statText: "text-neutral-700" },
   foundation:    { leftBorder: "border-l-accent-400", progressBar: "bg-accent-400", badge: "bg-accent-100 text-accent-700",   statText: "text-accent-700" },
   structure:     { leftBorder: "border-l-accent-500", progressBar: "bg-accent-500", badge: "bg-accent-100 text-accent-700",   statText: "text-accent-700" },
   exterior_done: { leftBorder: "border-l-accent-600", progressBar: "bg-accent-600", badge: "bg-accent-200 text-accent-800",   statText: "text-accent-800" },
   turnkey:       { leftBorder: "border-l-accent-700", progressBar: "bg-accent-700", badge: "bg-accent-200 text-accent-800",   statText: "text-accent-800" },
+  closed:        { leftBorder: "border-l-neutral-800", progressBar: "bg-neutral-800", badge: "bg-neutral-200 text-neutral-900", statText: "text-neutral-900" },
 };
 
 export const DEFAULT_CFG = STATUS_CFG.planning;

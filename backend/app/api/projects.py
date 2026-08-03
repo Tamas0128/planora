@@ -29,6 +29,7 @@ from app.schemas import (
 from app.services.audit import log_change
 from app.services.geocoding import geocode_project_in_background
 from app.services.health import compute_health_for_projects, predict_delay_risk
+from app.services.numbering import generate_project_code
 from app.services.schedule_engine import cascade_from_activity, create_project_activities, recalculate_schedule
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -57,6 +58,12 @@ def _project_to_card(
         health=(health_map or {}).get(project.id, "ok"),
         latitude=project.latitude,
         longitude=project.longitude,
+        waiting_deadline=project.waiting_deadline,
+        planning_deadline=project.planning_deadline,
+        foundation_deadline=project.foundation_deadline,
+        structure_deadline=project.structure_deadline,
+        exterior_done_deadline=project.exterior_done_deadline,
+        turnkey_deadline=project.turnkey_deadline,
     )
 
 
@@ -135,9 +142,16 @@ def kanban_board(
     projects = q.all()
     favorite_ids = _favorite_ids(db, user)
     health_map = compute_health_for_projects(db, projects)
-    board = {s.value: [] for s in ProjectStatus}
+    statuses = list(ProjectStatus)
+    # Lezárva is a separate function for admin/management/project_manager
+    # only — other roles never see the column at all, not just "can't drag
+    # into it".
+    if user.role not in (UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER):
+        statuses = [s for s in statuses if s != ProjectStatus.CLOSED]
+    board = {s.value: [] for s in statuses}
     for p in projects:
-        board[p.status.value].append(_project_to_card(p, favorite_ids, health_map))
+        if p.status.value in board:
+            board[p.status.value].append(_project_to_card(p, favorite_ids, health_map))
     return board
 
 
@@ -181,9 +195,13 @@ def create_project(
     db: Session = Depends(get_db),
     user: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER, UserRole.SITE_MANAGER)),
 ):
-    if db.query(Project).filter(Project.project_code == body.project_code).first():
-        raise HTTPException(status_code=400, detail="Project code already exists")
-    project = Project(**body.model_dump(exclude={"with_schedule"}))
+    project_code = body.project_code
+    if project_code:
+        if db.query(Project).filter(Project.project_code == project_code).first():
+            raise HTTPException(status_code=400, detail="Project code already exists")
+    else:
+        project_code = generate_project_code(db, body.building_type)
+    project = Project(**{**body.model_dump(exclude={"with_schedule", "project_code"}), "project_code": project_code})
     if user.role == UserRole.PROJECT_MANAGER and not project.project_manager_id:
         project.project_manager_id = user.id
     elif user.role == UserRole.SITE_MANAGER and not project.site_manager_id:
@@ -259,6 +277,12 @@ def _get_project_detail(db: Session, project_id: int, user: User | None = None) 
         delay_risk_reason=delay_risk_reason,
         latitude=project.latitude,
         longitude=project.longitude,
+        waiting_deadline=project.waiting_deadline,
+        planning_deadline=project.planning_deadline,
+        foundation_deadline=project.foundation_deadline,
+        structure_deadline=project.structure_deadline,
+        exterior_done_deadline=project.exterior_done_deadline,
+        turnkey_deadline=project.turnkey_deadline,
         address=project.address,
         lot_number=project.lot_number,
         client_phone=project.client_phone,
@@ -288,6 +312,14 @@ def update_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if not _can_edit_project(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    # Lezárás ("closed") is a separate, more restricted function than the
+    # rest of the kanban board — site_manager/procurement/billing/
+    # subcontractor never see or use it, even if they can otherwise edit
+    # this project.
+    if body.status == ProjectStatus.CLOSED and user.role not in (
+        UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER,
+    ):
         raise HTTPException(status_code=403, detail="Access denied")
     old_latitude, old_longitude = project.latitude, project.longitude
     updates = body.model_dump(exclude_unset=True)

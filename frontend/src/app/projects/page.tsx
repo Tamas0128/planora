@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Download,
   Image as ImageIcon,
+  Kanban as KanbanIcon,
   LayoutGrid,
   List,
   MapPin,
@@ -19,6 +20,7 @@ import {
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import { NewProjectDialog } from "@/components/NewProjectDialog";
+import { ProjectsKanbanBoard } from "@/components/ProjectsKanbanBoard";
 
 // Leaflet touches `window` at import time, so it can never render on the
 // server — load it only in the browser.
@@ -138,13 +140,27 @@ export default function ProjectsPage() {
   const [showNew, setShowNew]   = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
-  const [view, setView] = useState<"list" | "cards" | "map">("cards");
+  const [view, setView] = useState<"list" | "cards" | "map" | "kanban">("cards");
+  const [kanbanBoard, setKanbanBoard] = useState<Record<string, ProjectCard[]>>({});
+  const [kanbanLoading, setKanbanLoading] = useState(true);
 
-  useEffect(() => {
-    api.projects()
+  function loadProjects() {
+    return api.projects()
       .then(setProjects)
       .catch(() => toast.error("Nem sikerült betölteni a projektek listáját"))
       .finally(() => setLoading(false));
+  }
+
+  function loadKanban() {
+    return api.kanban()
+      .then(setKanbanBoard)
+      .catch(() => toast.error("Nem sikerült betölteni a kanban táblát"))
+      .finally(() => setKanbanLoading(false));
+  }
+
+  useEffect(() => {
+    loadProjects();
+    loadKanban();
   }, []);
 
   const q = search.toLowerCase();
@@ -243,6 +259,16 @@ export default function ProjectsPage() {
         >
           <MapPin className="size-3.5" /> Térkép
         </button>
+        <button
+          type="button"
+          onClick={() => setView("kanban")}
+          className={cn(
+            "flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
+            view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <KanbanIcon className="size-3.5" /> Kanban
+        </button>
       </div>
       <div className="hidden flex-1 sm:block" />
       <div className="relative">
@@ -276,7 +302,7 @@ export default function ProjectsPage() {
   return (
     <AppLayout header={pageHeader}>
       {/* Stats row — single O(N) pass */}
-      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         {STATUS_ORDER.map((s) => {
           const cfg = STATUS_CFG[s];
           return (
@@ -288,7 +314,17 @@ export default function ProjectsPage() {
         })}
       </div>
 
-      {view === "map" ? (
+      {view === "kanban" ? (
+        kanbanLoading ? (
+          <div className="flex items-center justify-center py-20 text-[13px] text-muted-foreground">Betöltés…</div>
+        ) : (
+          <ProjectsKanbanBoard
+            board={kanbanBoard}
+            columns={Object.keys(kanbanBoard)}
+            onChanged={() => { loadKanban(); loadProjects(); }}
+          />
+        )
+      ) : view === "map" ? (
         <ProjectsMap projects={filtered} />
       ) : view === "cards" ? (
         loading ? (

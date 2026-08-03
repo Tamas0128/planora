@@ -90,7 +90,11 @@ const BUILDING_OPTIONS: [string, string][] = [
   ["other", "Egyéb"],
 ];
 
+// "closed" (Lezárva) deliberately excluded — that's the separate "Lezárás"
+// button/function (admin/management/project_manager only), not a value
+// anyone with canEdit can pick from this general dropdown.
 const STATUS_OPTIONS: [string, string][] = [
+  ["waiting", "Várakozik"],
   ["planning", "Tervezés alatt"],
   ["foundation", "Alapozás"],
   ["structure", "Szerkezetállítás"],
@@ -465,6 +469,10 @@ export default function ProjectDetailPage() {
   }, [id]);
 
   const canEdit = me?.role === "admin" || me?.role === "management" || me?.role === "project_manager" || me?.role === "site_manager";
+  // Lezárás is a separate, more restricted function than the rest of the
+  // status pipeline — site_manager/procurement/billing/subcontractor never
+  // see or use it, even if they can otherwise edit this project.
+  const canClose = me?.role === "admin" || me?.role === "management" || me?.role === "project_manager";
 
   async function updateStatus(activityId: number, status: string) {
     await api.updateActivity(id, activityId, { status });
@@ -780,6 +788,16 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function handleCloseProject() {
+    try {
+      await api.updateProject(id, { status: "closed" });
+      loadProject();
+      toast.success("Projekt lezárva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a lezárás során");
+    }
+  }
+
   if (!project) {
     return (
       <AppLayout>
@@ -891,6 +909,28 @@ export default function ProjectDetailPage() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  {canClose && project.status !== "closed" && (
+                    <AlertDialog>
+                      <AlertDialogTrigger render={<Button variant="outline" />}>
+                        Lezárás
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Biztosan lezárod ezt a projektet?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            A &quot;{project.name}&quot; projekt Lezárva státuszba kerül. Ez egy külön,
+                            csak vezetői/projektmenedzseri funkció — a projekt adatai megmaradnak.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Mégse</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleCloseProject}>
+                            Lezárás
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               )}
               <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">

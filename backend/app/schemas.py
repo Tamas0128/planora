@@ -58,7 +58,9 @@ class UserResponse(BaseModel):
 
 class ProjectCreate(BaseModel):
     name: str
-    project_code: str
+    # Auto-generated from building_type when omitted (see
+    # services/numbering.py::generate_project_code) — still overridable.
+    project_code: Optional[str] = None
     settlement: str
     address: str
     lot_number: Optional[str] = None
@@ -77,6 +79,12 @@ class ProjectCreate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     status_text: Optional[str] = None
+    waiting_deadline: Optional[date] = None
+    planning_deadline: Optional[date] = None
+    foundation_deadline: Optional[date] = None
+    structure_deadline: Optional[date] = None
+    exterior_done_deadline: Optional[date] = None
+    turnkey_deadline: Optional[date] = None
     with_schedule: bool = True
 
 
@@ -100,6 +108,12 @@ class ProjectUpdate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     status_text: Optional[str] = None
+    waiting_deadline: Optional[date] = None
+    planning_deadline: Optional[date] = None
+    foundation_deadline: Optional[date] = None
+    structure_deadline: Optional[date] = None
+    exterior_done_deadline: Optional[date] = None
+    turnkey_deadline: Optional[date] = None
 
 
 class ProjectCard(BaseModel):
@@ -120,6 +134,12 @@ class ProjectCard(BaseModel):
     health: str = "ok"
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    waiting_deadline: Optional[date] = None
+    planning_deadline: Optional[date] = None
+    foundation_deadline: Optional[date] = None
+    structure_deadline: Optional[date] = None
+    exterior_done_deadline: Optional[date] = None
+    turnkey_deadline: Optional[date] = None
 
     model_config = {"from_attributes": True}
 

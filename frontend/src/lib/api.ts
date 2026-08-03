@@ -28,6 +28,12 @@ export interface ProjectCard {
   health: string;
   latitude?: number;
   longitude?: number;
+  waiting_deadline?: string;
+  planning_deadline?: string;
+  foundation_deadline?: string;
+  structure_deadline?: string;
+  exterior_done_deadline?: string;
+  turnkey_deadline?: string;
 }
 
 export interface ProjectDetail extends ProjectCard {
@@ -777,19 +783,35 @@ export const api = {
 };
 
 export const STATUS_LABELS: Record<string, string> = {
+  waiting: "Várakozik",
   planning: "Tervezés alatt",
   foundation: "Alapozás",
   structure: "Szerkezetállítás",
   exterior_done: "Kívülről kész",
   turnkey: "Kulcsrakész",
+  closed: "Lezárva",
 };
 
 export const STATUS_COLORS: Record<string, string> = {
+  waiting: "bg-neutral-300",
   planning: "bg-accent-300",
   foundation: "bg-accent-400",
   structure: "bg-accent-500",
   exterior_done: "bg-accent-600",
   turnkey: "bg-accent-700",
+  closed: "bg-neutral-700",
+};
+
+// Project field name (Project.<status>_deadline) for each per-phase kanban
+// column — "closed" deliberately has none, it's a one-shot action not a
+// scheduled phase.
+export const PROJECT_STATUS_DEADLINE_FIELD: Record<string, string> = {
+  waiting: "waiting_deadline",
+  planning: "planning_deadline",
+  foundation: "foundation_deadline",
+  structure: "structure_deadline",
+  exterior_done: "exterior_done_deadline",
+  turnkey: "turnkey_deadline",
 };
 
 export const BUILDING_LABELS: Record<string, string> = {

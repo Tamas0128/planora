@@ -40,6 +40,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -237,7 +238,7 @@ function NotificationBell() {
   );
 }
 
-const NAV_SECONDARY: NavItem[] = [
+const NAV_CRM: NavItem[] = [
   {
     href: "/crm/dashboard",
     label: "CRM Dashboard",
@@ -254,6 +255,9 @@ const NAV_SECONDARY: NavItem[] = [
     // adatlapján, tabként érhetők el (Kanban helyett a részletnézetben).
     roles: ["admin", "management", "project_manager", "site_manager", "billing"],
   },
+];
+
+const NAV_ADMIN: NavItem[] = [
   { href: "/users",             label: "Felhasználók",   icon: Users,      roles: ["admin"] },
   { href: "/audit-log",         label: "Audit napló",    icon: BarChart2,  roles: ["admin", "management"] },
   { href: "/activity-templates", label: "Ütemterv sablon", icon: ListChecks, roles: ["admin", "management"] },
@@ -328,7 +332,11 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
     return pathname.startsWith(item.href);
   }
 
-  const visibleSecondary = NAV_SECONDARY.filter((item) => {
+  const visibleCrm = NAV_CRM.filter((item) => {
+    if (!item.roles) return true;
+    return item.roles.includes(user?.role ?? "");
+  });
+  const visibleAdmin = NAV_ADMIN.filter((item) => {
     if (!item.roles) return true;
     return item.roles.includes(user?.role ?? "");
   });
@@ -408,31 +416,63 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
             </SidebarMenu>
           </SidebarGroup>
 
-          {/* Divider */}
-          <div className="mx-3 my-1 h-px bg-white/10 group-data-[collapsible=icon]:mx-1.5" />
+          {/* CRM nav — kept visually separate from Admin below */}
+          {visibleCrm.length > 0 && (
+            <>
+              <div className="mx-3 my-1 h-px bg-white/10 group-data-[collapsible=icon]:mx-1.5" />
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-white/40">CRM</SidebarGroupLabel>
+                <SidebarMenu>
+                  {visibleCrm.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item);
+                    return (
+                      <SidebarMenuItem key={item.label}>
+                        <SidebarMenuButton
+                          isActive={active}
+                          tooltip={item.label}
+                          render={<Link href={item.href} />}
+                          className="h-8 text-[13px] text-white/65 hover:bg-white/10 hover:text-white data-active:bg-white/15 data-active:text-white"
+                        >
+                          <Icon className="size-4" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            </>
+          )}
 
-          {/* Secondary nav */}
-          <SidebarGroup>
-            <SidebarMenu>
-              {visibleSecondary.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item);
-                return (
-                  <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                      isActive={active}
-                      tooltip={item.label}
-                      render={<Link href={item.href} />}
-                      className="h-8 text-[13px] text-white/65 hover:bg-white/10 hover:text-white data-active:bg-white/15 data-active:text-white"
-                    >
-                      <Icon className="size-4" />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
+          {/* Admin nav — kept visually separate from CRM above */}
+          {visibleAdmin.length > 0 && (
+            <>
+              <div className="mx-3 my-1 h-px bg-white/10 group-data-[collapsible=icon]:mx-1.5" />
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-white/40">Admin</SidebarGroupLabel>
+                <SidebarMenu>
+                  {visibleAdmin.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item);
+                    return (
+                      <SidebarMenuItem key={item.label}>
+                        <SidebarMenuButton
+                          isActive={active}
+                          tooltip={item.label}
+                          render={<Link href={item.href} />}
+                          className="h-8 text-[13px] text-white/65 hover:bg-white/10 hover:text-white data-active:bg-white/15 data-active:text-white"
+                        >
+                          <Icon className="size-4" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            </>
+          )}
         </SidebarContent>
 
         {/* ── User profile ── */}
