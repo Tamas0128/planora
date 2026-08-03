@@ -77,6 +77,28 @@ def test_digest_does_not_duplicate_unread_notifications(client, admin_headers, m
     assert len(titles) == len(set(titles))
 
 
+def test_reminder_date_creates_task_reminder_notification(client, admin_headers, monkeypatch):
+    monkeypatch.setattr("app.services.notifications.send_email", lambda *a, **k: None)
+    project = create_project(client, admin_headers, delivery_date="2026-12-01")
+    activities = client.get(f"/api/projects/{project['id']}/activities", headers=admin_headers).json()
+    activity = activities[0]
+
+    resp = client.patch(
+        f"/api/projects/{project['id']}/activities/{activity['id']}",
+        json={"reminder_date": "2026-01-01"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["reminder_date"] == "2026-01-01"
+
+    digest = client.post("/api/notifications/send-digest", headers=admin_headers)
+    assert digest.status_code == 200
+
+    listing = client.get("/api/notifications", headers=admin_headers).json()
+    matching = [n for n in listing if n["type"] == "task_reminder" and activity["name"] in n["title"]]
+    assert len(matching) == 1
+
+
 def test_digest_preview_matches_email_digest_content(client, admin_headers):
     create_project(client, admin_headers, delivery_date="2026-01-01")
 

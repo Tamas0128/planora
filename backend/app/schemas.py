@@ -76,6 +76,7 @@ class ProjectCreate(BaseModel):
     subcontractors: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    status_text: Optional[str] = None
     with_schedule: bool = True
 
 
@@ -98,6 +99,7 @@ class ProjectUpdate(BaseModel):
     subcontractors: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    status_text: Optional[str] = None
 
 
 class ProjectCard(BaseModel):
@@ -136,6 +138,7 @@ class ProjectDetail(ProjectCard):
     billing_id: Optional[int] = None
     billing_name: Optional[str] = None
     subcontractors: Optional[str] = None
+    status_text: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -158,6 +161,8 @@ class ActivityResponse(BaseModel):
     category: ActivityCategory = ActivityCategory.OTHER
     documentation_subtype: Optional[DocumentationSubtype] = None
     notes: Optional[str] = None
+    status_text: Optional[str] = None
+    reminder_date: Optional[date] = None
 
     model_config = {"from_attributes": True}
 
@@ -171,6 +176,8 @@ class ActivityCreate(BaseModel):
     category: ActivityCategory = ActivityCategory.OTHER
     documentation_subtype: Optional[DocumentationSubtype] = None
     notes: Optional[str] = None
+    status_text: Optional[str] = None
+    reminder_date: Optional[date] = None
 
 
 class ActivityUpdate(BaseModel):
@@ -187,6 +194,8 @@ class ActivityUpdate(BaseModel):
     category: Optional[ActivityCategory] = None
     documentation_subtype: Optional[DocumentationSubtype] = None
     notes: Optional[str] = None
+    status_text: Optional[str] = None
+    reminder_date: Optional[date] = None
 
 
 class DependencyCreate(BaseModel):
@@ -247,6 +256,8 @@ class PrepTaskItem(BaseModel):
     start_date: Optional[date]
     responsible_role: UserRole
     status: ActivityStatus
+    status_text: Optional[str] = None
+    reminder_date: Optional[date] = None
     is_overdue: bool
     days_until: Optional[int] = None
 
@@ -260,6 +271,8 @@ class TaskBoardItem(BaseModel):
     category: ActivityCategory = ActivityCategory.OTHER
     documentation_subtype: Optional[DocumentationSubtype] = None
     notes: Optional[str] = None
+    status_text: Optional[str] = None
+    reminder_date: Optional[date] = None
     assignee_id: Optional[int] = None
     assignee_name: Optional[str] = None
     start_date: Optional[date] = None

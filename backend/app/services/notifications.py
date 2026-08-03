@@ -78,6 +78,20 @@ def send_email(to_email: str, subject: str, body: str) -> None:
         server.send_message(msg)
 
 
+def get_user_reminders_due(db: Session, user: User) -> list[tuple[Activity, Project]]:
+    """Tasks whose optional reminder_date has arrived — picked up by the same
+    daily digest job as overdue/upcoming prep, not a separate real-time
+    scheduler (see Activity.reminder_date).
+    """
+    today = date.today()
+    q = scoped_activity_query(db, user).filter(
+        Activity.status != ActivityStatus.DONE,
+        Activity.reminder_date.isnot(None),
+        Activity.reminder_date <= today,
+    )
+    return sorted(q.all(), key=lambda pair: pair[0].reminder_date)
+
+
 def get_expiring_contracts_for_user(
     db: Session, user: User, within_days: int = 30
 ) -> list[Contract]:
@@ -161,6 +175,13 @@ def send_daily_digest(db: Session) -> int:
     for user in users:
         overdue, upcoming = get_user_digest_items(db, user)
         create_digest_notifications(db, user, overdue, upcoming)
+        for activity, project in get_user_reminders_due(db, user):
+            _create_notification_if_new(
+                db, user, NotificationType.TASK_REMINDER,
+                f"Emlékeztető: {activity.name}",
+                f"{project.name} / {activity.name} — emlékeztető dátuma: {activity.reminder_date.isoformat()}",
+                project.id,
+            )
         for contract in get_expiring_contracts_for_user(db, user):
             _create_notification_if_new(
                 db, user, NotificationType.CONTRACT_EXPIRING,

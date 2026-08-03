@@ -229,6 +229,8 @@ function RightPanel({
     category: item.category,
     documentation_subtype: item.documentation_subtype,
     notes: item.notes ?? "",
+    status_text: item.status_text ?? "",
+    reminder_date: item.reminder_date ?? "",
   });
 
   useEffect(() => {
@@ -240,6 +242,8 @@ function RightPanel({
       category: item.category,
       documentation_subtype: item.documentation_subtype,
       notes: item.notes ?? "",
+      status_text: item.status_text ?? "",
+      reminder_date: item.reminder_date ?? "",
     });
     setEditing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -256,6 +260,8 @@ function RightPanel({
         category: form.category,
         documentation_subtype: form.category === "documentation" ? form.documentation_subtype : null,
         notes: form.notes || null,
+        status_text: form.status_text || null,
+        reminder_date: form.reminder_date || null,
       });
       setEditing(false);
       onUpdated();
@@ -459,6 +465,39 @@ function RightPanel({
         )}
 
         <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Szöveges státusz</p>
+          {editing ? (
+            <Input
+              value={form.status_text}
+              onChange={(e) => setForm((f) => ({ ...f, status_text: e.target.value }))}
+              placeholder="Opcionális, szabad szöveg…"
+            />
+          ) : item.status_text ? (
+            <p className="text-[12px] text-foreground/80">{item.status_text}</p>
+          ) : (
+            <p className="text-[12px] text-muted-foreground">Nincs megadva</p>
+          )}
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Emlékeztető</p>
+          {editing ? (
+            <Input
+              type="date"
+              value={form.reminder_date}
+              onChange={(e) => setForm((f) => ({ ...f, reminder_date: e.target.value }))}
+            />
+          ) : item.reminder_date ? (
+            <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
+              <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+              <span>{new Date(item.reminder_date).toLocaleDateString("hu-HU")}</span>
+            </div>
+          ) : (
+            <p className="text-[12px] text-muted-foreground">Nincs beállítva</p>
+          )}
+        </div>
+
+        <div>
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Jegyzet</p>
           {editing ? (
             <Textarea
@@ -528,6 +567,7 @@ function makeNewTaskForm() {
     project_id: "", name: "", responsible_role: "project_manager", assignee_id: "none",
     duration_days: 1, prep_days: 14, status: "pending", category: "other",
     documentation_subtype: undefined as string | undefined, notes: "",
+    status_text: "", reminder_date: "",
   };
 }
 
@@ -588,6 +628,8 @@ export default function KanbanPage() {
         category: newTaskForm.category,
         documentation_subtype: newTaskForm.category === "documentation" ? newTaskForm.documentation_subtype : null,
         notes: newTaskForm.notes || null,
+        status_text: newTaskForm.status_text || null,
+        reminder_date: newTaskForm.reminder_date || null,
       });
       if (newTaskForm.status !== "pending") {
         await api.updateActivity(projectId, created.id, { status: newTaskForm.status });
@@ -911,6 +953,24 @@ export default function KanbanPage() {
                   required
                   value={newTaskForm.prep_days}
                   onChange={(e) => setNewTaskForm((f) => ({ ...f, prep_days: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-task-status-text">Szöveges státusz</Label>
+                <Input
+                  id="new-task-status-text"
+                  placeholder="Opcionális, szabad szöveg…"
+                  value={newTaskForm.status_text}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, status_text: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-task-reminder">Emlékeztető</Label>
+                <Input
+                  id="new-task-reminder"
+                  type="date"
+                  value={newTaskForm.reminder_date}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, reminder_date: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">

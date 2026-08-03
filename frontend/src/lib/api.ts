@@ -44,6 +44,7 @@ export interface ProjectDetail extends ProjectCard {
   billing_id?: number;
   billing_name?: string;
   subcontractors?: string;
+  status_text?: string;
   created_at: string;
   updated_at: string;
 }
@@ -66,6 +67,8 @@ export interface Activity {
   category: string;
   documentation_subtype?: string;
   notes?: string;
+  status_text?: string;
+  reminder_date?: string;
 }
 
 export interface ActivityTemplate {
@@ -91,6 +94,8 @@ export interface PrepTask {
   start_date?: string;
   responsible_role: string;
   status: string;
+  status_text?: string;
+  reminder_date?: string;
   is_overdue: boolean;
   days_until?: number;
 }
@@ -104,6 +109,8 @@ export interface TaskBoardItem {
   category: string;
   documentation_subtype?: string;
   notes?: string;
+  status_text?: string;
+  reminder_date?: string;
   assignee_id?: number;
   assignee_name?: string;
   start_date?: string;

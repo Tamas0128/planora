@@ -270,6 +270,7 @@ def _get_project_detail(db: Session, project_id: int, user: User | None = None) 
         billing_id=project.billing_id,
         billing_name=project.billing.full_name if project.billing else None,
         subcontractors=project.subcontractors,
+        status_text=project.status_text,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
@@ -385,6 +386,8 @@ def create_activity(
         category=body.category,
         documentation_subtype=body.documentation_subtype,
         notes=body.notes,
+        status_text=body.status_text,
+        reminder_date=body.reminder_date,
     )
     db.add(activity)
     db.flush()
@@ -410,6 +413,8 @@ def create_activity(
         category=activity.category,
         documentation_subtype=activity.documentation_subtype,
         notes=activity.notes,
+        status_text=activity.status_text,
+        reminder_date=activity.reminder_date,
     )
 
 
@@ -453,6 +458,8 @@ def list_activities(
                 category=a.category,
                 documentation_subtype=a.documentation_subtype,
                 notes=a.notes,
+                status_text=a.status_text,
+                reminder_date=a.reminder_date,
             )
         )
     return result
@@ -574,6 +581,8 @@ def update_activity(
         category=activity.category,
         documentation_subtype=activity.documentation_subtype,
         notes=activity.notes,
+        status_text=activity.status_text,
+        reminder_date=activity.reminder_date,
     )
 
 

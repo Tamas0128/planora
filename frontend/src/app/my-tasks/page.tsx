@@ -13,18 +13,45 @@ import {
   Circle,
   ClipboardList,
   Clock,
+  Plus,
   User as UserIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
-import { api, PrepTask, ROLE_LABELS } from "@/lib/api";
+import { api, CATEGORY_LABELS, DOCUMENTATION_SUBTYPE_LABELS, PrepTask, ProjectCard, ROLE_LABELS, UserBrief } from "@/lib/api";
+import {
+  ACTIVITY_STATUS_LABELS,
+  ACTIVITY_STATUS_ORDER,
+  CATEGORY_ORDER,
+  DOCUMENTATION_SUBTYPE_ORDER,
+} from "@/lib/project-utils";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+
+const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [string, string][];
+const CATEGORY_OPTIONS = CATEGORY_ORDER.map((c) => [c, CATEGORY_LABELS[c]] as [string, string]);
+const DOCUMENTATION_SUBTYPE_OPTIONS = DOCUMENTATION_SUBTYPE_ORDER.map(
+  (s) => [s, DOCUMENTATION_SUBTYPE_LABELS[s]] as [string, string],
+);
+const NEW_TASK_STATUS_OPTIONS = ACTIVITY_STATUS_ORDER.map((s) => [s, ACTIVITY_STATUS_LABELS[s]] as [string, string]);
+
+function makeNewTaskForm() {
+  return {
+    project_id: "", name: "", responsible_role: "project_manager", assignee_id: "none",
+    duration_days: 1, prep_days: 14, status: "pending", category: "other",
+    documentation_subtype: undefined as string | undefined, notes: "",
+    status_text: "", reminder_date: "",
+  };
+}
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Várakozik",
@@ -276,6 +303,22 @@ function TaskDetailPanel({
                 </div>
               </div>
 
+              {(item.status_text || item.reminder_date) && (
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Egyéb</p>
+                  {item.status_text && (
+                    <p className="text-[13px] text-foreground/80">{item.status_text}</p>
+                  )}
+                  {item.reminder_date && (
+                    <div className="mt-1 flex items-center gap-1.5 text-[13px] text-foreground/80">
+                      <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="text-muted-foreground">Emlékeztető:</span>
+                      <span>{new Date(item.reminder_date).toLocaleDateString("hu-HU")}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Státusz</p>
                 <Select value={item.status} onValueChange={(v) => v && onStatusChange(v)}>
@@ -322,6 +365,11 @@ export default function MyTasksPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("priority");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [projects, setProjects] = useState<ProjectCard[]>([]);
+  const [users, setUsers] = useState<UserBrief[]>([]);
+  const [showNewTask, setShowNewTask] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [newTaskForm, setNewTaskForm] = useState(makeNewTaskForm);
 
   function load() {
     return api.myTasks()
@@ -331,7 +379,44 @@ export default function MyTasksPage() {
 
   useEffect(() => {
     load().finally(() => setLoading(false));
+    api.usersDirectory().then(setUsers).catch(() => {});
+    api.projects().then(setProjects).catch(() => {});
   }, []);
+
+  async function createTask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newTaskForm.project_id) {
+      toast.error("Válassz projektet");
+      return;
+    }
+    setCreatingTask(true);
+    try {
+      const projectId = Number(newTaskForm.project_id);
+      const created = await api.createActivity(projectId, {
+        name: newTaskForm.name,
+        responsible_role: newTaskForm.responsible_role,
+        assignee_id: newTaskForm.assignee_id === "none" ? null : Number(newTaskForm.assignee_id),
+        duration_days: Number(newTaskForm.duration_days),
+        prep_days: Number(newTaskForm.prep_days),
+        category: newTaskForm.category,
+        documentation_subtype: newTaskForm.category === "documentation" ? newTaskForm.documentation_subtype : null,
+        notes: newTaskForm.notes || null,
+        status_text: newTaskForm.status_text || null,
+        reminder_date: newTaskForm.reminder_date || null,
+      });
+      if (newTaskForm.status !== "pending") {
+        await api.updateActivity(projectId, created.id, { status: newTaskForm.status });
+      }
+      setShowNewTask(false);
+      setNewTaskForm(makeNewTaskForm());
+      load();
+      toast.success("Feladat létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingTask(false);
+    }
+  }
 
   function resetPaging() {
     setVisibleCounts({});
@@ -417,10 +502,16 @@ export default function MyTasksPage() {
             A szerepkörödhöz rendelt nyitott tevékenységek
           </p>
         </div>
-        <Link href="/projects" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}>
-          <ClipboardList className="size-3.5" />
-          Projektek
-        </Link>
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="gap-1.5" onClick={() => setShowNewTask(true)}>
+            <Plus className="size-3.5" />
+            Új feladat
+          </Button>
+          <Link href="/projects" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}>
+            <ClipboardList className="size-3.5" />
+            Projektek
+          </Link>
+        </div>
       </div>
 
       {!loading && items.length > 0 && (
@@ -617,6 +708,184 @@ export default function MyTasksPage() {
         onClose={() => setSelectedKey(null)}
         onStatusChange={(status) => selected && handleStatusChange(selected, status)}
       />
+
+      <Dialog open={showNewTask} onOpenChange={(v) => { setShowNewTask(v); if (!v) setNewTaskForm(makeNewTaskForm()); }}>
+        <DialogContent>
+          <form onSubmit={createTask}>
+            <DialogHeader>
+              <DialogTitle>Új feladat</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-3 py-2">
+              <div className="space-y-1.5">
+                <Label>Projekt</Label>
+                <Select
+                  value={newTaskForm.project_id}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, project_id: v as string }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {() => projects.find((p) => String(p.id) === newTaskForm.project_id)?.name ?? "Válassz projektet"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name} ({p.project_code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="my-tasks-new-name">Feladat neve</Label>
+                <Input
+                  id="my-tasks-new-name"
+                  required
+                  value={newTaskForm.name}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Kategória</Label>
+                <Select
+                  value={newTaskForm.category}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, category: v as string, documentation_subtype: v === "documentation" ? f.documentation_subtype : undefined }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => CATEGORY_LABELS[v] || v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORY_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {newTaskForm.category === "documentation" && (
+                <div className="space-y-1.5">
+                  <Label>Dokumentáció altípusa</Label>
+                  <Select
+                    value={newTaskForm.documentation_subtype ?? ""}
+                    onValueChange={(v) => setNewTaskForm((f) => ({ ...f, documentation_subtype: v as string }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>{(v: string) => DOCUMENTATION_SUBTYPE_LABELS[v] || "Válassz altípust"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENTATION_SUBTYPE_OPTIONS.map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label>Felelős szerepkör</Label>
+                <Select
+                  value={newTaskForm.responsible_role}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, responsible_role: v as string }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => ROLE_LABELS[v] || v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Kijelölve</Label>
+                <Select
+                  value={newTaskForm.assignee_id}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, assignee_id: v as string }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {() => users.find((u) => String(u.id) === newTaskForm.assignee_id)?.full_name ?? "Nincs kijelölve"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nincs kijelölve</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)}>{u.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Kezdő állapot</Label>
+                <Select
+                  value={newTaskForm.status}
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, status: v as string }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => ACTIVITY_STATUS_LABELS[v] || v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NEW_TASK_STATUS_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="my-tasks-new-duration">Futási idő (nap)</Label>
+                <Input
+                  id="my-tasks-new-duration"
+                  type="number"
+                  min={1}
+                  required
+                  value={newTaskForm.duration_days}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, duration_days: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="my-tasks-new-prep">Előkészítési idő (nap)</Label>
+                <Input
+                  id="my-tasks-new-prep"
+                  type="number"
+                  min={1}
+                  required
+                  value={newTaskForm.prep_days}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, prep_days: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="my-tasks-new-status-text">Szöveges státusz</Label>
+                <Input
+                  id="my-tasks-new-status-text"
+                  placeholder="Opcionális, szabad szöveg…"
+                  value={newTaskForm.status_text}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, status_text: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="my-tasks-new-reminder">Emlékeztető</Label>
+                <Input
+                  id="my-tasks-new-reminder"
+                  type="date"
+                  value={newTaskForm.reminder_date}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, reminder_date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="my-tasks-new-notes">Jegyzet</Label>
+                <Textarea
+                  id="my-tasks-new-notes"
+                  rows={3}
+                  value={newTaskForm.notes}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={creatingTask}>
+                {creatingTask ? "Mentés..." : "Létrehozás"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

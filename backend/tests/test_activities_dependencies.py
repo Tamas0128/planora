@@ -22,6 +22,21 @@ def test_update_activity_status_recalculates_completion(client, admin_headers):
     assert detail["completion_percent"] == round(100 / 24, 1)
 
 
+def test_activity_status_text_is_optional_free_text(client, admin_headers):
+    project = create_project(client, admin_headers)
+    activities = _activities(client, admin_headers, project["id"])
+    first = activities[0]
+    assert first["status_text"] is None
+
+    resp = client.patch(
+        f"/api/projects/{project['id']}/activities/{first['id']}",
+        json={"status_text": "Szerelő megerősítette hétfőre"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status_text"] == "Szerelő megerősítette hétfőre"
+
+
 def test_add_and_remove_dependency(client, admin_headers):
     project = create_project(client, admin_headers)
     activities = _activities(client, admin_headers, project["id"])
