@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { BellRing, Calendar, Download, GripVertical, Image as ImageIcon, NotebookPen, Pencil, Plus, QrCode, TriangleAlert, Upload, X } from "lucide-react";
+import { BellRing, Calendar, Download, GripVertical, Image as ImageIcon, MessageSquareText, NotebookPen, Pencil, Plus, QrCode, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -39,7 +39,7 @@ import {
   User,
   UserBrief,
 } from "@/lib/api";
-import { CATEGORY_ORDER, DOCUMENTATION_SUBTYPE_ORDER, HEALTH_CFG } from "@/lib/project-utils";
+import { CATEGORY_ORDER, DOCUMENTATION_SUBTYPE_ORDER } from "@/lib/project-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -916,14 +916,12 @@ export default function ProjectDetailPage() {
                 </Card>
               </div>
 
-              {project.delay_risk !== "ok" && (
-                <Card className={cn("mb-3 flex items-start gap-2 p-3", HEALTH_CFG[project.delay_risk]?.badge)}>
-                  <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+              {project.status_text && (
+                <Card className="mb-3 flex items-start gap-2 p-3">
+                  <MessageSquareText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <div>
-                    <p className="text-[12px] font-semibold">
-                      Késés-előrejelzés: {HEALTH_CFG[project.delay_risk]?.label ?? project.delay_risk}
-                    </p>
-                    <p className="mt-0.5 text-[11px] opacity-90">{project.delay_risk_reason}</p>
+                    <p className="text-[12px] font-semibold text-foreground">Szöveges státusz</p>
+                    <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-foreground/80">{project.status_text}</p>
                   </div>
                 </Card>
               )}
@@ -1844,12 +1842,6 @@ export default function ProjectDetailPage() {
               <div className="mt-3 border-t pt-3 text-xs">
                 <dt className="text-muted-foreground">Alvállalkozók</dt>
                 <dd className="mt-1 whitespace-pre-wrap">{project.subcontractors}</dd>
-              </div>
-            )}
-            {project.status_text && (
-              <div className="mt-3 border-t pt-3 text-xs">
-                <dt className="text-muted-foreground">Szöveges státusz</dt>
-                <dd className="mt-1 whitespace-pre-wrap">{project.status_text}</dd>
               </div>
             )}
           </Card>
