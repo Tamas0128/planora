@@ -838,7 +838,7 @@ export default function ProjectDetailPage() {
             onUploaded={loadProject}
           />
           <div>
-            <h1 className="text-lg font-bold text-foreground">{project.name}</h1>
+            <h1 className="text-lg font-heading font-bold text-foreground">{project.name}</h1>
             <p className="text-xs text-muted-foreground">
               {project.project_code} · {project.settlement}
             </p>

@@ -227,7 +227,7 @@ export default function ProjectsPage() {
     <header className="sticky top-0 z-20 flex h-auto min-h-12 shrink-0 flex-wrap items-center gap-2.5 border-b border-border bg-card px-4 py-2">
       <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
       <div className="h-5 w-px bg-border" />
-      <h1 className="text-[14px] font-bold tracking-tight text-foreground">Projektek</h1>
+      <h1 className="text-[14px] font-heading font-bold tracking-tight text-foreground">Projektek</h1>
       <div className="flex items-center rounded-lg border border-border p-0.5">
         <button
           type="button"

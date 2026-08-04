@@ -154,7 +154,7 @@ export default function UsersPage() {
     <AppLayout>
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold">Felhasználók</h1>
+          <h1 className="text-lg font-heading font-bold">Felhasználók</h1>
           <p className="text-xs text-muted-foreground">Felhasználói fiókok és szerepkörök kezelése</p>
         </div>
         <Button

@@ -493,7 +493,7 @@ export default function CrmCustomerDetailPage() {
     <AppLayout>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold">{customer.name}</h1>
+          <h1 className="text-lg font-heading font-bold">{customer.name}</h1>
           <p className="text-xs text-muted-foreground">
             {customer.customer_number} · {CRM_CUSTOMER_TYPE_LABELS[customer.type] ?? customer.type}
           </p>

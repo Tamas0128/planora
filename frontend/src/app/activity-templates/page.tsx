@@ -302,7 +302,7 @@ export default function ActivityTemplatesPage() {
     <AppLayout>
       <div className="mb-3 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Ütemterv sablon</h1>
+          <h1 className="text-lg font-heading font-bold text-foreground">Ütemterv sablon</h1>
           <p className="text-xs text-muted-foreground">
             Az itt megadott tevékenységek kerülnek be minden újonnan létrehozott projekt ütemtervébe.
           </p>

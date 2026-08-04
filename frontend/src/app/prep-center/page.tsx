@@ -149,7 +149,7 @@ export default function PrepCenterPage() {
   return (
     <AppLayout>
       <div className="mb-3">
-        <h1 className="text-lg font-bold text-foreground">Előkészítési központ</h1>
+        <h1 className="text-lg font-heading font-bold text-foreground">Előkészítési központ</h1>
         <p className="text-xs text-muted-foreground">Anyagrendelés, alvállalkozó szervezés, költség jóváhagyás</p>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Betöltés...</p>}>

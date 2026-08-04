@@ -122,7 +122,7 @@ function TaskCardBody({ item }: { item: TaskBoardItem }) {
   const dashoffset = PROGRESS_RING_CIRCUMFERENCE - (PROGRESS_RING_CIRCUMFERENCE * pct) / 100;
 
   return (
-    <div className="flex border border-border bg-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+    <div className="flex border border-border bg-card transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
       <div className="flex w-10 shrink-0 items-center justify-center bg-neutral-200 text-neutral-800">
         <Icon className="size-[18px]" />
       </div>
@@ -716,7 +716,7 @@ export default function KanbanPage() {
     <header className="sticky top-0 z-20 flex h-auto min-h-12 shrink-0 flex-wrap items-center gap-2.5 border-b border-border bg-card px-4 py-2">
       <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
       <div className="h-5 w-px bg-border" />
-      <h1 className="text-[14px] font-bold tracking-tight text-foreground">Kanban tábla</h1>
+      <h1 className="text-[14px] font-heading font-bold tracking-tight text-foreground">Kanban tábla</h1>
       <div className="hidden flex-1 sm:block" />
       <Button size="sm" onClick={() => setShowNewTask(true)}>
         <Plus className="size-3.5" /> Új feladat

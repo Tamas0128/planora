@@ -83,7 +83,7 @@ export default function CalendarPage() {
     <AppLayout>
       <div className="mb-3 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Naptár</h1>
+          <h1 className="text-lg font-heading font-bold text-foreground">Naptár</h1>
           <p className="text-xs text-muted-foreground">{year}. {MONTH_NAMES[month]}</p>
         </div>
         <div className="flex items-center gap-1.5">

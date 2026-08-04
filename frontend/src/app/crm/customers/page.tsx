@@ -150,7 +150,7 @@ export default function CrmCustomersPage() {
     <AppLayout>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold">Ügyfelek</h1>
+          <h1 className="text-lg font-heading font-bold">Ügyfelek</h1>
           <p className="text-xs text-muted-foreground">CRM ügyfélnyilvántartás</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

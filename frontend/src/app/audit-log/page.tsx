@@ -50,7 +50,7 @@ export default function AuditLogPage() {
     <AppLayout>
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold">Audit napló</h1>
+          <h1 className="text-lg font-heading font-bold">Audit napló</h1>
           <p className="text-xs text-muted-foreground">Módosítások nyomon követése</p>
         </div>
         <Select value={projectId} onValueChange={(v) => setProjectId(v as string)}>

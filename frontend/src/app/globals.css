@@ -5,56 +5,55 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* PLANora brand pass of the Modernist design system — Archivo type,
-     soft rounded cards/buttons/inputs (the base system's "zero radius"
-     rule was NOT carried over here — confirmed against the user's own
-     reference screenshots, which show normal rounded corners). Brand
-     accent is PLANora's forest green (matches the logo), with two
-     dedicated exception colors — amber for warning/medium-urgency and
-     red for critical/late — confirmed against the real per-page exports
-     in docs/Planora design review2.zip (every Dashboard/Kanban/Naptár/...
-     .dc.html overrides --color-accent to #2f6b4a; the Naptár mockup's
-     event chips confirmed the amber/red exception colors below). */
-  --color-neutral-100: #f8f4f4;
-  --color-neutral-200: #eae7e7;
-  --color-neutral-300: #d7d3d3;
-  --color-neutral-400: #bab6b6;
-  --color-neutral-500: #9b9797;
-  --color-neutral-600: #7d7979;
-  --color-neutral-700: #605d5d;
-  --color-neutral-800: #444141;
-  --color-neutral-900: #2d2b2b;
+  /* PLANora "Japandi" design system — replaces the prior Modernist pass
+     (forest green / cool gray / Archivo / sharp corners). Sourced from
+     the design review at C:\Zsuzsi\japandi\stil.pdf (Dashboard/Projektek/
+     Kanban tábla/Naptár mockups): warm cream/beige surfaces, olive-green
+     accent, near-black sidebar, rounded cards, Lora serif headings.
+     Values below are sampled from the mockup PNGs (no vector source with
+     exact tokens existed) and extended into full 9-step ramps matching
+     the shape this file already used, so the rest of the token math
+     (status ramp, charts, @theme inline block) keeps working unchanged. */
+  --color-neutral-100: #faf6ee;
+  --color-neutral-200: #efe8d8;
+  --color-neutral-300: #e0d7c2;
+  --color-neutral-400: #c7bc9f;
+  --color-neutral-500: #a89b7c;
+  --color-neutral-600: #8a7d61;
+  --color-neutral-700: #6b6049;
+  --color-neutral-800: #453d2e;
+  --color-neutral-900: #25221d;
 
-  --color-accent-100: #eef4f0;
-  --color-accent-200: #d7e6dc;
-  --color-accent-300: #b0d0bd;
-  --color-accent-400: #7fb494;
-  --color-accent-500: #4c8f68;
-  --color-accent-600: #2a5f3f;
-  --color-accent-700: #1f4a32;
-  --color-accent-800: #163825;
-  --color-accent-900: #0f2a1b;
+  --color-accent-100: #eef0e4;
+  --color-accent-200: #dde3cb;
+  --color-accent-300: #c3cea3;
+  --color-accent-400: #9aab73;
+  --color-accent-500: #6f7e56;
+  --color-accent-600: #57633f;
+  --color-accent-700: #485737;
+  --color-accent-800: #33401f;
+  --color-accent-900: #202a13;
 
-  /* Warning (amber) and critical (red) are one-off exception colors, not
-     full ramps — used only for medium-urgency / late-or-blocked signals,
-     never as the brand color. */
-  --color-warning: #c98a00;
-  --color-warning-foreground: #8a5a00;
-  --color-warning-bg: #fff4de;
-  --color-critical: #a3281c;
-  --color-critical-bg: #fdecea;
+  /* Warning (amber) and critical (terracotta-red, matches the mockup's
+     "Késésben" tag) are one-off exception colors, not full ramps — used
+     only for medium-urgency / late-or-blocked signals, never as brand. */
+  --color-warning: #b8873a;
+  --color-warning-foreground: #6b4e1a;
+  --color-warning-bg: #f7ecd6;
+  --color-critical: #ae523a;
+  --color-critical-bg: #f6e4dc;
 
-  --background: #f3f2f2;
-  --foreground: #201e1d;
-  --card: #eae9e9;
-  --card-foreground: #201e1d;
-  --popover: #eae9e9;
-  --popover-foreground: #201e1d;
+  --background: #efe8d8;
+  --foreground: #2b271f;
+  --card: #fdf6ee;
+  --card-foreground: #2b271f;
+  --popover: #fdf6ee;
+  --popover-foreground: #2b271f;
 
-  --primary: #2f6b4a;
-  --primary-foreground: #f3f2f2;
+  --primary: #6f7e56;
+  --primary-foreground: #faf6ee;
   --secondary: var(--color-neutral-200);
-  --secondary-foreground: #201e1d;
+  --secondary-foreground: #2b271f;
   --muted: var(--color-neutral-100);
   --muted-foreground: var(--color-neutral-600);
   --accent: var(--color-accent-100);
@@ -63,28 +62,28 @@
 
   --border: var(--color-neutral-300);
   --input: var(--color-neutral-300);
-  --ring: #2f6b4a;
+  --ring: #6f7e56;
 
-  --chart-1: #2f6b4a;
+  --chart-1: #6f7e56;
   --chart-2: var(--color-neutral-700);
-  --chart-3: var(--color-accent-400);
+  --chart-3: var(--color-accent-300);
   --chart-4: var(--color-neutral-500);
   --chart-5: var(--color-neutral-900);
 
-  --radius: 0rem;
+  --radius: 0.85rem;
 
-  /* Sidebar — PLANora's actual dark-green logo palette */
-  --sidebar: var(--color-accent-900);
-  --sidebar-foreground: var(--color-accent-200);
-  --sidebar-primary: var(--color-accent-600);
-  --sidebar-primary-foreground: #f3f2f2;
-  --sidebar-accent: var(--color-accent-800);
-  --sidebar-accent-foreground: var(--color-neutral-100);
-  --sidebar-border: var(--color-accent-800);
-  --sidebar-ring: #2f6b4a;
+  /* Sidebar — near-black, matches the mockup's sidebar rail */
+  --sidebar: var(--color-neutral-900);
+  --sidebar-foreground: #d9d2c0;
+  --sidebar-primary: var(--color-accent-500);
+  --sidebar-primary-foreground: #faf6ee;
+  --sidebar-accent: #34302a;
+  --sidebar-accent-foreground: #f3ede0;
+  --sidebar-border: #34302a;
+  --sidebar-ring: var(--color-accent-500);
 
-  /* Project-phase status — progressive green shading (mirrors the
-     Dashboard donut's "Tervezés alatt" pale-mint -> "Folyamatban" green
+  /* Project-phase status — progressive olive shading (mirrors the
+     Dashboard donut's "Tervezés alatt" pale -> "Folyamatban" deep olive
      progression), red reserved separately for a project that's actually
      late (see HEALTH_CFG/delay-risk, not this phase ramp). */
   --status-planning: var(--color-accent-300);
@@ -95,7 +94,7 @@
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-heading);
   --font-sans: var(--font-sans);
   --color-neutral-100: var(--color-neutral-100);
   --color-neutral-200: var(--color-neutral-200);
@@ -166,6 +165,9 @@
 }
 
 .dark {
+  /* Unreachable today — no ThemeProvider/toggle ever applies .dark — kept
+     structurally consistent with the light Japandi ramps above so it
+     isn't left pointing at the old palette if that ever changes. */
   --background: var(--color-neutral-900);
   --foreground: var(--color-neutral-100);
   --card: var(--color-neutral-800);
@@ -189,13 +191,13 @@
   --chart-3: var(--color-accent-300);
   --chart-4: var(--color-neutral-500);
   --chart-5: var(--color-neutral-200);
-  --sidebar: var(--color-accent-900);
-  --sidebar-foreground: var(--color-accent-200);
-  --sidebar-primary: var(--color-accent-600);
+  --sidebar: var(--color-neutral-900);
+  --sidebar-foreground: #d9d2c0;
+  --sidebar-primary: var(--color-accent-500);
   --sidebar-primary-foreground: var(--color-neutral-900);
-  --sidebar-accent: var(--color-accent-800);
-  --sidebar-accent-foreground: var(--color-neutral-100);
-  --sidebar-border: var(--color-accent-800);
+  --sidebar-accent: #34302a;
+  --sidebar-accent-foreground: #f3ede0;
+  --sidebar-border: #34302a;
   --sidebar-ring: var(--color-accent-500);
 }
 

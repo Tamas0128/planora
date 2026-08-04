@@ -120,8 +120,8 @@ function StatCard({
           ) : (
             <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
           )}
+          {sub && <p className="truncate text-[10px] text-muted-foreground">{sub}</p>}
         </div>
-        {sub && <p className="shrink-0 text-[10px] text-muted-foreground">{sub}</p>}
       </Card>
     </Link>
   );
@@ -493,12 +493,10 @@ export default function DashboardPage() {
     <AppLayout>
       {/* ── Fejléc ── */}
       <div className="mb-4">
-        <h1 className="text-lg font-bold text-foreground">Dashboard</h1>
-        {me && (
-          <p className="text-xs text-muted-foreground">
-            Üdvözlünk, <span className="font-semibold text-foreground">{me.full_name}</span>!
-          </p>
-        )}
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dashboard</p>
+        <h1 className="text-2xl font-heading font-semibold text-foreground">
+          {me ? <>Üdvözlünk, {me.full_name}!</> : "Dashboard"}
+        </h1>
       </div>
 
       {/* ── 4 Stat kártya ── */}

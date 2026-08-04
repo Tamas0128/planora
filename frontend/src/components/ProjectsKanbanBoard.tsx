@@ -47,11 +47,11 @@ function ProjectKanbanCardBody({ project, deadlineField }: { project: ProjectCar
   const dashoffset = circumference - (circumference * pct) / 100;
 
   return (
-    <div className="flex border border-border bg-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+    <div className="flex border border-border bg-card transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
       <ProjectCardThumb projectId={project.id} hasThumbnail={project.has_thumbnail} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
         <div className="flex items-start gap-2">
-          <p className="min-w-0 flex-1 text-[13.5px] font-semibold leading-tight text-foreground">{project.name}</p>
+          <p className="min-w-0 flex-1 text-[13.5px] font-semibold leading-tight text-foreground">{project.client_name}</p>
           <div className="relative size-6 shrink-0">
             <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
               <circle cx="12" cy="12" r={radius} fill="none" stroke="var(--color-neutral-200)" strokeWidth="3.5" />
@@ -63,7 +63,7 @@ function ProjectKanbanCardBody({ project, deadlineField }: { project: ProjectCar
             <span className="absolute inset-0 flex items-center justify-center text-[7.5px] font-extrabold text-foreground">{pct}</span>
           </div>
         </div>
-        <p className="truncate text-[11px] text-muted-foreground">{project.client_name} · {project.settlement}</p>
+        <p className="truncate text-[11px] text-muted-foreground">{project.name} · {project.settlement}</p>
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1.5">
             <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-accent-100 text-[8.5px] font-extrabold text-accent-700">
