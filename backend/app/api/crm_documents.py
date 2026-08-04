@@ -19,35 +19,18 @@ ALLOWED_EXTENSIONS = {".pdf", ".dwg", ".xlsx", ".docx", ".jpg", ".jpeg", ".png"}
 S3_PREFIX = "crm"
 
 
-@router.get("", response_model=list[CrmDocumentResponse])
-def list_documents(
+async def store_and_link_document(
+    db: Session,
+    user: User,
+    file: UploadFile,
     entity_type: str,
     entity_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    doc_ids = (
-        db.query(CrmDocumentLink.document_id)
-        .filter(CrmDocumentLink.entity_type == entity_type, CrmDocumentLink.entity_id == entity_id)
-        .scalar_subquery()
-    )
-    return (
-        db.query(CrmDocument)
-        .filter(CrmDocument.id.in_(doc_ids))
-        .order_by(CrmDocument.created_at.desc())
-        .all()
-    )
-
-
-@router.post("", response_model=CrmDocumentResponse)
-async def upload_document(
-    entity_type: str = Form(...),
-    entity_id: int = Form(...),
-    document_type: CrmDocumentType = Form(CrmDocumentType.OTHER),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
+    document_type: CrmDocumentType,
+) -> CrmDocument:
+    """Shared upload+link path for both the standalone /crm/documents upload
+    endpoint and entity-creation endpoints (quotes, contracts) that require a
+    file attachment as part of creation, not as a separate follow-up step.
+    """
     ext = "." + file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else ""
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"File type not allowed: {ext}")
@@ -77,6 +60,39 @@ async def upload_document(
     db.add(doc)
     db.flush()
     db.add(CrmDocumentLink(document_id=doc.id, entity_type=entity_type, entity_id=entity_id))
+    return doc
+
+
+@router.get("", response_model=list[CrmDocumentResponse])
+def list_documents(
+    entity_type: str,
+    entity_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    doc_ids = (
+        db.query(CrmDocumentLink.document_id)
+        .filter(CrmDocumentLink.entity_type == entity_type, CrmDocumentLink.entity_id == entity_id)
+        .scalar_subquery()
+    )
+    return (
+        db.query(CrmDocument)
+        .filter(CrmDocument.id.in_(doc_ids))
+        .order_by(CrmDocument.created_at.desc())
+        .all()
+    )
+
+
+@router.post("", response_model=CrmDocumentResponse)
+async def upload_document(
+    entity_type: str = Form(...),
+    entity_id: int = Form(...),
+    document_type: CrmDocumentType = Form(CrmDocumentType.OTHER),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    doc = await store_and_link_document(db, user, file, entity_type, entity_id, document_type)
     db.commit()
     db.refresh(doc)
     return doc

@@ -111,10 +111,6 @@ class CustomerImportResult(BaseModel):
 # --- Quote / Contract ------------------------------------------------------
 
 
-class QuoteVersionCreate(BaseModel):
-    content_json: dict
-
-
 class QuoteVersionResponse(BaseModel):
     id: int
     version: int
@@ -123,11 +119,6 @@ class QuoteVersionResponse(BaseModel):
     created_by_id: int
 
     model_config = {"from_attributes": True}
-
-
-class QuoteCreate(BaseModel):
-    customer_id: int
-    content_json: dict
 
 
 class QuoteStatusUpdate(BaseModel):
@@ -144,18 +135,6 @@ class QuoteResponse(BaseModel):
     versions: list[QuoteVersionResponse] = []
 
     model_config = {"from_attributes": True}
-
-
-class ContractCreate(BaseModel):
-    customer_id: int
-    quote_id: Optional[int] = None
-    start_date: date
-    end_date: date
-
-
-class ContractFromQuoteBody(BaseModel):
-    start_date: date
-    end_date: date
 
 
 class ContractStatusUpdate(BaseModel):

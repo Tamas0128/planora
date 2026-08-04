@@ -64,7 +64,6 @@ const QUOTE_STATUS_OPTIONS = Object.entries(CRM_QUOTE_STATUS_LABELS) as [string,
 const CONTRACT_STATUS_OPTIONS = Object.entries(CRM_CONTRACT_STATUS_LABELS) as [string, string][];
 const emptyCommForm = { type: "phone", date: new Date().toISOString().slice(0, 10), summary: "" };
 const emptyTaskForm = { name: "", due_date: "", priority: "normal", owner_id: "" };
-const emptyQuoteContent = '{\n  "items": []\n}';
 
 // Local form state keeps every field as a string (controlled inputs) —
 // converted to ProjectCreationFields' typed shape only at submit time.
@@ -129,18 +128,20 @@ export default function CrmCustomerDetailPage() {
 
   const [quotes, setQuotes] = useState<CrmQuote[]>([]);
   const [showNewQuote, setShowNewQuote] = useState(false);
-  const [newQuoteContent, setNewQuoteContent] = useState(emptyQuoteContent);
+  const [newQuoteFile, setNewQuoteFile] = useState<File | null>(null);
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [versionDialogQuote, setVersionDialogQuote] = useState<CrmQuote | null>(null);
-  const [versionContent, setVersionContent] = useState(emptyQuoteContent);
+  const [versionFile, setVersionFile] = useState<File | null>(null);
   const [savingVersion, setSavingVersion] = useState(false);
   const [contractDialogQuote, setContractDialogQuote] = useState<CrmQuote | null>(null);
   const [contractFromQuoteForm, setContractFromQuoteForm] = useState(emptyContractForm);
+  const [contractFromQuoteFile, setContractFromQuoteFile] = useState<File | null>(null);
   const [savingContractFromQuote, setSavingContractFromQuote] = useState(false);
 
   const [contracts, setContracts] = useState<CrmContract[]>([]);
   const [showNewContract, setShowNewContract] = useState(false);
   const [newContractForm, setNewContractForm] = useState(emptyContractForm);
+  const [newContractFile, setNewContractFile] = useState<File | null>(null);
   const [creatingContract, setCreatingContract] = useState(false);
 
   // Reaching "Megrendelő" (ORDERED) auto-creates the construction project —
@@ -380,18 +381,15 @@ export default function CrmCustomerDetailPage() {
 
   async function createQuote(e: React.FormEvent) {
     e.preventDefault();
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(newQuoteContent);
-    } catch {
-      toast.error("Érvénytelen JSON az ajánlat tartalmában");
+    if (!newQuoteFile) {
+      toast.error("Az ajánlathoz fájl csatolása kötelező");
       return;
     }
     setCreatingQuote(true);
     try {
-      await api.createCrmQuote(customerId, parsed);
+      await api.createCrmQuote(customerId, newQuoteFile);
       setShowNewQuote(false);
-      setNewQuoteContent(emptyQuoteContent);
+      setNewQuoteFile(null);
       load();
       toast.success("Ajánlat létrehozva");
     } catch (err) {
@@ -413,17 +411,15 @@ export default function CrmCustomerDetailPage() {
   async function addQuoteVersion(e: React.FormEvent) {
     e.preventDefault();
     if (!versionDialogQuote) return;
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(versionContent);
-    } catch {
-      toast.error("Érvénytelen JSON");
+    if (!versionFile) {
+      toast.error("Az új verzióhoz fájl csatolása kötelező");
       return;
     }
     setSavingVersion(true);
     try {
-      await api.addCrmQuoteVersion(versionDialogQuote.id, parsed);
+      await api.addCrmQuoteVersion(versionDialogQuote.id, versionFile);
       setVersionDialogQuote(null);
+      setVersionFile(null);
       load();
       toast.success("Új verzió mentve");
     } catch (err) {
@@ -436,14 +432,20 @@ export default function CrmCustomerDetailPage() {
   async function confirmContractFromQuote(e: React.FormEvent) {
     e.preventDefault();
     if (!contractDialogQuote) return;
+    if (!contractFromQuoteFile) {
+      toast.error("A szerződéshez fájl csatolása kötelező");
+      return;
+    }
     setSavingContractFromQuote(true);
     try {
       await api.createContractFromQuote(
         contractDialogQuote.id,
         contractFromQuoteForm.start_date,
-        contractFromQuoteForm.end_date
+        contractFromQuoteForm.end_date,
+        contractFromQuoteFile
       );
       setContractDialogQuote(null);
+      setContractFromQuoteFile(null);
       load();
       toast.success("Szerződés létrehozva");
     } catch (err) {
@@ -455,11 +457,16 @@ export default function CrmCustomerDetailPage() {
 
   async function createContract(e: React.FormEvent) {
     e.preventDefault();
+    if (!newContractFile) {
+      toast.error("A szerződéshez fájl csatolása kötelező");
+      return;
+    }
     setCreatingContract(true);
     try {
-      await api.createCrmContract({ customer_id: customerId, ...newContractForm });
+      await api.createCrmContract(customerId, newContractForm.start_date, newContractForm.end_date, newContractFile);
       setShowNewContract(false);
       setNewContractForm(emptyContractForm);
+      setNewContractFile(null);
       load();
       toast.success("Szerződés létrehozva");
     } catch (err) {
@@ -752,8 +759,14 @@ export default function CrmCustomerDetailPage() {
                 </DialogHeader>
                 <div className="grid gap-3 py-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="quote-content">Tartalom (JSON)</Label>
-                    <Textarea id="quote-content" rows={6} value={newQuoteContent} onChange={(e) => setNewQuoteContent(e.target.value)} />
+                    <Label htmlFor="quote-file">Fájl (PDF, kép, Office dokumentum)</Label>
+                    <Input
+                      id="quote-file"
+                      type="file"
+                      required
+                      accept=".pdf,.dwg,.xlsx,.docx,.jpg,.jpeg,.png"
+                      onChange={(e) => setNewQuoteFile(e.target.files?.[0] ?? null)}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
@@ -771,8 +784,14 @@ export default function CrmCustomerDetailPage() {
                 </DialogHeader>
                 <div className="grid gap-3 py-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="version-content">Tartalom (JSON)</Label>
-                    <Textarea id="version-content" rows={6} value={versionContent} onChange={(e) => setVersionContent(e.target.value)} />
+                    <Label htmlFor="version-file">Fájl (PDF, kép, Office dokumentum)</Label>
+                    <Input
+                      id="version-file"
+                      type="file"
+                      required
+                      accept=".pdf,.dwg,.xlsx,.docx,.jpg,.jpeg,.png"
+                      onChange={(e) => setVersionFile(e.target.files?.[0] ?? null)}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
@@ -797,6 +816,16 @@ export default function CrmCustomerDetailPage() {
                     <Label htmlFor="cfq-end">Lejárati dátum</Label>
                     <Input id="cfq-end" type="date" required value={contractFromQuoteForm.end_date} onChange={(e) => setContractFromQuoteForm({ ...contractFromQuoteForm, end_date: e.target.value })} />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cfq-file">Fájl (PDF, kép, Office dokumentum)</Label>
+                    <Input
+                      id="cfq-file"
+                      type="file"
+                      required
+                      accept=".pdf,.dwg,.xlsx,.docx,.jpg,.jpeg,.png"
+                      onChange={(e) => setContractFromQuoteFile(e.target.files?.[0] ?? null)}
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={savingContractFromQuote}>{savingContractFromQuote ? "Mentés..." : "Szerződés létrehozása"}</Button>
@@ -815,7 +844,7 @@ export default function CrmCustomerDetailPage() {
                   <p className="font-medium">{q.quote_number} <span className="font-normal text-muted-foreground">v{q.current_version}</span></p>
                   <p className="text-xs text-muted-foreground">{new Date(q.date).toLocaleDateString("hu-HU")}</p>
                 </div>
-                <Button variant="link" className="h-auto shrink-0 p-0" onClick={() => { setVersionDialogQuote(q); setVersionContent(JSON.stringify(q.versions[q.versions.length - 1]?.content_json ?? {}, null, 2)); }}>
+                <Button variant="link" className="h-auto shrink-0 p-0" onClick={() => { setVersionDialogQuote(q); setVersionFile(null); }}>
                   Új verzió
                 </Button>
                 <Select value={q.status} onValueChange={(v) => changeQuoteStatus(q, v as string)}>
@@ -861,6 +890,16 @@ export default function CrmCustomerDetailPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="contract-end">Lejárati dátum</Label>
                     <Input id="contract-end" type="date" required value={newContractForm.end_date} onChange={(e) => setNewContractForm({ ...newContractForm, end_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contract-file">Fájl (PDF, kép, Office dokumentum)</Label>
+                    <Input
+                      id="contract-file"
+                      type="file"
+                      required
+                      accept=".pdf,.dwg,.xlsx,.docx,.jpg,.jpeg,.png"
+                      onChange={(e) => setNewContractFile(e.target.files?.[0] ?? null)}
+                    />
                   </div>
                 </div>
                 <DialogFooter>

@@ -1,20 +1,26 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.crm_documents import store_and_link_document
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
-from app.models_crm import Contract, ContractStatus, Customer, Quote, QuoteStatus, QuoteVersion
+from app.models_crm import (
+    Contract,
+    ContractStatus,
+    CrmDocumentType,
+    Customer,
+    Quote,
+    QuoteStatus,
+    QuoteVersion,
+)
 from app.schemas_crm import (
-    ContractFromQuoteBody,
     ContractResponse,
-    QuoteCreate,
     QuoteResponse,
     QuoteStatusUpdate,
-    QuoteVersionCreate,
 )
 from app.services.audit import log_change
 from app.services.numbering import next_sequence_number
@@ -43,14 +49,15 @@ def list_quotes(
 
 
 @router.post("", response_model=QuoteResponse)
-def create_quote(
-    body: QuoteCreate,
+async def create_quote(
+    customer_id: int = Form(...),
+    file: UploadFile = File(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    _visible_customer(db, user, body.customer_id)
+    _visible_customer(db, user, customer_id)
     quote = Quote(
-        customer_id=body.customer_id,
+        customer_id=customer_id,
         quote_number=next_sequence_number(db, Quote, "quote_number", "AJ"),
         date=date.today(),
         status=QuoteStatus.DRAFT,
@@ -58,10 +65,10 @@ def create_quote(
     )
     db.add(quote)
     db.flush()
-    version = QuoteVersion(
-        quote_id=quote.id, version=1, content_json=body.content_json, created_by_id=user.id
-    )
+    version = QuoteVersion(quote_id=quote.id, version=1, content_json={}, created_by_id=user.id)
     db.add(version)
+    db.flush()
+    await store_and_link_document(db, user, file, "quote", quote.id, CrmDocumentType.QUOTE)
     db.commit()
     db.refresh(quote)
     log_change(db, user, "quote", "created", None, quote.quote_number, None, quote.id)
@@ -87,9 +94,9 @@ def get_quote(
 
 
 @router.post("/{quote_id}/versions", response_model=QuoteResponse)
-def add_quote_version(
+async def add_quote_version(
     quote_id: int,
-    body: QuoteVersionCreate,
+    file: UploadFile = File(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -100,11 +107,12 @@ def add_quote_version(
     version = QuoteVersion(
         quote_id=quote.id,
         version=new_version_number,
-        content_json=body.content_json,
+        content_json={},
         created_by_id=user.id,
     )
     db.add(version)
     quote.current_version = new_version_number
+    await store_and_link_document(db, user, file, "quote", quote.id, CrmDocumentType.QUOTE)
     log_change(
         db, user, "quote", "version", str(new_version_number - 1), str(new_version_number), None, quote.id
     )
@@ -133,9 +141,11 @@ def update_quote_status(
 
 
 @router.post("/{quote_id}/create-contract", response_model=ContractResponse)
-def create_contract_from_quote(
+async def create_contract_from_quote(
     quote_id: int,
-    body: ContractFromQuoteBody,
+    start_date: date = Form(...),
+    end_date: date = Form(...),
+    file: UploadFile = File(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -152,12 +162,13 @@ def create_contract_from_quote(
         customer_id=customer.id,
         quote_id=quote.id,
         contract_number=next_sequence_number(db, Contract, "contract_number", "SZ"),
-        start_date=body.start_date,
-        end_date=body.end_date,
+        start_date=start_date,
+        end_date=end_date,
         status=ContractStatus.ACTIVE,
     )
     db.add(contract)
     db.flush()
+    await store_and_link_document(db, user, file, "contract", contract.id, CrmDocumentType.CONTRACT)
     log_change(db, user, "contract", "created", None, contract.contract_number, None, contract.id)
     db.commit()
     db.refresh(contract)
