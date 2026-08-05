@@ -253,6 +253,7 @@ def create_customer(
         email=body.email,
         tax_number=body.tax_number,
         billing_address=body.billing_address,
+        source=body.source,
     )
     db.add(customer)
     db.commit()

@@ -9,6 +9,7 @@ migrations/env.py both import this module explicitly).
 
 import enum
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -18,6 +19,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -53,6 +55,18 @@ class CustomerStatus(str, enum.Enum):
     QUOTE_SENT = "quote_sent"  # Ajánlatadás
     ORDERED = "ordered"  # Megrendelő — triggers project creation
     ARCHIVED = "archived"  # Archivált — soft-delete-instead-of-delete target
+
+
+class SourceType(str, enum.Enum):
+    """Where the customer heard about us — deliberately a plain field on
+    Customer, not a separate Lead entity (same simplification rationale as
+    CustomerStatus above, extended for the B2C sales dashboard, 2026-08-04).
+    """
+
+    REFERRAL = "referral"
+    FACEBOOK_INSTAGRAM = "facebook_instagram"
+    WEBSITE_SEO = "website_seo"
+    OTHER = "other"
 
 
 class QuoteStatus(str, enum.Enum):
@@ -118,6 +132,13 @@ CUSTOMER_STATUS_LABELS = {
     CustomerStatus.ARCHIVED: "Archivált",
 }
 
+SOURCE_TYPE_LABELS = {
+    SourceType.REFERRAL: "Ajánlás",
+    SourceType.FACEBOOK_INSTAGRAM: "Facebook / Instagram",
+    SourceType.WEBSITE_SEO: "Weboldal / SEO",
+    SourceType.OTHER: "Egyéb",
+}
+
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -132,6 +153,7 @@ class Customer(Base):
     status: Mapped[CustomerStatus] = mapped_column(
         Enum(CustomerStatus), default=CustomerStatus.NEW
     )
+    source: Mapped[SourceType | None] = mapped_column(Enum(SourceType), nullable=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
 
     # Only ever populated for type in (COMPANY, SOLE_PROPRIETOR) — enforced at
@@ -188,6 +210,14 @@ class Quote(Base):
     date: Mapped[date] = mapped_column(Date)
     status: Mapped[QuoteStatus] = mapped_column(Enum(QuoteStatus), default=QuoteStatus.DRAFT)
     current_version: Mapped[int] = mapped_column(Integer, default=1)
+    # Set once, the first time status becomes SENT (crm_quotes.py::update_quote_status) —
+    # not derived from QuoteVersion.created_at, which tracks content edits, not the
+    # sent transition, and a quote can be re-versioned after being sent.
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Manually entered gross value (HUF) — mirrors Contract.value (2026-08-04):
+    # QuoteVersion.content_json is freeform, not safe to parse a total out of,
+    # so there's no way to derive this from the quote's own line items.
+    value: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
 
     customer: Mapped["Customer"] = relationship(back_populates="quotes")
     versions: Mapped[list["QuoteVersion"]] = relationship(
@@ -228,6 +258,14 @@ class Contract(Base):
     status: Mapped[ContractStatus] = mapped_column(
         Enum(ContractStatus), default=ContractStatus.DRAFT
     )
+    # Gross contract value (HUF) — no monetary field existed anywhere on
+    # Quote/Contract before the sales dashboard (2026-08-04); QuoteVersion.
+    # content_json is freeform, not safe to parse a total out of.
+    value: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    # Set once, the first time status becomes ACTIVE — from either
+    # crm_quotes.py::create_contract_from_quote (created directly as ACTIVE)
+    # or crm_contracts.py::update_contract_status.
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     customer: Mapped["Customer"] = relationship(back_populates="contracts")
     quote: Mapped["Quote | None"] = relationship(foreign_keys=[quote_id])

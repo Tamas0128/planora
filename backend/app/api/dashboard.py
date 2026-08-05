@@ -133,7 +133,7 @@ def audit_logs(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    from app.api.projects import _can_view_project
+    from app.services.scoping import can_view_project
 
     q = (
         db.query(AuditLog)
@@ -142,7 +142,7 @@ def audit_logs(
     )
     if project_id:
         project = db.query(Project).get(project_id)
-        if not project or not _can_view_project(user, project):
+        if not project or not can_view_project(user, project):
             raise HTTPException(status_code=403, detail="Access denied")
         q = q.filter(AuditLog.project_id == project_id)
     elif user.role in (UserRole.PROJECT_MANAGER, UserRole.SITE_MANAGER):

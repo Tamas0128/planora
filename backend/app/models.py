@@ -1,5 +1,6 @@
 import enum
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -9,6 +10,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -18,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.orm.attributes import get_history
 
 from app.database import Base
+from app.models_finance import VatType
 
 
 class UserRole(str, enum.Enum):
@@ -189,6 +192,13 @@ class Project(Base):
     # optional, purely informational (e.g. "installer confirmed for Monday").
     status_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # Contract net/VAT/gross — the financial module's project-level summary
+    # (see models_finance.py). gross is always server-derived from net+vat_type,
+    # never settable directly (services/finance.py::compute_gross).
+    contract_net_value: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    contract_vat_type: Mapped[VatType | None] = mapped_column(Enum(VatType), nullable=True)
+    contract_gross_value: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -211,6 +221,15 @@ class Project(Base):
         back_populates="project", cascade="all, delete-orphan"
     )
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="project")
+    tigs: Mapped[list["Tig"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+    subcontractor_invoices: Mapped[list["SubcontractorInvoice"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+    customer_invoices: Mapped[list["CustomerInvoice"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
     @property
     def has_thumbnail(self) -> bool:

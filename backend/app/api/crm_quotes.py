@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +14,7 @@ from app.schemas_crm import (
     QuoteCreate,
     QuoteResponse,
     QuoteStatusUpdate,
+    QuoteUpdate,
     QuoteVersionCreate,
 )
 from app.services.audit import log_change
@@ -55,6 +56,7 @@ def create_quote(
         date=date.today(),
         status=QuoteStatus.DRAFT,
         current_version=1,
+        value=body.value,
     )
     db.add(quote)
     db.flush()
@@ -113,6 +115,28 @@ def add_quote_version(
     return quote
 
 
+@router.patch("/{quote_id}", response_model=QuoteResponse)
+def update_quote(
+    quote_id: int,
+    body: QuoteUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Edit endpoint distinct from /status — mainly for backfilling `value`
+    on quotes created before it existed, mirrors crm_contracts.py::update_contract."""
+    quote = scoped_quote_query(db, user).filter(Quote.id == quote_id).first()
+    if not quote:
+        raise HTTPException(status_code=404, detail="Ajánlat nem található")
+    updates = body.model_dump(exclude_unset=True)
+    for field, new_value in updates.items():
+        setattr(quote, field, new_value)
+    if updates:
+        log_change(db, user, "quote", "edit", None, ",".join(updates.keys()), None, quote.id)
+    db.commit()
+    db.refresh(quote)
+    return quote
+
+
 @router.patch("/{quote_id}/status", response_model=QuoteResponse)
 def update_quote_status(
     quote_id: int,
@@ -125,6 +149,8 @@ def update_quote_status(
         raise HTTPException(status_code=404, detail="Ajánlat nem található")
     old_status = quote.status
     quote.status = body.status
+    if body.status == QuoteStatus.SENT and quote.sent_at is None:
+        quote.sent_at = datetime.utcnow()
     if old_status != body.status:
         log_change(db, user, "quote", "status", old_status.value, body.status.value, None, quote.id)
     db.commit()
@@ -155,6 +181,8 @@ def create_contract_from_quote(
         start_date=body.start_date,
         end_date=body.end_date,
         status=ContractStatus.ACTIVE,
+        value=body.value,
+        signed_at=datetime.utcnow(),
     )
     db.add(contract)
     db.flush()

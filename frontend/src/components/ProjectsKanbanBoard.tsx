@@ -18,7 +18,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { api, BUILDING_LABELS, ProjectCard, PROJECT_STATUS_DEADLINE_FIELD, STATUS_LABELS } from "@/lib/api";
-import { clampPercent, pmInitials } from "@/lib/project-utils";
+import { clampPercent, FINANCE_STATUS_CFG, pmInitials } from "@/lib/project-utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,14 @@ function ProjectKanbanCardBody({ project, deadlineField }: { project: ProjectCar
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
         <div className="flex items-start gap-2">
           <p className="min-w-0 flex-1 text-[13.5px] font-semibold leading-tight text-foreground">{project.client_name}</p>
+          <span
+            className={cn(
+              "mt-1.5 size-2 shrink-0 rounded-full",
+              (FINANCE_STATUS_CFG[project.finance_status] ?? FINANCE_STATUS_CFG.green).dot
+            )}
+            title={(FINANCE_STATUS_CFG[project.finance_status] ?? FINANCE_STATUS_CFG.green).label}
+            aria-label={(FINANCE_STATUS_CFG[project.finance_status] ?? FINANCE_STATUS_CFG.green).label}
+          />
           <div className="relative size-6 shrink-0">
             <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
               <circle cx="12" cy="12" r={radius} fill="none" stroke="var(--color-neutral-200)" strokeWidth="3.5" />

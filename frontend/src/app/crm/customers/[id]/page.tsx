@@ -12,6 +12,7 @@ import {
   CRM_CUSTOMER_STATUS_LABELS,
   CRM_CUSTOMER_TYPE_LABELS,
   CRM_QUOTE_STATUS_LABELS,
+  CRM_SOURCE_LABELS,
   CRM_TASK_PRIORITY_LABELS,
   CrmCommunicationEvent,
   CrmContract,
@@ -62,6 +63,13 @@ const COMM_TYPE_OPTIONS = Object.entries(CRM_COMMUNICATION_TYPE_LABELS) as [stri
 const TASK_PRIORITY_OPTIONS = Object.entries(CRM_TASK_PRIORITY_LABELS) as [string, string][];
 const QUOTE_STATUS_OPTIONS = Object.entries(CRM_QUOTE_STATUS_LABELS) as [string, string][];
 const CONTRACT_STATUS_OPTIONS = Object.entries(CRM_CONTRACT_STATUS_LABELS) as [string, string][];
+const SOURCE_OPTIONS = Object.entries(CRM_SOURCE_LABELS) as [string, string][];
+
+function formatHuf(value?: string): string {
+  if (!value) return "";
+  const num = Number(value);
+  return Number.isFinite(num) ? `${num.toLocaleString("hu-HU")} Ft` : value;
+}
 const emptyCommForm = { type: "phone", date: new Date().toISOString().slice(0, 10), summary: "" };
 const emptyTaskForm = { name: "", due_date: "", priority: "normal", owner_id: "" };
 const emptyQuoteContent = '{\n  "items": []\n}';
@@ -96,7 +104,7 @@ function projectFieldsFromForm(form: ProjectFieldsForm): ProjectCreationFields {
   return fields;
 }
 
-const emptyContractForm = { start_date: "", end_date: "" };
+const emptyContractForm = { start_date: "", end_date: "", value: "" };
 
 export default function CrmCustomerDetailPage() {
   const params = useParams();
@@ -130,7 +138,11 @@ export default function CrmCustomerDetailPage() {
   const [quotes, setQuotes] = useState<CrmQuote[]>([]);
   const [showNewQuote, setShowNewQuote] = useState(false);
   const [newQuoteContent, setNewQuoteContent] = useState(emptyQuoteContent);
+  const [newQuoteValue, setNewQuoteValue] = useState("");
   const [creatingQuote, setCreatingQuote] = useState(false);
+  const [valueDialogQuote, setValueDialogQuote] = useState<CrmQuote | null>(null);
+  const [quoteValueForm, setQuoteValueForm] = useState("");
+  const [savingQuoteValue, setSavingQuoteValue] = useState(false);
   const [versionDialogQuote, setVersionDialogQuote] = useState<CrmQuote | null>(null);
   const [versionContent, setVersionContent] = useState(emptyQuoteContent);
   const [savingVersion, setSavingVersion] = useState(false);
@@ -151,9 +163,13 @@ export default function CrmCustomerDetailPage() {
 
   const [showEditCustomer, setShowEditCustomer] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: "", phone: "", email: "", tax_number: "", billing_address: "",
+    name: "", phone: "", email: "", tax_number: "", billing_address: "", source: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
+
+  const [valueDialogContract, setValueDialogContract] = useState<CrmContract | null>(null);
+  const [valueForm, setValueForm] = useState("");
+  const [savingValue, setSavingValue] = useState(false);
 
   function load() {
     api.crmCustomer(customerId).then(setCustomer).catch(() => setCustomer(null));
@@ -229,6 +245,7 @@ export default function CrmCustomerDetailPage() {
       email: customer.email ?? "",
       tax_number: customer.tax_number ?? "",
       billing_address: customer.billing_address ?? "",
+      source: customer.source ?? "",
     });
     setShowEditCustomer(true);
   }
@@ -238,7 +255,7 @@ export default function CrmCustomerDetailPage() {
     if (!customer) return;
     setSavingEdit(true);
     try {
-      const body: Record<string, unknown> = { name: editForm.name };
+      const body: Record<string, unknown> = { name: editForm.name, source: editForm.source || null };
       if (customer.type !== "person") {
         body.phone = editForm.phone || null;
         body.email = editForm.email || null;
@@ -389,15 +406,37 @@ export default function CrmCustomerDetailPage() {
     }
     setCreatingQuote(true);
     try {
-      await api.createCrmQuote(customerId, parsed);
+      await api.createCrmQuote(customerId, parsed, newQuoteValue || undefined);
       setShowNewQuote(false);
       setNewQuoteContent(emptyQuoteContent);
+      setNewQuoteValue("");
       load();
       toast.success("Ajánlat létrehozva");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
     } finally {
       setCreatingQuote(false);
+    }
+  }
+
+  function openQuoteValueDialog(quote: CrmQuote) {
+    setValueDialogQuote(quote);
+    setQuoteValueForm(quote.value ?? "");
+  }
+
+  async function saveQuoteValue(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valueDialogQuote) return;
+    setSavingQuoteValue(true);
+    try {
+      await api.updateCrmQuote(valueDialogQuote.id, { value: quoteValueForm || undefined });
+      setValueDialogQuote(null);
+      load();
+      toast.success("Ajánlat értéke mentve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    } finally {
+      setSavingQuoteValue(false);
     }
   }
 
@@ -441,7 +480,9 @@ export default function CrmCustomerDetailPage() {
       await api.createContractFromQuote(
         contractDialogQuote.id,
         contractFromQuoteForm.start_date,
-        contractFromQuoteForm.end_date
+        contractFromQuoteForm.end_date,
+        undefined,
+        contractFromQuoteForm.value || undefined
       );
       setContractDialogQuote(null);
       load();
@@ -457,7 +498,12 @@ export default function CrmCustomerDetailPage() {
     e.preventDefault();
     setCreatingContract(true);
     try {
-      await api.createCrmContract({ customer_id: customerId, ...newContractForm });
+      await api.createCrmContract({
+        customer_id: customerId,
+        start_date: newContractForm.start_date,
+        end_date: newContractForm.end_date,
+        value: newContractForm.value || undefined,
+      });
       setShowNewContract(false);
       setNewContractForm(emptyContractForm);
       load();
@@ -475,6 +521,27 @@ export default function CrmCustomerDetailPage() {
       load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba az állapotváltás során");
+    }
+  }
+
+  function openValueDialog(contract: CrmContract) {
+    setValueDialogContract(contract);
+    setValueForm(contract.value ?? "");
+  }
+
+  async function saveContractValue(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valueDialogContract) return;
+    setSavingValue(true);
+    try {
+      await api.updateCrmContract(valueDialogContract.id, { value: valueForm || null });
+      setValueDialogContract(null);
+      load();
+      toast.success("Szerződés értéke mentve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    } finally {
+      setSavingValue(false);
     }
   }
 
@@ -577,6 +644,20 @@ export default function CrmCustomerDetailPage() {
                       </div>
                     </>
                   )}
+                  <div className="space-y-1.5">
+                    <Label>Forrás</Label>
+                    <Select value={editForm.source || "none"} onValueChange={(v) => setEditForm({ ...editForm, source: v === "none" ? "" : (v as string) })}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>{(v: string) => (v === "none" ? "Nincs megadva" : CRM_SOURCE_LABELS[v] ?? v)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nincs megadva</SelectItem>
+                        {SOURCE_OPTIONS.map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={savingEdit}>{savingEdit ? "Mentés..." : "Mentés"}</Button>
@@ -755,9 +836,32 @@ export default function CrmCustomerDetailPage() {
                     <Label htmlFor="quote-content">Tartalom (JSON)</Label>
                     <Textarea id="quote-content" rows={6} value={newQuoteContent} onChange={(e) => setNewQuoteContent(e.target.value)} />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quote-value">Ajánlat értéke (Ft)</Label>
+                    <Input id="quote-value" type="number" min="0" step="1" value={newQuoteValue} onChange={(e) => setNewQuoteValue(e.target.value)} />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={creatingQuote}>{creatingQuote ? "Mentés..." : "Létrehozás"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!valueDialogQuote} onOpenChange={(open) => !open && setValueDialogQuote(null)}>
+            <DialogContent>
+              <form onSubmit={saveQuoteValue}>
+                <DialogHeader>
+                  <DialogTitle>Ajánlat értéke — {valueDialogQuote?.quote_number}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quote-value-edit">Érték (Ft)</Label>
+                    <Input id="quote-value-edit" type="number" min="0" step="1" value={quoteValueForm} onChange={(e) => setQuoteValueForm(e.target.value)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={savingQuoteValue}>{savingQuoteValue ? "Mentés..." : "Mentés"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -797,6 +901,10 @@ export default function CrmCustomerDetailPage() {
                     <Label htmlFor="cfq-end">Lejárati dátum</Label>
                     <Input id="cfq-end" type="date" required value={contractFromQuoteForm.end_date} onChange={(e) => setContractFromQuoteForm({ ...contractFromQuoteForm, end_date: e.target.value })} />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cfq-value">Szerződéses érték (Ft)</Label>
+                    <Input id="cfq-value" type="number" min="0" step="1" value={contractFromQuoteForm.value} onChange={(e) => setContractFromQuoteForm({ ...contractFromQuoteForm, value: e.target.value })} />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={savingContractFromQuote}>{savingContractFromQuote ? "Mentés..." : "Szerződés létrehozása"}</Button>
@@ -815,6 +923,13 @@ export default function CrmCustomerDetailPage() {
                   <p className="font-medium">{q.quote_number} <span className="font-normal text-muted-foreground">v{q.current_version}</span></p>
                   <p className="text-xs text-muted-foreground">{new Date(q.date).toLocaleDateString("hu-HU")}</p>
                 </div>
+                <Button
+                  variant="link"
+                  className="h-auto shrink-0 p-0 text-xs"
+                  onClick={() => openQuoteValueDialog(q)}
+                >
+                  {q.value ? formatHuf(q.value) : "Érték megadása"}
+                </Button>
                 <Button variant="link" className="h-auto shrink-0 p-0" onClick={() => { setVersionDialogQuote(q); setVersionContent(JSON.stringify(q.versions[q.versions.length - 1]?.content_json ?? {}, null, 2)); }}>
                   Új verzió
                 </Button>
@@ -862,9 +977,32 @@ export default function CrmCustomerDetailPage() {
                     <Label htmlFor="contract-end">Lejárati dátum</Label>
                     <Input id="contract-end" type="date" required value={newContractForm.end_date} onChange={(e) => setNewContractForm({ ...newContractForm, end_date: e.target.value })} />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contract-value">Szerződéses érték (Ft)</Label>
+                    <Input id="contract-value" type="number" min="0" step="1" value={newContractForm.value} onChange={(e) => setNewContractForm({ ...newContractForm, value: e.target.value })} />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={creatingContract}>{creatingContract ? "Mentés..." : "Létrehozás"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!valueDialogContract} onOpenChange={(open) => !open && setValueDialogContract(null)}>
+            <DialogContent>
+              <form onSubmit={saveContractValue}>
+                <DialogHeader>
+                  <DialogTitle>Szerződéses érték — {valueDialogContract?.contract_number}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="value-edit">Érték (Ft)</Label>
+                    <Input id="value-edit" type="number" min="0" step="1" value={valueForm} onChange={(e) => setValueForm(e.target.value)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={savingValue}>{savingValue ? "Mentés..." : "Mentés"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -882,6 +1020,13 @@ export default function CrmCustomerDetailPage() {
                     {new Date(c.start_date).toLocaleDateString("hu-HU")} – {new Date(c.end_date).toLocaleDateString("hu-HU")}
                   </p>
                 </div>
+                <Button
+                  variant="link"
+                  className="h-auto shrink-0 p-0 text-xs"
+                  onClick={() => openValueDialog(c)}
+                >
+                  {c.value ? formatHuf(c.value) : "Érték megadása"}
+                </Button>
                 <Select value={c.status} onValueChange={(v) => changeContractStatus(c, v as string)}>
                   <SelectTrigger size="sm" className="w-36 shrink-0">
                     <SelectValue>{(v: string) => CRM_CONTRACT_STATUS_LABELS[v] ?? v}</SelectValue>

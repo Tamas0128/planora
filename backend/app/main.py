@@ -15,14 +15,17 @@ from app.api import (
     crm_documents,
     crm_quotes,
     crm_relations,
+    crm_sales_dashboard,
     crm_search,
     crm_tasks,
 )
+from app.api import finance
 from app.config import settings
 from app.core.security import hash_password
 from app.database import SessionLocal
 from app.models import User, UserRole
 import app.models_crm  # noqa: F401 — register CRM models on Base.metadata
+import app.models_finance  # noqa: F401 — register finance models on Base.metadata
 from app.services.notifications import send_daily_digest
 from app.services.schedule_engine import seed_activity_templates
 
@@ -119,7 +122,9 @@ app.include_router(crm_communications.router, prefix="/api")
 app.include_router(crm_tasks.router, prefix="/api")
 app.include_router(crm_documents.router, prefix="/api")
 app.include_router(crm_dashboard.router, prefix="/api")
+app.include_router(crm_sales_dashboard.router, prefix="/api")
 app.include_router(crm_search.router, prefix="/api")
+app.include_router(finance.router, prefix="/api")
 
 
 @app.get("/api/health")

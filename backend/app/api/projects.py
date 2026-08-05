@@ -27,9 +27,11 @@ from app.schemas import (
     ProjectUpdate,
 )
 from app.services.audit import log_change
+from app.services.finance import compute_finance_status_for_projects
 from app.services.geocoding import geocode_project_in_background
 from app.services.health import compute_health_for_projects, predict_delay_risk
 from app.services.numbering import generate_project_code
+from app.services.scoping import can_edit_project, can_view_project
 from app.services.schedule_engine import cascade_from_activity, create_project_activities, recalculate_schedule
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -38,7 +40,10 @@ STATUS_ORDER = list(ProjectStatus)
 
 
 def _project_to_card(
-    project: Project, favorite_ids: set[int] = frozenset(), health_map: dict[int, str] | None = None
+    project: Project,
+    favorite_ids: set[int] = frozenset(),
+    health_map: dict[int, str] | None = None,
+    finance_status_map: dict[int, str] | None = None,
 ) -> ProjectCard:
     return ProjectCard(
         id=project.id,
@@ -56,6 +61,7 @@ def _project_to_card(
         has_thumbnail=project.has_thumbnail,
         is_favorite=project.id in favorite_ids,
         health=(health_map or {}).get(project.id, "ok"),
+        finance_status=(finance_status_map or {}).get(project.id, "green"),
         latitude=project.latitude,
         longitude=project.longitude,
         waiting_deadline=project.waiting_deadline,
@@ -89,26 +95,6 @@ def _favorite_ids(db: Session, user: User) -> set[int]:
     }
 
 
-def _can_view_project(user: User, project: Project) -> bool:
-    if user.role in (UserRole.ADMIN, UserRole.MANAGEMENT):
-        return True
-    if user.role == UserRole.PROJECT_MANAGER:
-        return project.project_manager_id == user.id
-    if user.role == UserRole.SITE_MANAGER:
-        return project.site_manager_id == user.id
-    return True
-
-
-def _can_edit_project(user: User, project: Project) -> bool:
-    if user.role in (UserRole.ADMIN, UserRole.MANAGEMENT):
-        return True
-    if user.role == UserRole.PROJECT_MANAGER:
-        return project.project_manager_id == user.id
-    if user.role == UserRole.SITE_MANAGER:
-        return project.site_manager_id == user.id
-    return False
-
-
 @router.get("", response_model=list[ProjectCard])
 def list_projects(
     db: Session = Depends(get_db),
@@ -124,7 +110,8 @@ def list_projects(
     projects = q.order_by(Project.delivery_date).all()
     favorite_ids = _favorite_ids(db, user)
     health_map = compute_health_for_projects(db, projects)
-    return [_project_to_card(p, favorite_ids, health_map) for p in projects]
+    finance_status_map = compute_finance_status_for_projects(db, projects)
+    return [_project_to_card(p, favorite_ids, health_map, finance_status_map) for p in projects]
 
 
 @router.get("/kanban")
@@ -142,6 +129,7 @@ def kanban_board(
     projects = q.all()
     favorite_ids = _favorite_ids(db, user)
     health_map = compute_health_for_projects(db, projects)
+    finance_status_map = compute_finance_status_for_projects(db, projects)
     statuses = list(ProjectStatus)
     # Lezárva is a separate function for admin/management/project_manager
     # only — other roles never see the column at all, not just "can't drag
@@ -151,7 +139,7 @@ def kanban_board(
     board = {s.value: [] for s in statuses}
     for p in projects:
         if p.status.value in board:
-            board[p.status.value].append(_project_to_card(p, favorite_ids, health_map))
+            board[p.status.value].append(_project_to_card(p, favorite_ids, health_map, finance_status_map))
     return board
 
 
@@ -164,7 +152,7 @@ def add_favorite(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_view_project(user, project):
+    if not can_view_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     existing = db.query(Favorite).filter(
         Favorite.user_id == user.id, Favorite.project_id == project_id
@@ -231,7 +219,7 @@ def get_project(
     project = db.query(Project).options(joinedload(Project.project_manager)).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_view_project(user, project):
+    if not can_view_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     return _get_project_detail(db, project_id, user)
 
@@ -256,6 +244,7 @@ def _get_project_detail(db: Session, project_id: int, user: User | None = None) 
             is not None
         )
     health = compute_health_for_projects(db, [project]).get(project.id, "ok")
+    finance_status = compute_finance_status_for_projects(db, [project]).get(project.id, "green")
     delay_risk, delay_risk_reason = predict_delay_risk(db, project)
     return ProjectDetail(
         id=project.id,
@@ -273,6 +262,7 @@ def _get_project_detail(db: Session, project_id: int, user: User | None = None) 
         has_thumbnail=project.has_thumbnail,
         is_favorite=is_favorite,
         health=health,
+        finance_status=finance_status,
         delay_risk=delay_risk,
         delay_risk_reason=delay_risk_reason,
         latitude=project.latitude,
@@ -297,6 +287,10 @@ def _get_project_detail(db: Session, project_id: int, user: User | None = None) 
         billing_name=project.billing.full_name if project.billing else None,
         subcontractors=project.subcontractors,
         status_text=project.status_text,
+        customer_id=project.customer_id,
+        contract_net_value=project.contract_net_value,
+        contract_vat_type=project.contract_vat_type,
+        contract_gross_value=project.contract_gross_value,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
@@ -313,7 +307,7 @@ def update_project(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_edit_project(user, project):
+    if not can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     # Lezárás ("closed") is a separate, more restricted function than the
     # rest of the kanban board — site_manager/procurement/billing/
@@ -321,6 +315,12 @@ def update_project(
     # this project.
     if body.status == ProjectStatus.CLOSED and user.role not in (
         UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.PROJECT_MANAGER,
+    ):
+        raise HTTPException(status_code=403, detail="Access denied")
+    # Linking the CRM customer ("Megrendelő" for CustomerInvoice) is a
+    # finance-adjacent change — restricted narrower than can_edit_project.
+    if body.customer_id is not None and user.role not in (
+        UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.BILLING,
     ):
         raise HTTPException(status_code=403, detail="Access denied")
     old_latitude, old_longitude = project.latitude, project.longitude
@@ -368,7 +368,7 @@ def delete_project(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_edit_project(user, project):
+    if not can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Dependency rows (on both the activity_id and prerequisite_id side) and
@@ -402,7 +402,7 @@ def create_activity(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_edit_project(user, project):
+    if not can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     max_sort = (
         db.query(Activity)
@@ -461,7 +461,7 @@ def list_activities(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_view_project(user, project):
+    if not can_view_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     activities = (
         db.query(Activity)
@@ -510,7 +510,7 @@ def update_activity(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_edit_project(user, project):
+    if not can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     activity = db.query(Activity).filter(
         Activity.id == activity_id, Activity.project_id == project_id
@@ -630,7 +630,7 @@ def delete_activity(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_edit_project(user, project):
+    if not can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     activity = db.query(Activity).filter(
         Activity.id == activity_id, Activity.project_id == project_id
@@ -678,7 +678,7 @@ def add_dependency(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_edit_project(user, project):
+    if not can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     if activity_id == body.prerequisite_id:
         raise HTTPException(status_code=400, detail="An activity cannot depend on itself")
@@ -718,7 +718,7 @@ def remove_dependency(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_edit_project(user, project):
+    if not can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     activity = db.query(Activity).filter(
         Activity.id == activity_id, Activity.project_id == project_id
@@ -752,7 +752,7 @@ def recalculate(
     project = db.query(Project).get(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not _can_edit_project(user, project):
+    if not can_edit_project(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     recalculate_schedule(db, project)
     db.commit()

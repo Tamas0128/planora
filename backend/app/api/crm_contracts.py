@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,7 +8,12 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
 from app.models_crm import Contract, ContractStatus
-from app.schemas_crm import ContractCreate, ContractResponse, ContractStatusUpdate
+from app.schemas_crm import (
+    ContractCreate,
+    ContractResponse,
+    ContractStatusUpdate,
+    ContractUpdate,
+)
 from app.services.audit import log_change
 from app.services.numbering import next_sequence_number
 from app.services.scoping import scoped_contract_query
@@ -43,6 +49,7 @@ def create_contract(
         start_date=body.start_date,
         end_date=body.end_date,
         status=ContractStatus.DRAFT,
+        value=body.value,
     )
     db.add(contract)
     db.commit()
@@ -76,10 +83,34 @@ def update_contract_status(
         raise HTTPException(status_code=404, detail="Szerződés nem található")
     old_status = contract.status
     contract.status = body.status
+    if body.status == ContractStatus.ACTIVE and contract.signed_at is None:
+        contract.signed_at = datetime.utcnow()
     if old_status != body.status:
         log_change(
             db, user, "contract", "status", old_status.value, body.status.value, None, contract.id
         )
+    db.commit()
+    db.refresh(contract)
+    return contract
+
+
+@router.patch("/{contract_id}", response_model=ContractResponse)
+def update_contract(
+    contract_id: int,
+    body: ContractUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Edit endpoint distinct from /status — mainly for backfilling `value`
+    on contracts created before the sales dashboard added that field."""
+    contract = scoped_contract_query(db, user).filter(Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Szerződés nem található")
+    updates = body.model_dump(exclude_unset=True)
+    for field, new_value in updates.items():
+        setattr(contract, field, new_value)
+    if updates:
+        log_change(db, user, "contract", "edit", None, ",".join(updates.keys()), None, contract.id)
     db.commit()
     db.refresh(contract)
     return contract

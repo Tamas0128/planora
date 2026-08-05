@@ -26,6 +26,12 @@ from app.models_crm import (  # noqa: F401 — register CRM models on Base.metad
     Quote,
     QuoteVersion,
 )
+from app.models_finance import (  # noqa: F401 — register finance models on Base.metadata
+    CustomerInvoice,
+    Partner,
+    SubcontractorInvoice,
+    Tig,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

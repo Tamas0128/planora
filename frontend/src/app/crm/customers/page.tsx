@@ -10,6 +10,7 @@ import {
   CRM_CUSTOMER_STATUS_COLORS,
   CRM_CUSTOMER_STATUS_LABELS,
   CRM_CUSTOMER_TYPE_LABELS,
+  CRM_SOURCE_LABELS,
   CrmCustomer,
   CrmImportRowResult,
   User,
@@ -45,6 +46,7 @@ import {
 
 const TYPE_OPTIONS = Object.entries(CRM_CUSTOMER_TYPE_LABELS) as [string, string][];
 const STATUS_OPTIONS = Object.entries(CRM_CUSTOMER_STATUS_LABELS) as [string, string][];
+const SOURCE_OPTIONS = Object.entries(CRM_SOURCE_LABELS) as [string, string][];
 
 const emptyForm = {
   type: "person",
@@ -54,6 +56,7 @@ const emptyForm = {
   email: "",
   tax_number: "",
   billing_address: "",
+  source: "",
 };
 
 export default function CrmCustomersPage() {
@@ -95,6 +98,7 @@ export default function CrmCustomersPage() {
     try {
       const body: Record<string, unknown> = { type: form.type, name: form.name };
       if (form.owner_id) body.owner_id = Number(form.owner_id);
+      if (form.source) body.source = form.source;
       if (!isPerson) {
         if (form.phone) body.phone = form.phone;
         if (form.email) body.email = form.email;
@@ -300,6 +304,20 @@ export default function CrmCustomersPage() {
                   </div>
                 </>
               )}
+              <div className="space-y-1.5">
+                <Label>Forrás</Label>
+                <Select value={form.source || "none"} onValueChange={(v) => setForm({ ...form, source: v === "none" ? "" : (v as string) })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => (v === "none" ? "Nincs megadva" : CRM_SOURCE_LABELS[v] ?? v)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nincs megadva</SelectItem>
+                    {SOURCE_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={creating}>

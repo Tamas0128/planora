@@ -26,6 +26,7 @@ export interface ProjectCard {
   has_thumbnail: boolean;
   is_favorite: boolean;
   health: string;
+  finance_status: string;
   latitude?: number;
   longitude?: number;
   waiting_deadline?: string;
@@ -53,6 +54,10 @@ export interface ProjectDetail extends ProjectCard {
   billing_name?: string;
   subcontractors?: string;
   status_text?: string;
+  customer_id?: number;
+  contract_net_value?: string;
+  contract_vat_type?: string;
+  contract_gross_value?: string;
   created_at: string;
   updated_at: string;
 }
@@ -222,6 +227,7 @@ export interface CrmCustomer {
   email?: string;
   tax_number?: string;
   billing_address?: string;
+  source?: string;
   created_at: string;
 }
 
@@ -260,7 +266,14 @@ export interface CrmQuote {
   date: string;
   status: string;
   current_version: number;
+  sent_at?: string;
+  value?: string;
   versions: CrmQuoteVersion[];
+}
+
+export interface ValidQuotesSummary {
+  count: number;
+  total_value: string;
 }
 
 export interface ProjectCreationFields {
@@ -280,6 +293,8 @@ export interface CrmContract {
   start_date: string;
   end_date: string;
   status: string;
+  value?: string;
+  signed_at?: string;
 }
 
 export interface CrmCommunicationEvent {
@@ -312,6 +327,52 @@ export interface CrmDashboardStats {
   active_contracts: number;
   expiring_contracts_30d: number;
   pending_quotes: number;
+}
+
+export interface PipelineBucket {
+  status: string;
+  count: number;
+}
+
+export interface SalesDashboardWeekly {
+  week_start: string;
+  week_end: string;
+  contracts_signed_count: number;
+  contracts_signed_value: string;
+  active_customers: number;
+  new_inquiries: number;
+  quotes_sent: number;
+  site_visits: number;
+  pipeline: PipelineBucket[];
+}
+
+export interface TrendPoint {
+  year: number;
+  month: number;
+  contracted_value: string;
+}
+
+export interface SourceBreakdown {
+  source: string | null;
+  count: number;
+}
+
+export interface ConversionFunnel {
+  leads: number;
+  negotiations: number;
+  contracts: number;
+  lead_to_negotiation_pct: number;
+  negotiation_to_contract_pct: number;
+}
+
+export interface SalesDashboardMonthly {
+  month: string;
+  total_contracted_value: string;
+  average_contract_value?: string;
+  average_sales_cycle_days?: number;
+  trend: TrendPoint[];
+  source_breakdown: SourceBreakdown[];
+  funnel: ConversionFunnel;
 }
 
 export interface CrmSearchResult {
@@ -463,6 +524,114 @@ export async function downloadFile(path: string, filename: string): Promise<void
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+export interface Partner {
+  id: number;
+  name: string;
+  tax_number?: string;
+  phone?: string;
+  email?: string;
+  billing_address?: string;
+  created_at: string;
+}
+
+export interface Tig {
+  id: number;
+  project_id: number;
+  partner_id: number;
+  date: string;
+  period_start: string;
+  period_end: string;
+  net_value: string;
+  vat_type: string;
+  gross_value: string;
+  status: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
+  consumed_amount: string;
+  invoice_count: number;
+  project_name?: string;
+  project_code?: string;
+}
+
+export interface SubcontractorInvoice {
+  id: number;
+  project_id: number;
+  partner_id: number;
+  tig_id?: number;
+  invoice_number: string;
+  performance_date: string;
+  issue_date: string;
+  due_date: string;
+  payment_date?: string;
+  net_value: string;
+  vat_type: string;
+  gross_value: string;
+  paid_amount?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  project_name?: string;
+  project_code?: string;
+}
+
+export interface CustomerInvoice {
+  id: number;
+  project_id: number;
+  invoice_number: string;
+  issue_date: string;
+  performance_date: string;
+  due_date: string;
+  payment_received_date?: string;
+  net_value: string;
+  vat_type: string;
+  gross_value: string;
+  paid_amount?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  customer_name?: string;
+  project_name?: string;
+  project_code?: string;
+}
+
+export interface CashFlowSummary {
+  contract_net?: string;
+  contract_gross?: string;
+  invoiced_net: string;
+  invoiced_gross: string;
+  received_gross: string;
+  outstanding_receivable: string;
+  tig_total_net: string;
+  subcontractor_invoiced_gross: string;
+  subcontractor_paid_gross: string;
+  payable_obligations: string;
+  expected_margin?: string;
+  actual_margin: string;
+  cash_flow_balance: string;
+  has_overdue_customer_invoice: boolean;
+  has_overdue_subcontractor_invoice: boolean;
+  overdue_receivable: string;
+  overdue_payable: string;
+}
+
+export interface ProjectFinanceOverviewRow {
+  project_id: number;
+  project_name: string;
+  project_code: string;
+  project_manager_name?: string;
+  customer_name?: string;
+  contract_gross?: string;
+  invoiced_gross: string;
+  received_gross: string;
+  subcontractor_invoiced_gross: string;
+  subcontractor_paid_gross: string;
+  cash_flow_balance: string;
+  overdue_receivable: string;
+  overdue_payable: string;
+  finance_status: string;
 }
 
 export const api = {
@@ -712,11 +881,14 @@ export const api = {
   crmQuotesForCustomer: (customerId: number) =>
     request<CrmQuote[]>(`/crm/quotes?customer_id=${customerId}`),
 
-  createCrmQuote: (customerId: number, contentJson: Record<string, unknown>) =>
+  createCrmQuote: (customerId: number, contentJson: Record<string, unknown>, value?: string) =>
     request<CrmQuote>("/crm/quotes", {
       method: "POST",
-      body: JSON.stringify({ customer_id: customerId, content_json: contentJson }),
+      body: JSON.stringify({ customer_id: customerId, content_json: contentJson, value }),
     }),
+
+  updateCrmQuote: (id: number, data: Record<string, unknown>) =>
+    request<CrmQuote>(`/crm/quotes/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   addCrmQuoteVersion: (id: number, contentJson: Record<string, unknown>) =>
     request<CrmQuote>(`/crm/quotes/${id}/versions`, {
@@ -734,11 +906,12 @@ export const api = {
     quoteId: number,
     startDate: string,
     endDate: string,
-    projectFields?: ProjectCreationFields
+    projectFields?: ProjectCreationFields,
+    value?: string
   ) =>
     request<CrmContract>(`/crm/quotes/${quoteId}/create-contract`, {
       method: "POST",
-      body: JSON.stringify({ start_date: startDate, end_date: endDate, ...projectFields }),
+      body: JSON.stringify({ start_date: startDate, end_date: endDate, value, ...projectFields }),
     }),
 
   crmContractsForCustomer: (customerId: number) =>
@@ -756,6 +929,12 @@ export const api = {
     request<CrmContract>(`/crm/contracts/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status, ...projectFields }),
+    }),
+
+  updateCrmContract: (id: number, data: Record<string, unknown>) =>
+    request<CrmContract>(`/crm/contracts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
     }),
 
   crmCommunications: (customerId: number) =>
@@ -801,6 +980,137 @@ export const api = {
   crmDashboardStats: () => request<CrmDashboardStats>("/crm/dashboard/stats"),
 
   crmSearch: (q: string) => request<CrmSearchResult[]>(`/crm/search?q=${encodeURIComponent(q)}`),
+
+  salesDashboardWeekly: (weekStart?: string) =>
+    request<SalesDashboardWeekly>(
+      `/crm/sales-dashboard/weekly${weekStart ? `?week_start=${weekStart}` : ""}`
+    ),
+
+  salesDashboardMonthly: (month?: string) =>
+    request<SalesDashboardMonthly>(
+      `/crm/sales-dashboard/monthly${month ? `?month=${month}` : ""}`
+    ),
+
+  salesDashboardValidQuotes: () =>
+    request<ValidQuotesSummary>("/crm/sales-dashboard/valid-quotes"),
+
+  financePartners: () => request<Partner[]>("/finance/partners"),
+
+  createFinancePartner: (data: Record<string, unknown>) =>
+    request<Partner>("/finance/partners", { method: "POST", body: JSON.stringify(data) }),
+
+  updateFinancePartner: (id: number, data: Record<string, unknown>) =>
+    request<Partner>(`/finance/partners/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  financeTigs: (projectId: number) =>
+    request<Tig[]>(`/finance/projects/${projectId}/tigs`),
+
+  createFinanceTig: (projectId: number, data: Record<string, unknown>) =>
+    request<Tig>(`/finance/projects/${projectId}/tigs`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateFinanceTig: (projectId: number, tigId: number, data: Record<string, unknown>) =>
+    request<Tig>(`/finance/projects/${projectId}/tigs/${tigId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  updateFinanceTigStatus: (projectId: number, tigId: number, status: string) =>
+    request<Tig>(`/finance/projects/${projectId}/tigs/${tigId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+
+  financeSubcontractorInvoices: (projectId: number) =>
+    request<SubcontractorInvoice[]>(`/finance/projects/${projectId}/subcontractor-invoices`),
+
+  createFinanceSubcontractorInvoice: (projectId: number, data: Record<string, unknown>) =>
+    request<SubcontractorInvoice>(`/finance/projects/${projectId}/subcontractor-invoices`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateFinanceSubcontractorInvoice: (
+    projectId: number,
+    invoiceId: number,
+    data: Record<string, unknown>
+  ) =>
+    request<SubcontractorInvoice>(
+      `/finance/projects/${projectId}/subcontractor-invoices/${invoiceId}`,
+      { method: "PATCH", body: JSON.stringify(data) }
+    ),
+
+  updateFinanceSubcontractorInvoiceStatus: (
+    projectId: number,
+    invoiceId: number,
+    status: string,
+    paidAmount?: string
+  ) =>
+    request<SubcontractorInvoice>(
+      `/finance/projects/${projectId}/subcontractor-invoices/${invoiceId}/status`,
+      { method: "PATCH", body: JSON.stringify({ status, paid_amount: paidAmount }) }
+    ),
+
+  financeCustomerInvoices: (projectId: number) =>
+    request<CustomerInvoice[]>(`/finance/projects/${projectId}/customer-invoices`),
+
+  createFinanceCustomerInvoice: (projectId: number, data: Record<string, unknown>) =>
+    request<CustomerInvoice>(`/finance/projects/${projectId}/customer-invoices`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateFinanceCustomerInvoice: (
+    projectId: number,
+    invoiceId: number,
+    data: Record<string, unknown>
+  ) =>
+    request<CustomerInvoice>(`/finance/projects/${projectId}/customer-invoices/${invoiceId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  updateFinanceCustomerInvoiceStatus: (
+    projectId: number,
+    invoiceId: number,
+    status: string,
+    paidAmount?: string
+  ) =>
+    request<CustomerInvoice>(
+      `/finance/projects/${projectId}/customer-invoices/${invoiceId}/status`,
+      { method: "PATCH", body: JSON.stringify({ status, paid_amount: paidAmount }) }
+    ),
+
+  financeCashFlow: (projectId: number) =>
+    request<CashFlowSummary>(`/finance/projects/${projectId}/cash-flow`),
+
+  updateProjectFinance: (projectId: number, data: Record<string, unknown>) =>
+    request<{ contract_net_value?: string; contract_vat_type?: string; contract_gross_value?: string }>(
+      `/finance/projects/${projectId}`,
+      { method: "PATCH", body: JSON.stringify(data) }
+    ),
+
+  financeOverview: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request<ProjectFinanceOverviewRow[]>(`/finance/overview${qs ? `?${qs}` : ""}`);
+  },
+
+  financeAllTigs: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request<Tig[]>(`/finance/all/tigs${qs ? `?${qs}` : ""}`);
+  },
+
+  financeAllSubcontractorInvoices: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request<SubcontractorInvoice[]>(`/finance/all/subcontractor-invoices${qs ? `?${qs}` : ""}`);
+  },
+
+  financeAllCustomerInvoices: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request<CustomerInvoice[]>(`/finance/all/customer-invoices${qs ? `?${qs}` : ""}`);
+  },
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -889,6 +1199,14 @@ export const CRM_CUSTOMER_STATUS_LABELS: Record<string, string> = {
 
 export const CRM_CUSTOMER_STATUS_ORDER = ["new", "inquiring", "quote_sent", "ordered", "archived"];
 
+export const CRM_SOURCE_LABELS: Record<string, string> = {
+  referral: "Ajánlás",
+  facebook_instagram: "Facebook / Instagram",
+  website_seo: "Weboldal / SEO",
+  other: "Egyéb",
+};
+export const CRM_SOURCE_UNKNOWN_LABEL = "Ismeretlen";
+
 export const CRM_CUSTOMER_STATUS_COLORS: Record<string, string> = {
   new: "bg-neutral-100 text-neutral-700",
   inquiring: "bg-accent-100 text-accent-700",
@@ -958,4 +1276,56 @@ export const DOCUMENTATION_SUBTYPE_LABELS: Record<string, string> = {
   invoice: "Számla",
   plan: "Terv",
   letter_of_intent: "Szándéknyilatkozat",
+};
+
+export const VAT_TYPE_LABELS: Record<string, string> = {
+  standard_27: "27% ÁFA",
+  reduced_5: "5% ÁFA",
+  reverse_charge: "Fordított ÁFA",
+};
+
+export const TIG_STATUS_LABELS: Record<string, string> = {
+  draft: "Tervezet",
+  pending_approval: "Jóváhagyás alatt",
+  approved: "Jóváhagyott",
+  invoiced: "Számlázott",
+  closed: "Lezárt",
+};
+
+export const TIG_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  pending_approval: "bg-warning-bg text-warning-foreground",
+  approved: "bg-accent-100 text-accent-700",
+  invoiced: "bg-accent-200 text-accent-800",
+  closed: "bg-muted text-muted-foreground",
+};
+
+export const SUBCONTRACTOR_INVOICE_STATUS_LABELS: Record<string, string> = {
+  received: "Beérkezett",
+  approved: "Jóváhagyott",
+  awaiting_payment: "Kifizetésre vár",
+  paid: "Kifizetett",
+  overdue: "Lejárt",
+};
+
+export const SUBCONTRACTOR_INVOICE_STATUS_COLORS: Record<string, string> = {
+  received: "bg-muted text-muted-foreground",
+  approved: "bg-accent-100 text-accent-700",
+  awaiting_payment: "bg-warning-bg text-warning-foreground",
+  paid: "bg-accent-200 text-accent-800",
+  overdue: "bg-destructive/10 text-destructive",
+};
+
+export const CUSTOMER_INVOICE_STATUS_LABELS: Record<string, string> = {
+  issued: "Kiállított",
+  partially_paid: "Részben kiegyenlített",
+  paid: "Kiegyenlített",
+  overdue: "Lejárt",
+};
+
+export const CUSTOMER_INVOICE_STATUS_COLORS: Record<string, string> = {
+  issued: "bg-muted text-muted-foreground",
+  partially_paid: "bg-warning-bg text-warning-foreground",
+  paid: "bg-accent-200 text-accent-800",
+  overdue: "bg-destructive/10 text-destructive",
 };
