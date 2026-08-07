@@ -12,10 +12,13 @@ from app.models import Project, User, UserRole
 from app.models_finance import (
     CustomerInvoice,
     CustomerInvoiceStatus,
+    OwnCompany,
     Partner,
+    SubcontractorContract,
     SubcontractorInvoice,
     SubcontractorInvoiceStatus,
     Tig,
+    VatType,
 )
 from app.schemas_finance import (
     CashFlowSummary,
@@ -23,12 +26,19 @@ from app.schemas_finance import (
     CustomerInvoiceResponse,
     CustomerInvoiceStatusUpdate,
     CustomerInvoiceUpdate,
+    OwnCompanyCreate,
+    OwnCompanyResponse,
+    OwnCompanyUpdate,
     PartnerCreate,
     PartnerResponse,
     PartnerUpdate,
     ProjectFinanceOverviewRow,
     ProjectFinanceResponse,
     ProjectFinanceUpdate,
+    SubcontractorContractCreate,
+    SubcontractorContractResponse,
+    SubcontractorContractStatusUpdate,
+    SubcontractorContractUpdate,
     SubcontractorInvoiceCreate,
     SubcontractorInvoiceResponse,
     SubcontractorInvoiceStatusUpdate,
@@ -82,6 +92,37 @@ def _scoped_projects_query(db: Session, user: User):
     elif user.role == UserRole.SITE_MANAGER:
         q = q.filter(Project.site_manager_id == user.id)
     return q
+
+
+def _validate_tig_contract_link(
+    db: Session, project_id: int, partner_id: int, subcontractor_contract_id: Optional[int]
+) -> None:
+    """A TIG's optional subcontractor_contract_id must belong to the same
+    project and partner as the TIG itself — otherwise "Kapcsolódó szerződés
+    száma" on the generated document silently prints an unrelated contract's
+    number. Only the frontend's dropdown filters candidates this way; this
+    is the server-side backstop for direct API calls and for any future
+    frontend bug that resubmits a stale selection.
+    """
+    if subcontractor_contract_id is None:
+        return
+    contract = db.query(SubcontractorContract).get(subcontractor_contract_id)
+    if not contract or contract.project_id != project_id or contract.partner_id != partner_id:
+        raise HTTPException(
+            status_code=422,
+            detail="A kapcsolódó szerződés nem ehhez a projekthez/partnerhez tartozik",
+        )
+
+
+def _validate_value_vat_pair(value: Optional[Decimal], vat_type: Optional[VatType]) -> None:
+    """A SubcontractorContract's value is NET — services/document_generation.py
+    derives the gross figure from value+vat_type via compute_gross, which
+    silently returns None (a blank merge field on the generated document) if
+    vat_type is missing. Since the two fields are independently nullable/
+    updatable, enforce that a set value always carries a vat_type.
+    """
+    if value is not None and vat_type is None:
+        raise HTTPException(status_code=422, detail="Nettó érték megadásakor az ÁFA típus kötelező")
 
 
 def _get_project_or_404(db: Session, project_id: int, user: User) -> Project:
@@ -146,6 +187,62 @@ def update_partner(
     return partner
 
 
+# --- OwnCompany (saját cégadatok — Megrendelő/fővállalkozó) ---------------
+
+
+@router.get("/own-companies", response_model=list[OwnCompanyResponse])
+def list_own_companies(
+    active_only: bool = False,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    # Any authenticated user can read (needed to pick one in the
+    # subcontractor-contract form) — only finance roles can create/edit.
+    q = db.query(OwnCompany)
+    if active_only:
+        q = q.filter(OwnCompany.is_active.is_(True))
+    return q.order_by(OwnCompany.name).all()
+
+
+@router.post("/own-companies", response_model=OwnCompanyResponse)
+def create_own_company(
+    body: OwnCompanyCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _require_finance_role(user)
+    own_company = OwnCompany(**body.model_dump())
+    db.add(own_company)
+    db.commit()
+    db.refresh(own_company)
+    log_change(db, user, "own_company", "created", None, own_company.name, None, own_company.id)
+    db.commit()
+    return own_company
+
+
+@router.patch("/own-companies/{own_company_id}", response_model=OwnCompanyResponse)
+def update_own_company(
+    own_company_id: int,
+    body: OwnCompanyUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _require_finance_role(user)
+    own_company = db.query(OwnCompany).get(own_company_id)
+    if not own_company:
+        raise HTTPException(status_code=404, detail="Cég nem található")
+    updates = body.model_dump(exclude_unset=True)
+    for field_name, value in updates.items():
+        setattr(own_company, field_name, value)
+    if updates:
+        log_change(
+            db, user, "own_company", "edit", None, ",".join(updates.keys()), None, own_company.id
+        )
+    db.commit()
+    db.refresh(own_company)
+    return own_company
+
+
 # --- TIG -----------------------------------------------------------------
 
 
@@ -195,10 +292,12 @@ def create_tig(
     project = _get_project_or_404(db, project_id, user)
     if not _can_edit_tig(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
+    _validate_tig_contract_link(db, project_id, body.partner_id, body.subcontractor_contract_id)
     gross = compute_gross(body.net_value, body.vat_type)
     tig = Tig(
         project_id=project_id,
         partner_id=body.partner_id,
+        subcontractor_contract_id=body.subcontractor_contract_id,
         date=body.date,
         period_start=body.period_start,
         period_end=body.period_end,
@@ -230,6 +329,13 @@ def update_tig(
     if not _can_edit_tig(user, project):
         raise HTTPException(status_code=403, detail="Access denied")
     updates = body.model_dump(exclude_unset=True)
+    if "partner_id" in updates or "subcontractor_contract_id" in updates:
+        _validate_tig_contract_link(
+            db,
+            project_id,
+            updates.get("partner_id", tig.partner_id),
+            updates.get("subcontractor_contract_id", tig.subcontractor_contract_id),
+        )
     for field_name, value in updates.items():
         setattr(tig, field_name, value)
     if "net_value" in updates or "vat_type" in updates:
@@ -396,6 +502,152 @@ def update_subcontractor_invoice_status(
     db.commit()
     db.refresh(invoice)
     return invoice
+
+
+# --- Subcontractor contracts --------------------------------------------------
+# Legal/contractual counterpart to the TIG (elszámolási alap) above — reuses
+# _can_edit_tig's role check as-is (finance role, or the project's own PM).
+
+
+@router.get(
+    "/projects/{project_id}/subcontractor-contracts", response_model=list[SubcontractorContractResponse]
+)
+def list_subcontractor_contracts(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _get_project_or_404(db, project_id, user)
+    return (
+        db.query(SubcontractorContract)
+        .filter(SubcontractorContract.project_id == project_id)
+        .order_by(SubcontractorContract.start_date.desc())
+        .all()
+    )
+
+
+@router.post(
+    "/projects/{project_id}/subcontractor-contracts", response_model=SubcontractorContractResponse
+)
+def create_subcontractor_contract(
+    project_id: int,
+    body: SubcontractorContractCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = _get_project_or_404(db, project_id, user)
+    if not _can_edit_tig(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    _validate_value_vat_pair(body.value, body.vat_type)
+    contract = SubcontractorContract(
+        project_id=project_id,
+        partner_id=body.partner_id,
+        own_company_id=body.own_company_id,
+        contract_number=next_sequence_number(db, SubcontractorContract, "contract_number", "ASZ"),
+        contract_type=body.contract_type,
+        scope_of_work=body.scope_of_work,
+        value=body.value,
+        vat_type=body.vat_type,
+        currency=body.currency,
+        payment_terms_days=body.payment_terms_days,
+        payment_method=body.payment_method,
+        start_date=body.start_date,
+        end_date=body.end_date,
+        effective_date=body.effective_date,
+    )
+    db.add(contract)
+    db.commit()
+    db.refresh(contract)
+    log_change(
+        db, user, "subcontractor_contract", "created", None, contract.contract_number, project_id, contract.id
+    )
+    db.commit()
+    return contract
+
+
+@router.patch(
+    "/projects/{project_id}/subcontractor-contracts/{contract_id}",
+    response_model=SubcontractorContractResponse,
+)
+def update_subcontractor_contract(
+    project_id: int,
+    contract_id: int,
+    body: SubcontractorContractUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = _get_project_or_404(db, project_id, user)
+    contract = (
+        db.query(SubcontractorContract)
+        .filter(SubcontractorContract.id == contract_id, SubcontractorContract.project_id == project_id)
+        .first()
+    )
+    if not contract:
+        raise HTTPException(status_code=404, detail="Szerződés nem található")
+    if not _can_edit_tig(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    updates = body.model_dump(exclude_unset=True)
+    if "value" in updates or "vat_type" in updates:
+        _validate_value_vat_pair(
+            updates.get("value", contract.value), updates.get("vat_type", contract.vat_type)
+        )
+    for field_name, value in updates.items():
+        setattr(contract, field_name, value)
+    if updates:
+        log_change(
+            db,
+            user,
+            "subcontractor_contract",
+            "edit",
+            None,
+            ",".join(updates.keys()),
+            project_id,
+            contract.id,
+        )
+    db.commit()
+    db.refresh(contract)
+    return contract
+
+
+@router.patch(
+    "/projects/{project_id}/subcontractor-contracts/{contract_id}/status",
+    response_model=SubcontractorContractResponse,
+)
+def update_subcontractor_contract_status(
+    project_id: int,
+    contract_id: int,
+    body: SubcontractorContractStatusUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = _get_project_or_404(db, project_id, user)
+    contract = (
+        db.query(SubcontractorContract)
+        .filter(SubcontractorContract.id == contract_id, SubcontractorContract.project_id == project_id)
+        .first()
+    )
+    if not contract:
+        raise HTTPException(status_code=404, detail="Szerződés nem található")
+    if not _can_edit_tig(user, project):
+        raise HTTPException(status_code=403, detail="Access denied")
+    old_status = contract.status
+    contract.status = body.status
+    if body.status == SubcontractorContractStatus.ACTIVE and contract.signed_at is None:
+        contract.signed_at = datetime.utcnow()
+    if old_status != body.status:
+        log_change(
+            db,
+            user,
+            "subcontractor_contract",
+            "status",
+            old_status.value,
+            body.status.value,
+            project_id,
+            contract.id,
+        )
+    db.commit()
+    db.refresh(contract)
+    return contract
 
 
 # --- Customer invoices --------------------------------------------------------

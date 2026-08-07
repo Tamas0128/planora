@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from app.models_finance import (
     CustomerInvoiceStatus,
+    SubcontractorContractStatus,
     SubcontractorInvoiceStatus,
     TigStatus,
     VatType,
@@ -21,6 +22,12 @@ class PartnerCreate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     billing_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
 
 
 class PartnerUpdate(BaseModel):
@@ -29,6 +36,12 @@ class PartnerUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     billing_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
 
 
 class PartnerResponse(BaseModel):
@@ -38,6 +51,63 @@ class PartnerResponse(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     billing_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# --- OwnCompany (Megrendelő/fővállalkozó saját cégadatok) ----------------
+
+
+class OwnCompanyCreate(BaseModel):
+    name: str
+    registered_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    tax_number: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+
+
+class OwnCompanyUpdate(BaseModel):
+    name: Optional[str] = None
+    registered_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    tax_number: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class OwnCompanyResponse(BaseModel):
+    id: int
+    name: str
+    registered_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    tax_number: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    is_active: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -48,6 +118,7 @@ class PartnerResponse(BaseModel):
 
 class TigCreate(BaseModel):
     partner_id: int
+    subcontractor_contract_id: Optional[int] = None
     date: date
     period_start: date
     period_end: date
@@ -58,6 +129,7 @@ class TigCreate(BaseModel):
 
 class TigUpdate(BaseModel):
     partner_id: Optional[int] = None
+    subcontractor_contract_id: Optional[int] = None
     date: Optional[date] = None
     period_start: Optional[date] = None
     period_end: Optional[date] = None
@@ -74,6 +146,7 @@ class TigResponse(BaseModel):
     id: int
     project_id: int
     partner_id: int
+    subcontractor_contract_id: Optional[int] = None
     date: date
     period_start: date
     period_end: date
@@ -201,6 +274,71 @@ class CustomerInvoiceResponse(BaseModel):
     # has no customer_id column of its own (reuses Project.customer_id).
     customer_name: Optional[str] = None
     # Only populated by the cross-project /finance/all/customer-invoices list.
+    project_name: Optional[str] = None
+    project_code: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+# --- SubcontractorContract --------------------------------------------------
+
+
+class SubcontractorContractCreate(BaseModel):
+    partner_id: int
+    own_company_id: Optional[int] = None
+    contract_type: Optional[str] = None
+    scope_of_work: Optional[str] = None
+    value: Optional[Decimal] = None
+    vat_type: Optional[VatType] = None
+    currency: str = "HUF"
+    payment_terms_days: Optional[int] = None
+    payment_method: Optional[str] = None
+    start_date: date
+    end_date: date
+    effective_date: Optional[date] = None
+
+
+class SubcontractorContractUpdate(BaseModel):
+    partner_id: Optional[int] = None
+    own_company_id: Optional[int] = None
+    contract_type: Optional[str] = None
+    scope_of_work: Optional[str] = None
+    value: Optional[Decimal] = None
+    vat_type: Optional[VatType] = None
+    currency: Optional[str] = None
+    payment_terms_days: Optional[int] = None
+    payment_method: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    effective_date: Optional[date] = None
+
+
+class SubcontractorContractStatusUpdate(BaseModel):
+    status: SubcontractorContractStatus
+
+
+class SubcontractorContractResponse(BaseModel):
+    id: int
+    project_id: int
+    partner_id: int
+    own_company_id: Optional[int] = None
+    contract_number: str
+    contract_type: Optional[str] = None
+    scope_of_work: Optional[str] = None
+    value: Optional[Decimal] = None
+    vat_type: Optional[VatType] = None
+    currency: str = "HUF"
+    payment_terms_days: Optional[int] = None
+    payment_method: Optional[str] = None
+    start_date: date
+    end_date: date
+    effective_date: Optional[date] = None
+    status: SubcontractorContractStatus
+    signed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    # Only populated by cross-project listing endpoints, if added later —
+    # left None on the per-project endpoint (mirrors TigResponse/CustomerInvoiceResponse).
     project_name: Optional[str] = None
     project_code: Optional[str] = None
 

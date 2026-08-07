@@ -45,11 +45,19 @@ def create_contract(
     contract = Contract(
         customer_id=body.customer_id,
         quote_id=body.quote_id,
+        own_company_id=body.own_company_id,
         contract_number=next_sequence_number(db, Contract, "contract_number", "SZ"),
+        contract_type=body.contract_type,
         start_date=body.start_date,
         end_date=body.end_date,
+        effective_date=body.effective_date,
         status=ContractStatus.DRAFT,
         value=body.value,
+        net_value_standard=body.net_value_standard,
+        net_value_reduced=body.net_value_reduced,
+        currency=body.currency,
+        payment_due_date=body.payment_due_date,
+        payment_method=body.payment_method,
     )
     db.add(contract)
     db.commit()

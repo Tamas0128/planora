@@ -3,6 +3,8 @@ import os
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
+import io
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -49,6 +51,9 @@ class FakeS3Client:
 
     def put_object(self, Bucket, Key, Body, ContentType=None):
         self.store.setdefault(Bucket, {})[Key] = Body
+
+    def get_object(self, Bucket, Key):
+        return {"Body": io.BytesIO(self.store.get(Bucket, {})[Key])}
 
     def generate_presigned_url(self, operation, Params, ExpiresIn=300):
         return f"http://fake-s3.local/{Params['Bucket']}/{Params['Key']}?expires={ExpiresIn}"

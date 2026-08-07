@@ -29,10 +29,17 @@ import {
   BUILDING_LABELS,
   CashFlowSummary,
   CATEGORY_LABELS,
+  CrmContract,
   CUSTOMER_INVOICE_STATUS_LABELS,
   CustomerInvoice,
+  DocumentTemplate,
+  DOCUMENT_FAMILY_LABELS,
+  OwnCompany,
   DOCUMENTATION_SUBTYPE_LABELS,
   downloadFile,
+  GENERATED_DOCUMENT_STATUS_COLORS,
+  GENERATED_DOCUMENT_STATUS_LABELS,
+  GeneratedDocument,
   getCachedUser,
   Partner,
   ProjectDetail,
@@ -40,9 +47,12 @@ import {
   ProjectPhoto,
   ROLE_LABELS,
   STATUS_LABELS,
+  SUBCONTRACTOR_CONTRACT_STATUS_LABELS,
   SUBCONTRACTOR_INVOICE_STATUS_LABELS,
+  SubcontractorContract,
   SubcontractorInvoice,
   Tig,
+  TIG_DOCUMENT_SUBTYPE_LABELS,
   TIG_STATUS_LABELS,
   User,
   UserBrief,
@@ -164,13 +174,20 @@ function formatHuf(value?: string | number | null): string {
 
 const VAT_TYPE_OPTIONS = Object.entries(VAT_TYPE_LABELS) as [string, string][];
 const TIG_STATUS_OPTIONS = Object.entries(TIG_STATUS_LABELS) as [string, string][];
+const SUBCONTRACTOR_CONTRACT_STATUS_OPTIONS = Object.entries(SUBCONTRACTOR_CONTRACT_STATUS_LABELS) as [string, string][];
+const TIG_DOCUMENT_SUBTYPE_OPTIONS = Object.entries(TIG_DOCUMENT_SUBTYPE_LABELS) as [string, string][];
 const SUBCONTRACTOR_INVOICE_STATUS_OPTIONS = Object.entries(SUBCONTRACTOR_INVOICE_STATUS_LABELS) as [string, string][];
 const CUSTOMER_INVOICE_STATUS_OPTIONS = Object.entries(CUSTOMER_INVOICE_STATUS_LABELS) as [string, string][];
 
 const emptyPartnerForm = { name: "", tax_number: "", phone: "", email: "" };
 const emptyTigForm = {
-  partner_id: "", date: new Date().toISOString().slice(0, 10),
+  partner_id: "", subcontractor_contract_id: "", date: new Date().toISOString().slice(0, 10),
   period_start: "", period_end: "", net_value: "", vat_type: "standard_27", note: "",
+};
+const emptySubcontractorContractForm = {
+  partner_id: "", own_company_id: "", contract_type: "", scope_of_work: "", value: "", vat_type: "standard_27",
+  currency: "HUF", payment_terms_days: "", payment_method: "",
+  start_date: "", end_date: "", effective_date: "",
 };
 const emptySubcontractorInvoiceForm = {
   partner_id: "", tig_id: "none", invoice_number: "",
@@ -485,6 +502,7 @@ export default function ProjectDetailPage() {
   });
 
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [ownCompanies, setOwnCompanies] = useState<OwnCompany[]>([]);
   const [tigs, setTigs] = useState<Tig[]>([]);
   const [subcontractorInvoices, setSubcontractorInvoices] = useState<SubcontractorInvoice[]>([]);
   const [customerInvoices, setCustomerInvoices] = useState<CustomerInvoice[]>([]);
@@ -495,6 +513,18 @@ export default function ProjectDetailPage() {
   const [showNewTig, setShowNewTig] = useState(false);
   const [creatingTig, setCreatingTig] = useState(false);
   const [tigForm, setTigForm] = useState(emptyTigForm);
+  const [subcontractorContracts, setSubcontractorContracts] = useState<SubcontractorContract[]>([]);
+  const [showNewSubContract, setShowNewSubContract] = useState(false);
+  const [creatingSubContract, setCreatingSubContract] = useState(false);
+  const [subContractForm, setSubContractForm] = useState(emptySubcontractorContractForm);
+  const [customerContracts, setCustomerContracts] = useState<CrmContract[]>([]);
+  const [generatedDocuments, setGeneratedDocuments] = useState<GeneratedDocument[]>([]);
+  const [showGenerateDoc, setShowGenerateDoc] = useState(false);
+  const [generatingDoc, setGeneratingDoc] = useState(false);
+  const [generateDocForm, setGenerateDocForm] = useState({
+    family: "tig", source_id: "", doc_subtype: "normal", delay_reason: "", template_id: "",
+  });
+  const [genTemplateOptions, setGenTemplateOptions] = useState<DocumentTemplate[]>([]);
   const [showNewSubInvoice, setShowNewSubInvoice] = useState(false);
   const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
   const [subInvoiceForm, setSubInvoiceForm] = useState(emptySubcontractorInvoiceForm);
@@ -516,6 +546,9 @@ export default function ProjectDetailPage() {
   function loadDocuments() {
     api.documents(id).then(setDocuments).catch(console.error);
   }
+  function loadGeneratedDocuments() {
+    api.projectGeneratedDocuments(id).then(setGeneratedDocuments).catch(() => setGeneratedDocuments([]));
+  }
   function loadPhotos() {
     api.photos(id).then(setPhotos).catch(console.error);
   }
@@ -525,6 +558,7 @@ export default function ProjectDetailPage() {
   function loadFinance() {
     api.financePartners().then(setPartners).catch(() => setPartners([]));
     api.financeTigs(id).then(setTigs).catch(() => setTigs([]));
+    api.financeSubcontractorContracts(id).then(setSubcontractorContracts).catch(() => setSubcontractorContracts([]));
     api.financeSubcontractorInvoices(id).then(setSubcontractorInvoices).catch(() => setSubcontractorInvoices([]));
     api.financeCustomerInvoices(id).then(setCustomerInvoices).catch(() => setCustomerInvoices([]));
     api.financeCashFlow(id).then(setCashFlow).catch(() => setCashFlow(null));
@@ -538,11 +572,46 @@ export default function ProjectDetailPage() {
     loadPhotos();
     loadAuditLog();
     loadFinance();
+    loadGeneratedDocuments();
     api.me().then(setMe).catch(() => setMe(null));
     api.users().then(setUsers).catch(() => setUsers([]));
     api.usersDirectory().then(setAssignableUsers).catch(() => setAssignableUsers([]));
+    api.listOwnCompanies(true).then(setOwnCompanies).catch(() => setOwnCompanies([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Ügyfél-szerződés dokumentumokhoz a CRM Contract lista kell — csak akkor
+  // tölthető, ha a projekthez már van CRM ügyfél kapcsolva. Ha nincs, a
+  // dialog nem enged tetszőleges (más ügyfélhez tartozó) szerződést
+  // választani innen — az a dokumentum project_id nélkül jönne létre, és
+  // soha nem jelenne meg ennek a projektnek a listáján, csak az ügyfél CRM
+  // adatlapján, ami megtévesztő ("elindult, de nem látszik" élmény).
+  useEffect(() => {
+    if (!project?.customer_id) {
+      setCustomerContracts([]);
+      return;
+    }
+    api.crmContractsForCustomer(project.customer_id).then(setCustomerContracts).catch(() => setCustomerContracts([]));
+  }, [project?.customer_id]);
+
+  // A generálás-dialog sablonválasztójához: aktív sablonok a kiválasztott
+  // dokumentumcsaládhoz, hogy a rendszer automatikus (épülettípus/csúszás
+  // alapú) választása helyett kézzel is kijelölhető legyen egy konkrét
+  // sablon (services/document_templates.py::select_template megkerülése).
+  useEffect(() => {
+    if (!showGenerateDoc) return;
+    api.listDocumentTemplates(generateDocForm.family, true).then(setGenTemplateOptions).catch(() => setGenTemplateOptions([]));
+  }, [showGenerateDoc, generateDocForm.family]);
+
+  // Amíg van "pending" státuszú generált dokumentum (PDF-konverzió fut a
+  // háttérben), pár másodpercenként újratöltjük a listát, amíg készen nem
+  // lesz (vagy hiba nem történik).
+  useEffect(() => {
+    if (!generatedDocuments.some((d) => d.status === "pending")) return;
+    const timer = setTimeout(loadGeneratedDocuments, 2000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generatedDocuments]);
 
   const canEdit = me?.role === "admin" || me?.role === "management" || me?.role === "project_manager" || me?.role === "site_manager";
   // Lezárás is a separate, more restricted function than the rest of the
@@ -600,6 +669,7 @@ export default function ProjectDetailPage() {
     try {
       await api.createFinanceTig(id, {
         partner_id: Number(tigForm.partner_id),
+        subcontractor_contract_id: tigForm.subcontractor_contract_id ? Number(tigForm.subcontractor_contract_id) : undefined,
         date: tigForm.date,
         period_start: tigForm.period_start,
         period_end: tigForm.period_end,
@@ -621,6 +691,44 @@ export default function ProjectDetailPage() {
   async function changeTigStatus(tig: Tig, status: string) {
     try {
       await api.updateFinanceTigStatus(id, tig.id, status);
+      loadFinance();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba az állapotváltás során");
+    }
+  }
+
+  async function createSubcontractorContract(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingSubContract(true);
+    try {
+      await api.createFinanceSubcontractorContract(id, {
+        partner_id: Number(subContractForm.partner_id),
+        own_company_id: subContractForm.own_company_id ? Number(subContractForm.own_company_id) : undefined,
+        contract_type: subContractForm.contract_type || undefined,
+        scope_of_work: subContractForm.scope_of_work || undefined,
+        value: subContractForm.value || undefined,
+        vat_type: subContractForm.value ? subContractForm.vat_type : undefined,
+        currency: subContractForm.currency,
+        payment_terms_days: subContractForm.payment_terms_days ? Number(subContractForm.payment_terms_days) : undefined,
+        payment_method: subContractForm.payment_method || undefined,
+        start_date: subContractForm.start_date,
+        end_date: subContractForm.end_date,
+        effective_date: subContractForm.effective_date || undefined,
+      });
+      setShowNewSubContract(false);
+      setSubContractForm(emptySubcontractorContractForm);
+      loadFinance();
+      toast.success("Alvállalkozói szerződés létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingSubContract(false);
+    }
+  }
+
+  async function changeSubcontractorContractStatus(contract: SubcontractorContract, status: string) {
+    try {
+      await api.updateFinanceSubcontractorContractStatus(id, contract.id, status);
       loadFinance();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba az állapotváltás során");
@@ -822,6 +930,65 @@ export default function ProjectDetailPage() {
     try {
       await api.deleteDocument(id, documentId);
       loadDocuments();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
+    }
+  }
+
+  const generateDocSources: { value: string; label: string }[] =
+    generateDocForm.family === "tig"
+      ? tigs.map((t) => ({
+          value: String(t.id),
+          label: `${partners.find((p) => p.id === t.partner_id)?.name ?? `Partner #${t.partner_id}`} · ${new Date(t.date).toLocaleDateString("hu-HU")}`,
+        }))
+      : generateDocForm.family === "subcontractor_contract"
+        ? subcontractorContracts.map((c) => ({
+            value: String(c.id),
+            label: `${partners.find((p) => p.id === c.partner_id)?.name ?? `Partner #${c.partner_id}`} · ${c.contract_number}`,
+          }))
+        : customerContracts.map((c) => ({ value: String(c.id), label: c.contract_number }));
+
+  async function handleGenerateDocument(e: React.FormEvent) {
+    e.preventDefault();
+    setGeneratingDoc(true);
+    try {
+      await api.generateDocument({
+        family: generateDocForm.family,
+        source_id: Number(generateDocForm.source_id),
+        doc_subtype: generateDocForm.family === "tig" ? generateDocForm.doc_subtype : undefined,
+        delay_reason: generateDocForm.delay_reason || undefined,
+        template_id: generateDocForm.template_id ? Number(generateDocForm.template_id) : undefined,
+      });
+      setShowGenerateDoc(false);
+      setGenerateDocForm({ family: "tig", source_id: "", doc_subtype: "normal", delay_reason: "", template_id: "" });
+      loadGeneratedDocuments();
+      toast.success("Dokumentum generálása elindult");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a generálás során");
+    } finally {
+      setGeneratingDoc(false);
+    }
+  }
+
+  async function handleDownloadGeneratedDocument(docId: number, format: "docx" | "pdf") {
+    const tab = window.open("", "_blank");
+    if (!tab) {
+      toast.error("A böngésző blokkolta a felugró ablakot. Engedélyezd a felugró ablakokat ehhez az oldalhoz, majd próbáld újra.");
+      return;
+    }
+    try {
+      const { url } = await api.downloadGeneratedDocument(docId, format);
+      tab.location.href = url;
+    } catch (err) {
+      tab.close();
+      toast.error(err instanceof Error ? err.message : "Hiba a letöltés során");
+    }
+  }
+
+  async function handleDeleteGeneratedDocument(docId: number) {
+    try {
+      await api.deleteGeneratedDocument(docId);
+      loadGeneratedDocuments();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
     }
@@ -1977,7 +2144,158 @@ export default function ProjectDetailPage() {
           </Dialog>
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-3">
+        <TabsContent value="documents" className="mt-3 space-y-4">
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Dokumentum generálás</h3>
+              {canEditTig && (
+                <Button size="sm" variant="outline" onClick={() => setShowGenerateDoc(true)}>
+                  <Plus className="size-3.5" /> Generálás
+                </Button>
+              )}
+            </div>
+            <div className="divide-y divide-border">
+              {generatedDocuments.length === 0 && (
+                <p className="p-2 text-xs text-muted-foreground">Nincs generált dokumentum</p>
+              )}
+              {generatedDocuments.map((doc) => (
+                <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">
+                      {DOCUMENT_FAMILY_LABELS[doc.family] ?? doc.family}
+                      {doc.family === "tig" && ` · ${TIG_DOCUMENT_SUBTYPE_LABELS[doc.doc_subtype] ?? doc.doc_subtype}`}
+                      {" · v"}{doc.version}
+                    </p>
+                    <p className="text-muted-foreground">{new Date(doc.created_at).toLocaleString("hu-HU")}</p>
+                  </div>
+                  <Badge className={cn("text-xs", GENERATED_DOCUMENT_STATUS_COLORS[doc.status])}>
+                    {GENERATED_DOCUMENT_STATUS_LABELS[doc.status] ?? doc.status}
+                  </Badge>
+                  <Button variant="link" className="h-auto p-0" onClick={() => handleDownloadGeneratedDocument(doc.id, "docx")}>
+                    Word
+                  </Button>
+                  <Button
+                    variant="link"
+                    className="h-auto p-0"
+                    disabled={!doc.has_pdf}
+                    onClick={() => handleDownloadGeneratedDocument(doc.id, "pdf")}
+                  >
+                    PDF
+                  </Button>
+                  {me?.role === "admin" && (
+                    <Button variant="link" className="h-auto p-0 text-destructive" onClick={() => handleDeleteGeneratedDocument(doc.id)}>
+                      Törlés
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Dialog open={showGenerateDoc} onOpenChange={setShowGenerateDoc}>
+            <DialogContent>
+              <form onSubmit={handleGenerateDocument}>
+                <DialogHeader><DialogTitle>Dokumentum generálása</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label>Dokumentumcsalád</Label>
+                    <Select
+                      value={generateDocForm.family}
+                      onValueChange={(v) => setGenerateDocForm({ ...generateDocForm, family: v as string, source_id: "", template_id: "" })}
+                    >
+                      <SelectTrigger><SelectValue>{(v: string) => DOCUMENT_FAMILY_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tig">{DOCUMENT_FAMILY_LABELS.tig}</SelectItem>
+                        <SelectItem value="subcontractor_contract">{DOCUMENT_FAMILY_LABELS.subcontractor_contract}</SelectItem>
+                        <SelectItem value="client_contract">{DOCUMENT_FAMILY_LABELS.client_contract}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {generateDocForm.family === "tig" && (
+                    <div className="space-y-1.5">
+                      <Label>Altípus</Label>
+                      <Select value={generateDocForm.doc_subtype} onValueChange={(v) => setGenerateDocForm({ ...generateDocForm, doc_subtype: v as string })}>
+                        <SelectTrigger><SelectValue>{(v: string) => TIG_DOCUMENT_SUBTYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                        <SelectContent>
+                          {TIG_DOCUMENT_SUBTYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {generateDocForm.family === "client_contract" && !project.customer_id ? (
+                    <p className="rounded-md border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
+                      Ehhez a projekthez nincs CRM ügyfél kötve, ezért innen nem generálható ügyfél-szerződés
+                      dokumentum — a projekt itt nem tudná megjeleníteni, mert nincs hozzá kapcsolva. Nyisd meg az
+                      ügyfél CRM adatlapját (Ügyfelek → a szerződés → Szerződések tab), ott a szerződéshez
+                      közvetlenül generálhatod.
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label>Forrás</Label>
+                      <Select value={generateDocForm.source_id} onValueChange={(v) => setGenerateDocForm({ ...generateDocForm, source_id: v as string })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Válasszon rekordot">
+                            {(v: string) => generateDocSources.find((s) => s.value === v)?.label ?? v}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {generateDocSources.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                      {generateDocSources.length === 0 && (
+                        <p className="text-[11px] text-muted-foreground">Nincs ehhez választható rekord.</p>
+                      )}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label>Sablon</Label>
+                    <Select
+                      value={generateDocForm.template_id || "auto"}
+                      onValueChange={(v) => setGenerateDocForm({ ...generateDocForm, template_id: v === "auto" ? "" : (v as string) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue>
+                          {(v: string) =>
+                            v === "auto"
+                              ? "Automatikus (rendszer választja)"
+                              : (genTemplateOptions.find((t) => String(t.id) === v)?.name ?? v)
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Automatikus (rendszer választja)</SelectItem>
+                        {genTemplateOptions.map((t) => (
+                          <SelectItem key={t.id} value={String(t.id)}>
+                            {t.name} · v{t.version}
+                            {t.building_type ? ` · ${BUILDING_LABELS[t.building_type] ?? t.building_type}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">
+                      Automatikus esetén a rendszer épülettípus és csúszás-kockázat alapján választ sablont — itt felülbírálható.
+                    </p>
+                  </div>
+                  {generateDocForm.family === "tig" && generateDocForm.doc_subtype === "normal" && project.delay_risk !== "ok" && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="generate-delay-reason">Csúszás indoklása</Label>
+                      <Textarea
+                        id="generate-delay-reason"
+                        value={generateDocForm.delay_reason}
+                        onChange={(e) => setGenerateDocForm({ ...generateDocForm, delay_reason: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={generatingDoc || !generateDocForm.source_id}>
+                    {generatingDoc ? "Generálás..." : "Generálás"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
           <Card className="py-0">
             <div className="flex items-center justify-between border-b p-3">
               <h3 className="text-[13px] font-semibold">Dokumentumok</h3>
@@ -2395,7 +2713,7 @@ export default function ProjectDetailPage() {
                 <div className="grid gap-3 py-2">
                   <div className="space-y-1.5">
                     <Label>Partner</Label>
-                    <Select value={tigForm.partner_id} onValueChange={(v) => setTigForm({ ...tigForm, partner_id: v as string })}>
+                    <Select value={tigForm.partner_id} onValueChange={(v) => setTigForm({ ...tigForm, partner_id: v as string, subcontractor_contract_id: "" })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Válasszon partnert">
                           {(v: string) => partners.find((p) => String(p.id) === v)?.name ?? v}
@@ -2403,6 +2721,22 @@ export default function ProjectDetailPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {partners.map((p) => (<SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Kapcsolódó szerződés</Label>
+                    <Select value={tigForm.subcontractor_contract_id || "none"} onValueChange={(v) => setTigForm({ ...tigForm, subcontractor_contract_id: v === "none" ? "" : (v as string) })}>
+                      <SelectTrigger>
+                        <SelectValue>
+                          {(v: string) => (v === "none" ? "Nincs (eseti munka)" : subcontractorContracts.find((c) => String(c.id) === v)?.contract_number ?? v)}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nincs (eseti munka)</SelectItem>
+                        {subcontractorContracts
+                          .filter((c) => !tigForm.partner_id || c.partner_id === Number(tigForm.partner_id))
+                          .map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.contract_number}</SelectItem>))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -2440,6 +2774,128 @@ export default function ProjectDetailPage() {
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={creatingTig || !tigForm.partner_id}>{creatingTig ? "Mentés..." : "Létrehozás"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Alvállalkozói szerződések</h3>
+              {canEditTig && (
+                <Button size="sm" variant="outline" onClick={() => setShowNewSubContract(true)} disabled={partners.length === 0}>
+                  <Plus className="size-3.5" /> Új szerződés
+                </Button>
+              )}
+            </div>
+            <div className="divide-y divide-border">
+              {subcontractorContracts.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nincs alvállalkozói szerződés</p>}
+              {subcontractorContracts.map((c) => {
+                const partner = partners.find((p) => p.id === c.partner_id);
+                return (
+                  <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{partner?.name ?? `Partner #${c.partner_id}`} · {c.contract_number}</p>
+                      <p className="text-muted-foreground">
+                        {new Date(c.start_date).toLocaleDateString("hu-HU")} – {new Date(c.end_date).toLocaleDateString("hu-HU")}
+                        {c.value && <>{" · "}{formatHuf(c.value)}</>}
+                      </p>
+                      {c.scope_of_work && <p className="mt-0.5 text-muted-foreground">{c.scope_of_work}</p>}
+                    </div>
+                    <Select value={c.status} onValueChange={(v) => changeSubcontractorContractStatus(c, v as string)} disabled={!canEditTig}>
+                      <SelectTrigger size="sm" className="w-32 shrink-0">
+                        <SelectValue>{(v: string) => SUBCONTRACTOR_CONTRACT_STATUS_LABELS[v] ?? v}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUBCONTRACTOR_CONTRACT_STATUS_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Dialog open={showNewSubContract} onOpenChange={setShowNewSubContract}>
+            <DialogContent>
+              <form onSubmit={createSubcontractorContract}>
+                <DialogHeader><DialogTitle>Új alvállalkozói szerződés</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label>Partner</Label>
+                    <Select value={subContractForm.partner_id} onValueChange={(v) => setSubContractForm({ ...subContractForm, partner_id: v as string })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Válasszon partnert">
+                          {(v: string) => partners.find((p) => String(p.id) === v)?.name ?? v}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {partners.map((p) => (<SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Megrendelő (saját cég)</Label>
+                    <Select value={subContractForm.own_company_id || "none"} onValueChange={(v) => setSubContractForm({ ...subContractForm, own_company_id: v === "none" ? "" : (v as string) })}>
+                      <SelectTrigger>
+                        <SelectValue>{(v: string) => (v === "none" ? "Nincs megadva" : ownCompanies.find((c) => String(c.id) === v)?.name ?? v)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nincs megadva</SelectItem>
+                        {ownCompanies.map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subcontract-type">Szerződés típusa</Label>
+                    <Input id="subcontract-type" value={subContractForm.contract_type} onChange={(e) => setSubContractForm({ ...subContractForm, contract_type: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subcontract-scope">A szerződés tárgya</Label>
+                    <Textarea id="subcontract-scope" value={subContractForm.scope_of_work} onChange={(e) => setSubContractForm({ ...subContractForm, scope_of_work: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-start">Kezdete</Label>
+                      <Input id="subcontract-start" type="date" required value={subContractForm.start_date} onChange={(e) => setSubContractForm({ ...subContractForm, start_date: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-end">Vége</Label>
+                      <Input id="subcontract-end" type="date" required value={subContractForm.end_date} onChange={(e) => setSubContractForm({ ...subContractForm, end_date: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-effective">Hatálybalépés</Label>
+                      <Input id="subcontract-effective" type="date" value={subContractForm.effective_date} onChange={(e) => setSubContractForm({ ...subContractForm, effective_date: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subcontract-value">Nettó szerződéses érték (Ft)</Label>
+                    <Input id="subcontract-value" type="number" min="0" step="1" value={subContractForm.value} onChange={(e) => setSubContractForm({ ...subContractForm, value: e.target.value })} />
+                  </div>
+                  {subContractForm.value && (
+                    <div className="space-y-1.5">
+                      <Label>ÁFA típus</Label>
+                      <Select value={subContractForm.vat_type} onValueChange={(v) => setSubContractForm({ ...subContractForm, vat_type: v as string })}>
+                        <SelectTrigger><SelectValue>{(v: string) => VAT_TYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                        <SelectContent>
+                          {VAT_TYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-payment-days">Fizetési határidő (nap)</Label>
+                      <Input id="subcontract-payment-days" type="number" min="0" step="1" value={subContractForm.payment_terms_days} onChange={(e) => setSubContractForm({ ...subContractForm, payment_terms_days: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-payment-method">Fizetési mód</Label>
+                      <Input id="subcontract-payment-method" value={subContractForm.payment_method} onChange={(e) => setSubContractForm({ ...subContractForm, payment_method: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creatingSubContract || !subContractForm.partner_id}>{creatingSubContract ? "Mentés..." : "Létrehozás"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>

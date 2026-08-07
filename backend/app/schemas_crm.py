@@ -27,6 +27,12 @@ class CustomerCreate(BaseModel):
     email: Optional[str] = None
     tax_number: Optional[str] = None
     billing_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
     source: Optional[SourceType] = None
     confirm_duplicate: bool = False
 
@@ -59,6 +65,12 @@ class CustomerUpdate(ProjectCreationFields):
     email: Optional[str] = None
     tax_number: Optional[str] = None
     billing_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
     source: Optional[SourceType] = None
 
 
@@ -74,6 +86,12 @@ class CustomerResponse(BaseModel):
     email: Optional[str] = None
     tax_number: Optional[str] = None
     billing_address: Optional[str] = None
+    mailing_address: Optional[str] = None
+    company_registry_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    representative_title: Optional[str] = None
+    contact_name: Optional[str] = None
     source: Optional[SourceType] = None
     created_at: datetime
 
@@ -164,9 +182,17 @@ class QuoteResponse(BaseModel):
 class ContractCreate(BaseModel):
     customer_id: int
     quote_id: Optional[int] = None
+    own_company_id: Optional[int] = None
+    contract_type: Optional[str] = None
     start_date: date
     end_date: date
+    effective_date: Optional[date] = None
     value: Optional[Decimal] = None
+    net_value_standard: Optional[Decimal] = None
+    net_value_reduced: Optional[Decimal] = None
+    currency: str = "HUF"
+    payment_due_date: Optional[date] = None
+    payment_method: Optional[str] = None
 
 
 class ContractFromQuoteBody(BaseModel):
@@ -184,20 +210,36 @@ class ContractUpdate(BaseModel):
     fields) be backfilled after creation, e.g. for contracts predating the
     sales-dashboard's value field (2026-08-04)."""
 
+    own_company_id: Optional[int] = None
+    contract_type: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    effective_date: Optional[date] = None
     value: Optional[Decimal] = None
+    net_value_standard: Optional[Decimal] = None
+    net_value_reduced: Optional[Decimal] = None
+    currency: Optional[str] = None
+    payment_due_date: Optional[date] = None
+    payment_method: Optional[str] = None
 
 
 class ContractResponse(BaseModel):
     id: int
     customer_id: int
     quote_id: Optional[int] = None
+    own_company_id: Optional[int] = None
     contract_number: str
+    contract_type: Optional[str] = None
     start_date: date
     end_date: date
+    effective_date: Optional[date] = None
     status: ContractStatus
     value: Optional[Decimal] = None
+    net_value_standard: Optional[Decimal] = None
+    net_value_reduced: Optional[Decimal] = None
+    currency: str = "HUF"
+    payment_due_date: Optional[date] = None
+    payment_method: Optional[str] = None
     signed_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
