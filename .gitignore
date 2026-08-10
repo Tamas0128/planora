@@ -44,3 +44,4 @@ postgres_data/
 # Docx extract temp
 _docx_extract/
 _spec.zip
+backend/tmp_templates/

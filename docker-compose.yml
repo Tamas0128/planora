@@ -14,6 +14,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   minio:
     image: minio/minio:latest
@@ -57,6 +58,12 @@ services:
         condition: service_started
       mailpit:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
 
   postgres-backup:
     image: prodrigestivill/postgres-backup-local:16
@@ -76,6 +83,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
 
   minio-backup:
     build: ./infra/minio-backup
@@ -97,15 +105,19 @@ services:
       args:
         BACKEND_INTERNAL_URL: http://backend:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3001:3000"
+    restart: unless-stopped
 
   nginx:
     build: ./infra/nginx
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
     # No 80:80/443:443 here on purpose — those collide with whatever else on
     # the host already owns the bare ports (e.g. an unrelated project's
     # container), which used to make `docker compose up` fail outright and
@@ -115,6 +127,7 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
+    restart: unless-stopped
 
   https-local:
     image: caddy:2-alpine
