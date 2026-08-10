@@ -78,7 +78,102 @@ function formatHuf(value?: string): string {
 }
 const emptyCommForm = { type: "phone", date: new Date().toISOString().slice(0, 10), summary: "" };
 const emptyTaskForm = { name: "", due_date: "", priority: "normal", owner_id: "" };
-const emptyQuoteContent = '{\n  "items": []\n}';
+
+type QuoteItemRow = { description: string; quantity: string; unit: string; unit_price: string };
+function emptyQuoteItemRow(): QuoteItemRow {
+  return { description: "", quantity: "1", unit: "db", unit_price: "" };
+}
+function quoteItemsToContentJson(items: QuoteItemRow[]): Record<string, unknown> {
+  const cleaned = items
+    .filter((it) => it.description.trim() || Number(it.unit_price))
+    .map((it) => ({
+      description: it.description,
+      quantity: Number(it.quantity) || 0,
+      unit: it.unit,
+      unit_price: Number(it.unit_price) || 0,
+    }));
+  return { items: cleaned };
+}
+function quoteItemsFromContentJson(content: Record<string, unknown> | undefined): QuoteItemRow[] {
+  const rawItems = Array.isArray(content?.items) ? (content!.items as unknown[]) : [];
+  if (rawItems.length === 0) return [emptyQuoteItemRow()];
+  return rawItems.map((raw) => {
+    const o = (raw ?? {}) as Record<string, unknown>;
+    return {
+      description: typeof o.description === "string" ? o.description : "",
+      quantity: o.quantity !== undefined && o.quantity !== null ? String(o.quantity) : "1",
+      unit: typeof o.unit === "string" ? o.unit : "db",
+      unit_price: o.unit_price !== undefined && o.unit_price !== null ? String(o.unit_price) : "",
+    };
+  });
+}
+function quoteItemLineTotal(it: QuoteItemRow): number {
+  return (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+}
+function quoteItemsTotal(items: QuoteItemRow[]): number {
+  return items.reduce((sum, it) => sum + quoteItemLineTotal(it), 0);
+}
+
+function QuoteItemsEditor({
+  items,
+  onChange,
+  onUseTotal,
+}: {
+  items: QuoteItemRow[];
+  onChange: (items: QuoteItemRow[]) => void;
+  onUseTotal?: (total: number) => void;
+}) {
+  function updateItem(idx: number, patch: Partial<QuoteItemRow>) {
+    onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  }
+  function removeItem(idx: number) {
+    onChange(items.filter((_, i) => i !== idx));
+  }
+  const total = quoteItemsTotal(items);
+  return (
+    <div className="space-y-2">
+      <Label>Tételek</Label>
+      <div className="space-y-2">
+        {items.map((it, idx) => (
+          <div key={idx} className="grid grid-cols-[1fr_64px_64px_100px_auto] items-end gap-2">
+            <div className="space-y-1">
+              {idx === 0 && <span className="text-[11px] text-muted-foreground">Megnevezés</span>}
+              <Input value={it.description} onChange={(e) => updateItem(idx, { description: e.target.value })} placeholder="Megnevezés" />
+            </div>
+            <div className="space-y-1">
+              {idx === 0 && <span className="text-[11px] text-muted-foreground">Menny.</span>}
+              <Input type="number" min="0" step="1" value={it.quantity} onChange={(e) => updateItem(idx, { quantity: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              {idx === 0 && <span className="text-[11px] text-muted-foreground">Egység</span>}
+              <Input value={it.unit} onChange={(e) => updateItem(idx, { unit: e.target.value })} placeholder="db" />
+            </div>
+            <div className="space-y-1">
+              {idx === 0 && <span className="text-[11px] text-muted-foreground">Egységár (Ft)</span>}
+              <Input type="number" min="0" step="1" value={it.unit_price} onChange={(e) => updateItem(idx, { unit_price: e.target.value })} />
+            </div>
+            <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeItem(idx)}>
+              Törlés
+            </Button>
+          </div>
+        ))}
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...items, emptyQuoteItemRow()])}>
+        + Tétel hozzáadása
+      </Button>
+      {total > 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          Tételek összesen: {fmtAmount(total, "Ft")}
+          {onUseTotal && (
+            <Button type="button" variant="link" className="h-auto p-0 pl-2 text-[11px]" onClick={() => onUseTotal(total)}>
+              Átvétel az ajánlat értékébe
+            </Button>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
 
 // Local form state keeps every field as a string (controlled inputs) —
 // converted to ProjectCreationFields' typed shape only at submit time.
@@ -168,14 +263,14 @@ export default function CrmCustomerDetailPage() {
 
   const [quotes, setQuotes] = useState<CrmQuote[]>([]);
   const [showNewQuote, setShowNewQuote] = useState(false);
-  const [newQuoteContent, setNewQuoteContent] = useState(emptyQuoteContent);
+  const [newQuoteItems, setNewQuoteItems] = useState<QuoteItemRow[]>([emptyQuoteItemRow()]);
   const [newQuoteValue, setNewQuoteValue] = useState("");
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [valueDialogQuote, setValueDialogQuote] = useState<CrmQuote | null>(null);
   const [quoteValueForm, setQuoteValueForm] = useState("");
   const [savingQuoteValue, setSavingQuoteValue] = useState(false);
   const [versionDialogQuote, setVersionDialogQuote] = useState<CrmQuote | null>(null);
-  const [versionContent, setVersionContent] = useState(emptyQuoteContent);
+  const [versionItems, setVersionItems] = useState<QuoteItemRow[]>([emptyQuoteItemRow()]);
   const [savingVersion, setSavingVersion] = useState(false);
   const [contractDialogQuote, setContractDialogQuote] = useState<CrmQuote | null>(null);
   const [contractFromQuoteForm, setContractFromQuoteForm] = useState(emptyContractForm);
@@ -496,18 +591,12 @@ export default function CrmCustomerDetailPage() {
 
   async function createQuote(e: React.FormEvent) {
     e.preventDefault();
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(newQuoteContent);
-    } catch {
-      toast.error("Érvénytelen JSON az ajánlat tartalmában");
-      return;
-    }
+    const parsed = quoteItemsToContentJson(newQuoteItems);
     setCreatingQuote(true);
     try {
       await api.createCrmQuote(customerId, parsed, newQuoteValue || undefined);
       setShowNewQuote(false);
-      setNewQuoteContent(emptyQuoteContent);
+      setNewQuoteItems([emptyQuoteItemRow()]);
       setNewQuoteValue("");
       load();
       toast.success("Ajánlat létrehozva");
@@ -551,13 +640,7 @@ export default function CrmCustomerDetailPage() {
   async function addQuoteVersion(e: React.FormEvent) {
     e.preventDefault();
     if (!versionDialogQuote) return;
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(versionContent);
-    } catch {
-      toast.error("Érvénytelen JSON");
-      return;
-    }
+    const parsed = quoteItemsToContentJson(versionItems);
     setSavingVersion(true);
     try {
       await api.addCrmQuoteVersion(versionDialogQuote.id, parsed);
@@ -957,7 +1040,15 @@ export default function CrmCustomerDetailPage() {
 
         <TabsContent value="quotes" className="mt-4">
           <div className="mb-3">
-            <Button onClick={() => setShowNewQuote(true)}>Új ajánlat</Button>
+            <Button
+              onClick={() => {
+                setNewQuoteItems([emptyQuoteItemRow()]);
+                setNewQuoteValue("");
+                setShowNewQuote(true);
+              }}
+            >
+              Új ajánlat
+            </Button>
           </div>
 
           <Dialog open={showNewQuote} onOpenChange={setShowNewQuote}>
@@ -967,10 +1058,11 @@ export default function CrmCustomerDetailPage() {
                   <DialogTitle>Új ajánlat</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-3 py-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="quote-content">Tartalom (JSON)</Label>
-                    <Textarea id="quote-content" rows={6} value={newQuoteContent} onChange={(e) => setNewQuoteContent(e.target.value)} />
-                  </div>
+                  <QuoteItemsEditor
+                    items={newQuoteItems}
+                    onChange={setNewQuoteItems}
+                    onUseTotal={(total) => setNewQuoteValue(String(Math.round(total)))}
+                  />
                   <div className="space-y-1.5">
                     <Label htmlFor="quote-value">Ajánlat értéke (Ft)</Label>
                     <Input id="quote-value" type="number" min="0" step="1" value={newQuoteValue} onChange={(e) => setNewQuoteValue(e.target.value)} />
@@ -1009,10 +1101,7 @@ export default function CrmCustomerDetailPage() {
                   <DialogTitle>Új verzió — {versionDialogQuote?.quote_number}</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-3 py-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="version-content">Tartalom (JSON)</Label>
-                    <Textarea id="version-content" rows={6} value={versionContent} onChange={(e) => setVersionContent(e.target.value)} />
-                  </div>
+                  <QuoteItemsEditor items={versionItems} onChange={setVersionItems} />
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={savingVersion}>{savingVersion ? "Mentés..." : "Mentés"}</Button>
@@ -1065,7 +1154,7 @@ export default function CrmCustomerDetailPage() {
                 >
                   {q.value ? formatHuf(q.value) : "Érték megadása"}
                 </Button>
-                <Button variant="link" className="h-auto shrink-0 p-0" onClick={() => { setVersionDialogQuote(q); setVersionContent(JSON.stringify(q.versions[q.versions.length - 1]?.content_json ?? {}, null, 2)); }}>
+                <Button variant="link" className="h-auto shrink-0 p-0" onClick={() => { setVersionDialogQuote(q); setVersionItems(quoteItemsFromContentJson(q.versions[q.versions.length - 1]?.content_json)); }}>
                   Új verzió
                 </Button>
                 <Select value={q.status} onValueChange={(v) => changeQuoteStatus(q, v as string)}>
