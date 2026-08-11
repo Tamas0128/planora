@@ -664,6 +664,8 @@ export interface DocumentTemplate {
   family: string;
   doc_subtype: string;
   building_type?: string;
+  currency?: string;
+  is_electronic: boolean;
   is_delay_variant: boolean;
   name: string;
   input_schema?: string;
@@ -1249,6 +1251,8 @@ export const api = {
     family: string;
     doc_subtype: string;
     building_type?: string;
+    currency?: string;
+    is_electronic: boolean;
     is_delay_variant: boolean;
     name: string;
     file: File;
@@ -1257,6 +1261,8 @@ export const api = {
     formData.append("family", data.family);
     formData.append("doc_subtype", data.doc_subtype);
     if (data.building_type) formData.append("building_type", data.building_type);
+    if (data.currency) formData.append("currency", data.currency);
+    formData.append("is_electronic", String(data.is_electronic));
     formData.append("is_delay_variant", String(data.is_delay_variant));
     formData.append("name", data.name);
     formData.append("file", data.file);
@@ -1274,6 +1280,7 @@ export const api = {
     source_id: number;
     doc_subtype?: string;
     delay_reason?: string;
+    is_electronic?: boolean;
     template_id?: number;
   }) =>
     request<GeneratedDocument>("/generated-documents", { method: "POST", body: JSON.stringify(data) }),
@@ -1523,8 +1530,10 @@ export const DOCUMENT_FAMILY_LABELS: Record<string, string> = {
 
 export const TIG_DOCUMENT_SUBTYPE_LABELS: Record<string, string> = {
   normal: "Normál",
-  helyesbito: "Helyesbítő",
+  helyesbito: "Helyesbítő / módosítási",
   potmunka: "Pótmunka",
+  torlesi: "Törlési",
+  utolagos: "Utólagos",
 };
 
 export const GENERATED_DOCUMENT_STATUS_LABELS: Record<string, string> = {

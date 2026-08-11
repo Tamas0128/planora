@@ -42,6 +42,8 @@ class TigDocumentSubtype(str, enum.Enum):
     NORMAL = "normal"
     HELYESBITO = "helyesbito"
     POTMUNKA = "potmunka"
+    TORLESI = "torlesi"
+    UTOLAGOS = "utolagos"
 
 
 class GeneratedDocumentStatus(str, enum.Enum):
@@ -58,8 +60,10 @@ DOCUMENT_FAMILY_LABELS = {
 
 TIG_DOCUMENT_SUBTYPE_LABELS = {
     TigDocumentSubtype.NORMAL: "Normál",
-    TigDocumentSubtype.HELYESBITO: "Helyesbítő",
+    TigDocumentSubtype.HELYESBITO: "Helyesbítő / módosítási",
     TigDocumentSubtype.POTMUNKA: "Pótmunka",
+    TigDocumentSubtype.TORLESI: "Törlési",
+    TigDocumentSubtype.UTOLAGOS: "Utólagos",
 }
 
 
@@ -73,6 +77,15 @@ class DocumentTemplate(Base):
     )
     # NULL = catch-all, matches any building type (select_template's fallback).
     building_type: Mapped[BuildingType | None] = mapped_column(Enum(BuildingType), nullable=True)
+    # "HUF"/"EUR" — only meaningful for CLIENT_CONTRACT/SUBCONTRACTOR_CONTRACT
+    # (matches Contract.currency/SubcontractorContract.currency). NULL =
+    # catch-all, same fallback semantics as building_type.
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    # Paper vs. e-signature-ready wording — meaningful for
+    # SUBCONTRACTOR_CONTRACT and TIG. Not derived from any stored data (no
+    # "is this document electronic" flag on Contract/Tig); the caller
+    # chooses it explicitly at generation time.
+    is_electronic: Mapped[bool] = mapped_column(Boolean, default=False)
     # Only meaningful for family=TIG, doc_subtype=NORMAL: a template flagged
     # here is preferred over its non-delay counterpart when
     # services.health.predict_delay_risk reports active risk on the project

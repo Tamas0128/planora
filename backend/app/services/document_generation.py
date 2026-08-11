@@ -213,6 +213,7 @@ def build_tig_context(project: Project, tig: Tig, delay_reason: str | None) -> d
         "TIG_IDOSZAK_VEGE": _fmt_date(tig.period_end),
         "TIG_OSSZEG_NETTO": str(tig.net_value),
         "TIG_OSSZEG_BRUTTO": str(tig.gross_value),
+        "TIG_MEGJEGYZES": tig.note or "",
         # --- Dokumentum adatai ---
         "TIG_SZAM": f"TIG-{tig.id:04d}",
         "KAPCSOLODO_SZERZODES_SZAM": sc_contract.contract_number if sc_contract else "",

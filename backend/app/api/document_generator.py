@@ -88,6 +88,8 @@ async def create_document_template(
     family: DocumentFamily = Form(...),
     doc_subtype: TigDocumentSubtype = Form(TigDocumentSubtype.NORMAL),
     building_type: Optional[BuildingType] = Form(None),
+    currency: Optional[str] = Form(None),
+    is_electronic: bool = Form(False),
     is_delay_variant: bool = Form(False),
     name: str = Form(...),
     input_schema: Optional[str] = Form(None),
@@ -118,6 +120,8 @@ async def create_document_template(
             DocumentTemplate.family == family,
             DocumentTemplate.doc_subtype == doc_subtype,
             DocumentTemplate.building_type == building_type,
+            DocumentTemplate.currency == currency,
+            DocumentTemplate.is_electronic == is_electronic,
             DocumentTemplate.is_delay_variant == is_delay_variant,
         )
         .order_by(DocumentTemplate.version.desc())
@@ -127,6 +131,8 @@ async def create_document_template(
         family=family,
         doc_subtype=doc_subtype,
         building_type=building_type,
+        currency=currency,
+        is_electronic=is_electronic,
         is_delay_variant=is_delay_variant,
         name=name,
         input_schema=input_schema,
@@ -215,6 +221,7 @@ def generate_document(
 ):
     project: Optional[Project] = None
     building_type: Optional[BuildingType] = None
+    currency: Optional[str] = None
     doc_subtype = TigDocumentSubtype.NORMAL
     delay_reason = None
     context: dict
@@ -258,6 +265,7 @@ def generate_document(
         if not _can_generate_for_project(user, project):
             raise HTTPException(status_code=403, detail="Access denied")
         building_type = project.building_type
+        currency = sc_contract.currency
         context = build_subcontractor_contract_context(sc_contract, sc_contract.partner, project)
 
     elif body.family == DocumentFamily.CLIENT_CONTRACT:
@@ -281,14 +289,27 @@ def generate_document(
             .first()
         )
         building_type = project.building_type if project else None
+        currency = contract.currency
         context = build_client_contract_context(contract, customer, project)
 
     else:
         raise HTTPException(status_code=400, detail="Ismeretlen dokumentumcsalád")
 
+    # Who's generating it — same two merge fields regardless of family,
+    # mainly for the "Jóváhagyó" block on electronic-variant templates.
+    context["GENERALO_NEV"] = user.full_name
+    context["GENERALO_EMAIL"] = user.email
+
     try:
         template = select_template(
-            db, body.family, doc_subtype, building_type, project, override_template_id=body.template_id
+            db,
+            body.family,
+            doc_subtype,
+            building_type,
+            project,
+            currency=currency,
+            is_electronic=body.is_electronic,
+            override_template_id=body.template_id,
         )
     except TemplateNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
