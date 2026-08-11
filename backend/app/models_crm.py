@@ -243,9 +243,8 @@ class QuoteVersion(Base):
         ForeignKey("quotes.id", ondelete="CASCADE"), index=True
     )
     version: Mapped[int] = mapped_column(Integer)
-    # Unused (always {}) — quote content is now a required file attachment
-    # (CrmDocument, entity_type="quote"), not structured JSON. Column kept
-    # NOT NULL rather than migrated away to avoid a schema change.
+    # Structured line items/terms, rendered natively by the frontend — no
+    # backend PDF generation (dev plan 0/4, 2.6).
     content_json: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))

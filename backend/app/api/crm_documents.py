@@ -19,50 +19,6 @@ ALLOWED_EXTENSIONS = {".pdf", ".dwg", ".xlsx", ".docx", ".jpg", ".jpeg", ".png"}
 S3_PREFIX = "crm"
 
 
-async def store_and_link_document(
-    db: Session,
-    user: User,
-    file: UploadFile,
-    entity_type: str,
-    entity_id: int,
-    document_type: CrmDocumentType,
-) -> CrmDocument:
-    """Shared upload+link path for both the standalone /crm/documents upload
-    endpoint and entity-creation endpoints (quotes, contracts) that require a
-    file attachment as part of creation, not as a separate follow-up step.
-    """
-    ext = "." + file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else ""
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"File type not allowed: {ext}")
-    content = await file.read()
-    if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
-
-    documents_api.ensure_bucket()
-    key = f"{S3_PREFIX}/{entity_type}/{entity_id}/{uuid.uuid4()}{ext}"
-    client = documents_api.get_s3_client()
-    client.put_object(
-        Bucket=settings.s3_bucket,
-        Key=key,
-        Body=content,
-        ContentType=file.content_type or "application/octet-stream",
-    )
-
-    doc = CrmDocument(
-        filename=key.split("/")[-1],
-        original_filename=file.filename or "unknown",
-        content_type=file.content_type or "application/octet-stream",
-        file_size=len(content),
-        s3_key=key,
-        document_type=document_type,
-        uploaded_by_id=user.id,
-    )
-    db.add(doc)
-    db.flush()
-    db.add(CrmDocumentLink(document_id=doc.id, entity_type=entity_type, entity_id=entity_id))
-    return doc
-
-
 @router.get("", response_model=list[CrmDocumentResponse])
 def list_documents(
     entity_type: str,
@@ -92,7 +48,35 @@ async def upload_document(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    doc = await store_and_link_document(db, user, file, entity_type, entity_id, document_type)
+    ext = "." + file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"File type not allowed: {ext}")
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
+
+    documents_api.ensure_bucket()
+    key = f"{S3_PREFIX}/{entity_type}/{entity_id}/{uuid.uuid4()}{ext}"
+    client = documents_api.get_s3_client()
+    client.put_object(
+        Bucket=settings.s3_bucket,
+        Key=key,
+        Body=content,
+        ContentType=file.content_type or "application/octet-stream",
+    )
+
+    doc = CrmDocument(
+        filename=key.split("/")[-1],
+        original_filename=file.filename or "unknown",
+        content_type=file.content_type or "application/octet-stream",
+        file_size=len(content),
+        s3_key=key,
+        document_type=document_type,
+        uploaded_by_id=user.id,
+    )
+    db.add(doc)
+    db.flush()
+    db.add(CrmDocumentLink(document_id=doc.id, entity_type=entity_type, entity_id=entity_id))
     db.commit()
     db.refresh(doc)
     return doc

@@ -120,12 +120,7 @@ def create_customer(client, headers, **overrides):
 def create_contract(client, headers, customer_id, **overrides):
     body = {"customer_id": customer_id, "start_date": "2026-07-01", "end_date": "2027-07-01", "value": "10000000"}
     body.update(overrides)
-    resp = client.post(
-        "/api/crm/contracts",
-        data={k: str(v) for k, v in body.items()},
-        files={"file": ("contract.pdf", io.BytesIO(b"contract content"), "application/pdf")},
-        headers=headers,
-    )
+    resp = client.post("/api/crm/contracts", json=body, headers=headers)
     assert resp.status_code == 200, resp.text
     return resp.json()
 

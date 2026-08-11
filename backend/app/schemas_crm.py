@@ -134,6 +134,10 @@ class CustomerImportResult(BaseModel):
 # --- Quote / Contract ------------------------------------------------------
 
 
+class QuoteVersionCreate(BaseModel):
+    content_json: dict
+
+
 class QuoteVersionResponse(BaseModel):
     id: int
     version: int
@@ -142,6 +146,12 @@ class QuoteVersionResponse(BaseModel):
     created_by_id: int
 
     model_config = {"from_attributes": True}
+
+
+class QuoteCreate(BaseModel):
+    customer_id: int
+    content_json: dict
+    value: Optional[Decimal] = None
 
 
 class QuoteUpdate(BaseModel):
@@ -167,6 +177,28 @@ class QuoteResponse(BaseModel):
     versions: list[QuoteVersionResponse] = []
 
     model_config = {"from_attributes": True}
+
+
+class ContractCreate(BaseModel):
+    customer_id: int
+    quote_id: Optional[int] = None
+    own_company_id: Optional[int] = None
+    contract_type: Optional[str] = None
+    start_date: date
+    end_date: date
+    effective_date: Optional[date] = None
+    value: Optional[Decimal] = None
+    net_value_standard: Optional[Decimal] = None
+    net_value_reduced: Optional[Decimal] = None
+    currency: str = "HUF"
+    payment_due_date: Optional[date] = None
+    payment_method: Optional[str] = None
+
+
+class ContractFromQuoteBody(BaseModel):
+    start_date: date
+    end_date: date
+    value: Optional[Decimal] = None
 
 
 class ContractStatusUpdate(BaseModel):

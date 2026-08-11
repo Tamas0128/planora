@@ -79,6 +79,102 @@ function formatHuf(value?: string): string {
 const emptyCommForm = { type: "phone", date: new Date().toISOString().slice(0, 10), summary: "" };
 const emptyTaskForm = { name: "", due_date: "", priority: "normal", owner_id: "" };
 
+type QuoteItemRow = { description: string; quantity: string; unit: string; unit_price: string };
+function emptyQuoteItemRow(): QuoteItemRow {
+  return { description: "", quantity: "1", unit: "db", unit_price: "" };
+}
+function quoteItemsToContentJson(items: QuoteItemRow[]): Record<string, unknown> {
+  const cleaned = items
+    .filter((it) => it.description.trim() || Number(it.unit_price))
+    .map((it) => ({
+      description: it.description,
+      quantity: Number(it.quantity) || 0,
+      unit: it.unit,
+      unit_price: Number(it.unit_price) || 0,
+    }));
+  return { items: cleaned };
+}
+function quoteItemsFromContentJson(content: Record<string, unknown> | undefined): QuoteItemRow[] {
+  const rawItems = Array.isArray(content?.items) ? (content!.items as unknown[]) : [];
+  if (rawItems.length === 0) return [emptyQuoteItemRow()];
+  return rawItems.map((raw) => {
+    const o = (raw ?? {}) as Record<string, unknown>;
+    return {
+      description: typeof o.description === "string" ? o.description : "",
+      quantity: o.quantity !== undefined && o.quantity !== null ? String(o.quantity) : "1",
+      unit: typeof o.unit === "string" ? o.unit : "db",
+      unit_price: o.unit_price !== undefined && o.unit_price !== null ? String(o.unit_price) : "",
+    };
+  });
+}
+function quoteItemLineTotal(it: QuoteItemRow): number {
+  return (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+}
+function quoteItemsTotal(items: QuoteItemRow[]): number {
+  return items.reduce((sum, it) => sum + quoteItemLineTotal(it), 0);
+}
+
+function QuoteItemsEditor({
+  items,
+  onChange,
+  onUseTotal,
+}: {
+  items: QuoteItemRow[];
+  onChange: (items: QuoteItemRow[]) => void;
+  onUseTotal?: (total: number) => void;
+}) {
+  function updateItem(idx: number, patch: Partial<QuoteItemRow>) {
+    onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  }
+  function removeItem(idx: number) {
+    onChange(items.filter((_, i) => i !== idx));
+  }
+  const total = quoteItemsTotal(items);
+  return (
+    <div className="space-y-2">
+      <Label>Tételek</Label>
+      <div className="space-y-2">
+        {items.map((it, idx) => (
+          <div key={idx} className="grid grid-cols-[1fr_64px_64px_100px_auto] items-end gap-2">
+            <div className="space-y-1">
+              {idx === 0 && <span className="text-[11px] text-muted-foreground">Megnevezés</span>}
+              <Input value={it.description} onChange={(e) => updateItem(idx, { description: e.target.value })} placeholder="Megnevezés" />
+            </div>
+            <div className="space-y-1">
+              {idx === 0 && <span className="text-[11px] text-muted-foreground">Menny.</span>}
+              <Input type="number" min="0" step="1" value={it.quantity} onChange={(e) => updateItem(idx, { quantity: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              {idx === 0 && <span className="text-[11px] text-muted-foreground">Egység</span>}
+              <Input value={it.unit} onChange={(e) => updateItem(idx, { unit: e.target.value })} placeholder="db" />
+            </div>
+            <div className="space-y-1">
+              {idx === 0 && <span className="text-[11px] text-muted-foreground">Egységár (Ft)</span>}
+              <Input type="number" min="0" step="1" value={it.unit_price} onChange={(e) => updateItem(idx, { unit_price: e.target.value })} />
+            </div>
+            <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeItem(idx)}>
+              Törlés
+            </Button>
+          </div>
+        ))}
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...items, emptyQuoteItemRow()])}>
+        + Tétel hozzáadása
+      </Button>
+      {total > 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          Tételek összesen: {fmtAmount(total, "Ft")}
+          {onUseTotal && (
+            <Button type="button" variant="link" className="h-auto p-0 pl-2 text-[11px]" onClick={() => onUseTotal(total)}>
+              Átvétel az ajánlat értékébe
+            </Button>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // Local form state keeps every field as a string (controlled inputs) —
 // converted to ProjectCreationFields' typed shape only at submit time.
 type ProjectFieldsForm = {
@@ -167,24 +263,22 @@ export default function CrmCustomerDetailPage() {
 
   const [quotes, setQuotes] = useState<CrmQuote[]>([]);
   const [showNewQuote, setShowNewQuote] = useState(false);
-  const [newQuoteFile, setNewQuoteFile] = useState<File | null>(null);
+  const [newQuoteItems, setNewQuoteItems] = useState<QuoteItemRow[]>([emptyQuoteItemRow()]);
   const [newQuoteValue, setNewQuoteValue] = useState("");
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [valueDialogQuote, setValueDialogQuote] = useState<CrmQuote | null>(null);
   const [quoteValueForm, setQuoteValueForm] = useState("");
   const [savingQuoteValue, setSavingQuoteValue] = useState(false);
   const [versionDialogQuote, setVersionDialogQuote] = useState<CrmQuote | null>(null);
-  const [versionFile, setVersionFile] = useState<File | null>(null);
+  const [versionItems, setVersionItems] = useState<QuoteItemRow[]>([emptyQuoteItemRow()]);
   const [savingVersion, setSavingVersion] = useState(false);
   const [contractDialogQuote, setContractDialogQuote] = useState<CrmQuote | null>(null);
   const [contractFromQuoteForm, setContractFromQuoteForm] = useState(emptyContractForm);
-  const [contractFromQuoteFile, setContractFromQuoteFile] = useState<File | null>(null);
   const [savingContractFromQuote, setSavingContractFromQuote] = useState(false);
 
   const [contracts, setContracts] = useState<CrmContract[]>([]);
   const [showNewContract, setShowNewContract] = useState(false);
   const [newContractForm, setNewContractForm] = useState(emptyNewContractForm);
-  const [newContractFile, setNewContractFile] = useState<File | null>(null);
   const [ownCompanies, setOwnCompanies] = useState<OwnCompany[]>([]);
   const [creatingContract, setCreatingContract] = useState(false);
 
@@ -497,15 +591,12 @@ export default function CrmCustomerDetailPage() {
 
   async function createQuote(e: React.FormEvent) {
     e.preventDefault();
-    if (!newQuoteFile) {
-      toast.error("Az ajánlathoz fájl csatolása kötelező");
-      return;
-    }
+    const parsed = quoteItemsToContentJson(newQuoteItems);
     setCreatingQuote(true);
     try {
-      await api.createCrmQuote(customerId, newQuoteFile, newQuoteValue || undefined);
+      await api.createCrmQuote(customerId, parsed, newQuoteValue || undefined);
       setShowNewQuote(false);
-      setNewQuoteFile(null);
+      setNewQuoteItems([emptyQuoteItemRow()]);
       setNewQuoteValue("");
       load();
       toast.success("Ajánlat létrehozva");
@@ -549,15 +640,11 @@ export default function CrmCustomerDetailPage() {
   async function addQuoteVersion(e: React.FormEvent) {
     e.preventDefault();
     if (!versionDialogQuote) return;
-    if (!versionFile) {
-      toast.error("Az új verzióhoz fájl csatolása kötelező");
-      return;
-    }
+    const parsed = quoteItemsToContentJson(versionItems);
     setSavingVersion(true);
     try {
-      await api.addCrmQuoteVersion(versionDialogQuote.id, versionFile);
+      await api.addCrmQuoteVersion(versionDialogQuote.id, parsed);
       setVersionDialogQuote(null);
-      setVersionFile(null);
       load();
       toast.success("Új verzió mentve");
     } catch (err) {
@@ -570,21 +657,16 @@ export default function CrmCustomerDetailPage() {
   async function confirmContractFromQuote(e: React.FormEvent) {
     e.preventDefault();
     if (!contractDialogQuote) return;
-    if (!contractFromQuoteFile) {
-      toast.error("A szerződéshez fájl csatolása kötelező");
-      return;
-    }
     setSavingContractFromQuote(true);
     try {
       await api.createContractFromQuote(
         contractDialogQuote.id,
         contractFromQuoteForm.start_date,
         contractFromQuoteForm.end_date,
-        contractFromQuoteFile,
+        undefined,
         contractFromQuoteForm.value || undefined
       );
       setContractDialogQuote(null);
-      setContractFromQuoteFile(null);
       load();
       toast.success("Szerződés létrehozva");
     } catch (err) {
@@ -596,32 +678,24 @@ export default function CrmCustomerDetailPage() {
 
   async function createContract(e: React.FormEvent) {
     e.preventDefault();
-    if (!newContractFile) {
-      toast.error("A szerződéshez fájl csatolása kötelező");
-      return;
-    }
     setCreatingContract(true);
     try {
-      await api.createCrmContract(
-        {
-          customer_id: customerId,
-          own_company_id: newContractForm.own_company_id ? Number(newContractForm.own_company_id) : undefined,
-          contract_type: newContractForm.contract_type || undefined,
-          start_date: newContractForm.start_date,
-          end_date: newContractForm.end_date,
-          effective_date: newContractForm.effective_date || undefined,
-          value: newContractForm.value || undefined,
-          net_value_standard: newContractForm.net_value_standard || undefined,
-          net_value_reduced: newContractForm.net_value_reduced || undefined,
-          currency: newContractForm.currency,
-          payment_due_date: newContractForm.payment_due_date || undefined,
-          payment_method: newContractForm.payment_method || undefined,
-        },
-        newContractFile
-      );
+      await api.createCrmContract({
+        customer_id: customerId,
+        own_company_id: newContractForm.own_company_id ? Number(newContractForm.own_company_id) : undefined,
+        contract_type: newContractForm.contract_type || undefined,
+        start_date: newContractForm.start_date,
+        end_date: newContractForm.end_date,
+        effective_date: newContractForm.effective_date || undefined,
+        value: newContractForm.value || undefined,
+        net_value_standard: newContractForm.net_value_standard || undefined,
+        net_value_reduced: newContractForm.net_value_reduced || undefined,
+        currency: newContractForm.currency,
+        payment_due_date: newContractForm.payment_due_date || undefined,
+        payment_method: newContractForm.payment_method || undefined,
+      });
       setShowNewContract(false);
       setNewContractForm(emptyNewContractForm);
-      setNewContractFile(null);
       load();
       toast.success("Szerződés létrehozva");
     } catch (err) {
@@ -968,7 +1042,7 @@ export default function CrmCustomerDetailPage() {
           <div className="mb-3">
             <Button
               onClick={() => {
-                setNewQuoteFile(null);
+                setNewQuoteItems([emptyQuoteItemRow()]);
                 setNewQuoteValue("");
                 setShowNewQuote(true);
               }}
@@ -984,16 +1058,11 @@ export default function CrmCustomerDetailPage() {
                   <DialogTitle>Új ajánlat</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-3 py-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="quote-file">Fájl (PDF, kép, Office dokumentum)</Label>
-                    <Input
-                      id="quote-file"
-                      type="file"
-                      required
-                      accept=".pdf,.dwg,.xlsx,.docx,.jpg,.jpeg,.png"
-                      onChange={(e) => setNewQuoteFile(e.target.files?.[0] ?? null)}
-                    />
-                  </div>
+                  <QuoteItemsEditor
+                    items={newQuoteItems}
+                    onChange={setNewQuoteItems}
+                    onUseTotal={(total) => setNewQuoteValue(String(Math.round(total)))}
+                  />
                   <div className="space-y-1.5">
                     <Label htmlFor="quote-value">Ajánlat értéke (Ft)</Label>
                     <Input id="quote-value" type="number" min="0" step="1" value={newQuoteValue} onChange={(e) => setNewQuoteValue(e.target.value)} />
@@ -1032,16 +1101,7 @@ export default function CrmCustomerDetailPage() {
                   <DialogTitle>Új verzió — {versionDialogQuote?.quote_number}</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-3 py-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="version-file">Fájl (PDF, kép, Office dokumentum)</Label>
-                    <Input
-                      id="version-file"
-                      type="file"
-                      required
-                      accept=".pdf,.dwg,.xlsx,.docx,.jpg,.jpeg,.png"
-                      onChange={(e) => setVersionFile(e.target.files?.[0] ?? null)}
-                    />
-                  </div>
+                  <QuoteItemsEditor items={versionItems} onChange={setVersionItems} />
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={savingVersion}>{savingVersion ? "Mentés..." : "Mentés"}</Button>
@@ -1064,16 +1124,6 @@ export default function CrmCustomerDetailPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="cfq-end">Lejárati dátum</Label>
                     <Input id="cfq-end" type="date" required value={contractFromQuoteForm.end_date} onChange={(e) => setContractFromQuoteForm({ ...contractFromQuoteForm, end_date: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="cfq-file">Fájl (PDF, kép, Office dokumentum)</Label>
-                    <Input
-                      id="cfq-file"
-                      type="file"
-                      required
-                      accept=".pdf,.dwg,.xlsx,.docx,.jpg,.jpeg,.png"
-                      onChange={(e) => setContractFromQuoteFile(e.target.files?.[0] ?? null)}
-                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="cfq-value">Szerződéses érték (Ft)</Label>
@@ -1104,7 +1154,7 @@ export default function CrmCustomerDetailPage() {
                 >
                   {q.value ? formatHuf(q.value) : "Érték megadása"}
                 </Button>
-                <Button variant="link" className="h-auto shrink-0 p-0" onClick={() => { setVersionDialogQuote(q); setVersionFile(null); }}>
+                <Button variant="link" className="h-auto shrink-0 p-0" onClick={() => { setVersionDialogQuote(q); setVersionItems(quoteItemsFromContentJson(q.versions[q.versions.length - 1]?.content_json)); }}>
                   Új verzió
                 </Button>
                 <Select value={q.status} onValueChange={(v) => changeQuoteStatus(q, v as string)}>
@@ -1263,16 +1313,6 @@ export default function CrmCustomerDetailPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="contract-file">Fájl (PDF, kép, Office dokumentum)</Label>
-                    <Input
-                      id="contract-file"
-                      type="file"
-                      required
-                      accept=".pdf,.dwg,.xlsx,.docx,.jpg,.jpeg,.png"
-                      onChange={(e) => setNewContractFile(e.target.files?.[0] ?? null)}
-                    />
                   </div>
                 </div>
                 <DialogFooter>

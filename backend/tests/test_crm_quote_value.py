@@ -1,18 +1,11 @@
-import io
-
 from tests.test_crm_sales_dashboard import create_customer
-
-
-def _quote_file(name="quote.pdf"):
-    return {"file": (name, io.BytesIO(b"quote content"), "application/pdf")}
 
 
 def test_create_quote_with_value_and_update_it(client, admin_headers):
     customer = create_customer(client, admin_headers, name="Quote Value Kft.")
     resp = client.post(
         "/api/crm/quotes",
-        data={"customer_id": customer["id"], "value": "1500000"},
-        files=_quote_file(),
+        json={"customer_id": customer["id"], "content_json": {}, "value": "1500000"},
         headers=admin_headers,
     )
     assert resp.status_code == 200
@@ -31,15 +24,13 @@ def test_valid_quotes_summary_excludes_rejected_and_expired(client, admin_header
 
     open_quote = client.post(
         "/api/crm/quotes",
-        data={"customer_id": customer["id"], "value": "1000000"},
-        files=_quote_file(),
+        json={"customer_id": customer["id"], "content_json": {}, "value": "1000000"},
         headers=admin_headers,
     ).json()
 
     rejected_quote = client.post(
         "/api/crm/quotes",
-        data={"customer_id": customer["id"], "value": "5000000"},
-        files=_quote_file(),
+        json={"customer_id": customer["id"], "content_json": {}, "value": "5000000"},
         headers=admin_headers,
     ).json()
     client.patch(

@@ -1,4 +1,3 @@
-import io
 from datetime import date, timedelta
 
 
@@ -8,20 +7,9 @@ def create_customer(client, headers, **overrides):
     return client.post("/api/crm/customers", json=body, headers=headers).json()
 
 
-def _quote_file(name="quote.pdf"):
-    return {"file": (name, io.BytesIO(b"quote content"), "application/pdf")}
-
-
-def _contract_file(name="contract.pdf"):
-    return {"file": (name, io.BytesIO(b"contract content"), "application/pdf")}
-
-
 def make_signed_contract(client, headers, customer_id, value=None, quote_status="accepted"):
     quote = client.post(
-        "/api/crm/quotes",
-        data={"customer_id": customer_id},
-        files=_quote_file(),
-        headers=headers,
+        "/api/crm/quotes", json={"customer_id": customer_id, "content_json": {}}, headers=headers
     ).json()
     client.patch(f"/api/crm/quotes/{quote['id']}/status", json={"status": "sent"}, headers=headers)
     client.patch(
@@ -29,12 +17,16 @@ def make_signed_contract(client, headers, customer_id, value=None, quote_status=
     )
     contract = client.post(
         f"/api/crm/quotes/{quote['id']}/create-contract",
-        data={
+        json={
             "start_date": "2026-08-01",
             "end_date": "2027-08-01",
-            **({"value": value} if value is not None else {}),
+            "value": value,
+            "project_code": f"CRM-SD-{customer_id}",
+            "settlement": "Szeged",
+            "address": "Fő utca 3",
+            "floor_area_sqm": 100,
+            "delivery_date": "2027-06-01",
         },
-        files=_contract_file(),
         headers=headers,
     ).json()
     return quote, contract
@@ -193,12 +185,11 @@ def test_contract_patch_backfills_value(client, admin_headers):
     customer = create_customer(client, admin_headers, name="Backfill Kft.")
     contract = client.post(
         "/api/crm/contracts",
-        data={
+        json={
             "customer_id": customer["id"],
             "start_date": "2026-01-01",
             "end_date": "2027-01-01",
         },
-        files=_contract_file(),
         headers=admin_headers,
     ).json()
     assert contract["value"] is None
@@ -213,7 +204,7 @@ def test_contract_patch_backfills_value(client, admin_headers):
 def test_quote_sent_at_set_once_on_first_sent_transition(client, admin_headers):
     customer = create_customer(client, admin_headers, name="SentAt Kft.")
     quote = client.post(
-        "/api/crm/quotes", data={"customer_id": customer["id"]}, files=_quote_file(), headers=admin_headers
+        "/api/crm/quotes", json={"customer_id": customer["id"], "content_json": {}}, headers=admin_headers
     ).json()
     assert quote["sent_at"] is None
 

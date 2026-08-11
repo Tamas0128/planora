@@ -972,22 +972,20 @@ export const api = {
   crmQuotesForCustomer: (customerId: number) =>
     request<CrmQuote[]>(`/crm/quotes?customer_id=${customerId}`),
 
-  createCrmQuote: (customerId: number, file: File, value?: string) => {
-    const formData = new FormData();
-    formData.append("customer_id", String(customerId));
-    if (value) formData.append("value", value);
-    formData.append("file", file);
-    return request<CrmQuote>("/crm/quotes", { method: "POST", body: formData });
-  },
+  createCrmQuote: (customerId: number, contentJson: Record<string, unknown>, value?: string) =>
+    request<CrmQuote>("/crm/quotes", {
+      method: "POST",
+      body: JSON.stringify({ customer_id: customerId, content_json: contentJson, value }),
+    }),
 
   updateCrmQuote: (id: number, data: Record<string, unknown>) =>
     request<CrmQuote>(`/crm/quotes/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
-  addCrmQuoteVersion: (id: number, file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    return request<CrmQuote>(`/crm/quotes/${id}/versions`, { method: "POST", body: formData });
-  },
+  addCrmQuoteVersion: (id: number, contentJson: Record<string, unknown>) =>
+    request<CrmQuote>(`/crm/quotes/${id}/versions`, {
+      method: "POST",
+      body: JSON.stringify({ content_json: contentJson }),
+    }),
 
   updateCrmQuoteStatus: (id: number, status: string) =>
     request<CrmQuote>(`/crm/quotes/${id}/status`, {
@@ -999,19 +997,13 @@ export const api = {
     quoteId: number,
     startDate: string,
     endDate: string,
-    file: File,
+    projectFields?: ProjectCreationFields,
     value?: string
-  ) => {
-    const formData = new FormData();
-    formData.append("start_date", startDate);
-    formData.append("end_date", endDate);
-    if (value) formData.append("value", value);
-    formData.append("file", file);
-    return request<CrmContract>(`/crm/quotes/${quoteId}/create-contract`, {
+  ) =>
+    request<CrmContract>(`/crm/quotes/${quoteId}/create-contract`, {
       method: "POST",
-      body: formData,
-    });
-  },
+      body: JSON.stringify({ start_date: startDate, end_date: endDate, value, ...projectFields }),
+    }),
 
   crmContractsForCustomer: (customerId: number) =>
     request<CrmContract[]>(`/crm/contracts?customer_id=${customerId}`),
@@ -1021,31 +1013,8 @@ export const api = {
     return request<CrmContract[]>(`/crm/contracts${qs ? `?${qs}` : ""}`);
   },
 
-  createCrmContract: (
-    fields: {
-      customer_id: number;
-      quote_id?: number;
-      own_company_id?: number;
-      contract_type?: string;
-      start_date: string;
-      end_date: string;
-      effective_date?: string;
-      value?: string;
-      net_value_standard?: string;
-      net_value_reduced?: string;
-      currency?: string;
-      payment_due_date?: string;
-      payment_method?: string;
-    },
-    file: File
-  ) => {
-    const formData = new FormData();
-    for (const [key, val] of Object.entries(fields)) {
-      if (val !== undefined && val !== null && val !== "") formData.append(key, String(val));
-    }
-    formData.append("file", file);
-    return request<CrmContract>("/crm/contracts", { method: "POST", body: formData });
-  },
+  createCrmContract: (data: Record<string, unknown>) =>
+    request<CrmContract>("/crm/contracts", { method: "POST", body: JSON.stringify(data) }),
 
   updateCrmContractStatus: (id: number, status: string, projectFields?: ProjectCreationFields) =>
     request<CrmContract>(`/crm/contracts/${id}/status`, {

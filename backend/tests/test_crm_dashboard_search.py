@@ -1,23 +1,12 @@
-import io
-
-
 def create_customer(client, headers, **overrides):
     body = {"type": "company", "name": "Dash Kft.", "owner_id": 1}
     body.update(overrides)
     return client.post("/api/crm/customers", json=body, headers=headers).json()
 
 
-def _quote_file():
-    return {"file": ("quote.pdf", io.BytesIO(b"quote content"), "application/pdf")}
-
-
-def _contract_file():
-    return {"file": ("contract.pdf", io.BytesIO(b"contract content"), "application/pdf")}
-
-
 def make_accepted_quote(client, headers, customer_id):
     q = client.post(
-        "/api/crm/quotes", data={"customer_id": customer_id}, files=_quote_file(), headers=headers
+        "/api/crm/quotes", json={"customer_id": customer_id, "content_json": {}}, headers=headers
     ).json()
     client.patch(f"/api/crm/quotes/{q['id']}/status", json={"status": "accepted"}, headers=headers)
     return q
@@ -39,7 +28,7 @@ def test_dashboard_stats_shape(client, admin_headers):
 def test_dashboard_pending_quotes_and_active_contracts(client, admin_headers):
     customer = create_customer(client, admin_headers, name="Pending Kft.")
     quote = client.post(
-        "/api/crm/quotes", data={"customer_id": customer["id"]}, files=_quote_file(), headers=admin_headers
+        "/api/crm/quotes", json={"customer_id": customer["id"], "content_json": {}}, headers=admin_headers
     ).json()
     client.patch(f"/api/crm/quotes/{quote['id']}/status", json={"status": "sent"}, headers=admin_headers)
 
@@ -49,8 +38,15 @@ def test_dashboard_pending_quotes_and_active_contracts(client, admin_headers):
     accepted_quote = make_accepted_quote(client, admin_headers, customer["id"])
     client.post(
         f"/api/crm/quotes/{accepted_quote['id']}/create-contract",
-        data={"start_date": "2026-08-01", "end_date": "2027-08-01"},
-        files=_contract_file(),
+        json={
+            "start_date": "2026-08-01",
+            "end_date": "2027-08-01",
+            "project_code": "CRM-DASH-001",
+            "settlement": "Kecskemét",
+            "address": "Fő utca 1",
+            "floor_area_sqm": 100,
+            "delivery_date": "2027-06-01",
+        },
         headers=admin_headers,
     )
     stats2 = client.get("/api/crm/dashboard/stats", headers=admin_headers).json()
@@ -109,8 +105,15 @@ def test_billing_role_sees_all_contracts_unscoped(client, admin_headers):
     quote = make_accepted_quote(client, headers1, customer["id"])
     contract = client.post(
         f"/api/crm/quotes/{quote['id']}/create-contract",
-        data={"start_date": "2026-08-01", "end_date": "2027-08-01"},
-        files=_contract_file(),
+        json={
+            "start_date": "2026-08-01",
+            "end_date": "2027-08-01",
+            "project_code": "CRM-DASH-002",
+            "settlement": "Nyíregyháza",
+            "address": "Fő utca 2",
+            "floor_area_sqm": 100,
+            "delivery_date": "2027-06-01",
+        },
         headers=headers1,
     ).json()
 
