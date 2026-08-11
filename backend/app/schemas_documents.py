@@ -12,6 +12,8 @@ class DocumentTemplateResponse(BaseModel):
     family: DocumentFamily
     doc_subtype: TigDocumentSubtype
     building_type: Optional[BuildingType] = None
+    currency: Optional[str] = None
+    is_electronic: bool
     is_delay_variant: bool
     name: str
     input_schema: Optional[str] = None
@@ -35,9 +37,12 @@ class GeneratedDocumentCreate(BaseModel):
     # Only meaningful for family=TIG — ignored otherwise.
     doc_subtype: TigDocumentSubtype = TigDocumentSubtype.NORMAL
     delay_reason: Optional[str] = None
+    # Only meaningful for SUBCONTRACTOR_CONTRACT/TIG — not derived from any
+    # stored data, the caller explicitly picks paper vs. e-signature wording.
+    is_electronic: bool = False
     # Explicit template override — when set, generation uses this exact
     # template instead of services.document_templates.select_template's
-    # automatic building_type/delay-risk matching.
+    # automatic building_type/currency/delay-risk matching.
     template_id: Optional[int] = None
 
 

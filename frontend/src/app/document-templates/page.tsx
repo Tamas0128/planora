@@ -31,6 +31,8 @@ const emptyForm = {
   family: "tig",
   doc_subtype: "normal",
   building_type: "",
+  currency: "",
+  is_electronic: false,
   is_delay_variant: false,
   name: "",
   file: null as File | null,
@@ -72,6 +74,8 @@ export default function DocumentTemplatesPage() {
         family: form.family,
         doc_subtype: form.doc_subtype,
         building_type: form.building_type || undefined,
+        currency: form.currency || undefined,
+        is_electronic: form.is_electronic,
         is_delay_variant: form.is_delay_variant,
         name: form.name,
         file: form.file,
@@ -110,6 +114,8 @@ export default function DocumentTemplatesPage() {
               <TableHead>Család</TableHead>
               <TableHead>Altípus</TableHead>
               <TableHead>Épülettípus</TableHead>
+              <TableHead>Pénznem</TableHead>
+              <TableHead>Elektronikus</TableHead>
               <TableHead>Csúszás-variáns</TableHead>
               <TableHead>Név</TableHead>
               <TableHead>Verzió</TableHead>
@@ -122,6 +128,8 @@ export default function DocumentTemplatesPage() {
                 <TableCell className="text-xs">{DOCUMENT_FAMILY_LABELS[t.family] ?? t.family}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{TIG_DOCUMENT_SUBTYPE_LABELS[t.doc_subtype] ?? t.doc_subtype}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{t.building_type ? (BUILDING_LABELS[t.building_type] ?? t.building_type) : "Bármely"}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{t.currency ?? "Bármely"}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{t.is_electronic ? "Igen" : "—"}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{t.is_delay_variant ? "Igen" : "—"}</TableCell>
                 <TableCell className="text-xs font-medium">{t.name}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">v{t.version}</TableCell>
@@ -142,7 +150,7 @@ export default function DocumentTemplatesPage() {
             ))}
             {templates.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                   Nincs feltöltött sablon
                 </TableCell>
               </TableRow>
@@ -186,6 +194,28 @@ export default function DocumentTemplatesPage() {
                     {BUILDING_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Pénznem</Label>
+                <Select value={form.currency || "any"} onValueChange={(v) => setForm({ ...form, currency: v === "any" ? "" : (v as string) })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => (v === "any" ? "Bármely (catch-all)" : v)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Bármely (catch-all)</SelectItem>
+                    <SelectItem value="HUF">HUF</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Csak ügyfél- és alvállalkozói szerződésnél van jelentősége.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={form.is_electronic}
+                  aria-label="Elektronikus aláírásra előkészített"
+                  onCheckedChange={(checked) => setForm({ ...form, is_electronic: !!checked })}
+                />
+                <Label className="font-normal">Elektronikus aláírásra előkészített (a papír alapú helyett)</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox

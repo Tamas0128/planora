@@ -73,6 +73,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
@@ -522,7 +523,7 @@ export default function ProjectDetailPage() {
   const [showGenerateDoc, setShowGenerateDoc] = useState(false);
   const [generatingDoc, setGeneratingDoc] = useState(false);
   const [generateDocForm, setGenerateDocForm] = useState({
-    family: "tig", source_id: "", doc_subtype: "normal", delay_reason: "", template_id: "",
+    family: "tig", source_id: "", doc_subtype: "normal", delay_reason: "", is_electronic: false, template_id: "",
   });
   const [genTemplateOptions, setGenTemplateOptions] = useState<DocumentTemplate[]>([]);
   const [showNewSubInvoice, setShowNewSubInvoice] = useState(false);
@@ -957,10 +958,11 @@ export default function ProjectDetailPage() {
         source_id: Number(generateDocForm.source_id),
         doc_subtype: generateDocForm.family === "tig" ? generateDocForm.doc_subtype : undefined,
         delay_reason: generateDocForm.delay_reason || undefined,
+        is_electronic: generateDocForm.is_electronic,
         template_id: generateDocForm.template_id ? Number(generateDocForm.template_id) : undefined,
       });
       setShowGenerateDoc(false);
-      setGenerateDocForm({ family: "tig", source_id: "", doc_subtype: "normal", delay_reason: "", template_id: "" });
+      setGenerateDocForm({ family: "tig", source_id: "", doc_subtype: "normal", delay_reason: "", is_electronic: false, template_id: "" });
       loadGeneratedDocuments();
       toast.success("Dokumentum generálása elindult");
     } catch (err) {
@@ -2220,6 +2222,16 @@ export default function ProjectDetailPage() {
                           {TIG_DOCUMENT_SUBTYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+                  {(generateDocForm.family === "tig" || generateDocForm.family === "subcontractor_contract") && (
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={generateDocForm.is_electronic}
+                        aria-label="Elektronikus aláírásra előkészített"
+                        onCheckedChange={(checked) => setGenerateDocForm({ ...generateDocForm, is_electronic: !!checked })}
+                      />
+                      <Label className="font-normal">Elektronikus aláírásra előkészített (a papír alapú helyett)</Label>
                     </div>
                   )}
                   {generateDocForm.family === "client_contract" && !project.customer_id ? (
