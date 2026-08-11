@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
@@ -12,6 +13,7 @@ from app.models import (
     ProjectStatus,
     UserRole,
 )
+from app.models_finance import VatType
 
 
 class TokenResponse(BaseModel):
@@ -118,6 +120,7 @@ class ProjectUpdate(BaseModel):
     structure_deadline: Optional[date] = None
     exterior_done_deadline: Optional[date] = None
     turnkey_deadline: Optional[date] = None
+    customer_id: Optional[int] = None
 
 
 class ProjectCard(BaseModel):
@@ -136,6 +139,7 @@ class ProjectCard(BaseModel):
     has_thumbnail: bool = False
     is_favorite: bool = False
     health: str = "ok"
+    finance_status: str = "green"
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     waiting_deadline: Optional[date] = None
@@ -165,6 +169,10 @@ class ProjectDetail(ProjectCard):
     billing_name: Optional[str] = None
     subcontractors: Optional[str] = None
     status_text: Optional[str] = None
+    customer_id: Optional[int] = None
+    contract_net_value: Optional[Decimal] = None
+    contract_vat_type: Optional[VatType] = None
+    contract_gross_value: Optional[Decimal] = None
     created_at: datetime
     updated_at: datetime
 

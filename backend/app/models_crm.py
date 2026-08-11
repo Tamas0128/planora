@@ -9,6 +9,7 @@ migrations/env.py both import this module explicitly).
 
 import enum
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -18,6 +19,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -53,6 +55,18 @@ class CustomerStatus(str, enum.Enum):
     QUOTE_SENT = "quote_sent"  # Ajánlatadás
     ORDERED = "ordered"  # Megrendelő — triggers project creation
     ARCHIVED = "archived"  # Archivált — soft-delete-instead-of-delete target
+
+
+class SourceType(str, enum.Enum):
+    """Where the customer heard about us — deliberately a plain field on
+    Customer, not a separate Lead entity (same simplification rationale as
+    CustomerStatus above, extended for the B2C sales dashboard, 2026-08-04).
+    """
+
+    REFERRAL = "referral"
+    FACEBOOK_INSTAGRAM = "facebook_instagram"
+    WEBSITE_SEO = "website_seo"
+    OTHER = "other"
 
 
 class QuoteStatus(str, enum.Enum):
@@ -118,6 +132,13 @@ CUSTOMER_STATUS_LABELS = {
     CustomerStatus.ARCHIVED: "Archivált",
 }
 
+SOURCE_TYPE_LABELS = {
+    SourceType.REFERRAL: "Ajánlás",
+    SourceType.FACEBOOK_INSTAGRAM: "Facebook / Instagram",
+    SourceType.WEBSITE_SEO: "Weboldal / SEO",
+    SourceType.OTHER: "Egyéb",
+}
+
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -132,6 +153,7 @@ class Customer(Base):
     status: Mapped[CustomerStatus] = mapped_column(
         Enum(CustomerStatus), default=CustomerStatus.NEW
     )
+    source: Mapped[SourceType | None] = mapped_column(Enum(SourceType), nullable=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
 
     # Only ever populated for type in (COMPANY, SOLE_PROPRIETOR) — enforced at
@@ -141,6 +163,15 @@ class Customer(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tax_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     billing_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Same company-header fields as models_finance.Partner — needed for the
+    # "Ügyfél vállalkozási szerződés" Megrendelő section. Only meaningful
+    # for type in (COMPANY, SOLE_PROPRIETOR), same as the fields above.
+    mailing_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    company_registry_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    bank_account_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    representative_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    representative_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contact_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -188,6 +219,14 @@ class Quote(Base):
     date: Mapped[date] = mapped_column(Date)
     status: Mapped[QuoteStatus] = mapped_column(Enum(QuoteStatus), default=QuoteStatus.DRAFT)
     current_version: Mapped[int] = mapped_column(Integer, default=1)
+    # Set once, the first time status becomes SENT (crm_quotes.py::update_quote_status) —
+    # not derived from QuoteVersion.created_at, which tracks content edits, not the
+    # sent transition, and a quote can be re-versioned after being sent.
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Manually entered gross value (HUF) — mirrors Contract.value (2026-08-04):
+    # QuoteVersion.content_json is freeform, not safe to parse a total out of,
+    # so there's no way to derive this from the quote's own line items.
+    value: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
 
     customer: Mapped["Customer"] = relationship(back_populates="quotes")
     versions: Mapped[list["QuoteVersion"]] = relationship(
@@ -223,15 +262,47 @@ class Contract(Base):
     quote_id: Mapped[int | None] = mapped_column(
         ForeignKey("quotes.id", ondelete="SET NULL"), nullable=True
     )
+    # Which of our own legal entities is the "Vállalkozó" on this contract's
+    # document header — same OwnCompany list as SubcontractorContract's
+    # own_company_id (models_finance.py), just the mirrored role (contractor
+    # here vs. ordering party there).
+    own_company_id: Mapped[int | None] = mapped_column(
+        ForeignKey("own_companies.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     contract_number: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    contract_type: Mapped[str | None] = mapped_column(String(255), nullable=True)
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date] = mapped_column(Date)
+    effective_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[ContractStatus] = mapped_column(
         Enum(ContractStatus), default=ContractStatus.DRAFT
     )
+    # Gross contract value (HUF), manually typed by sales — no monetary field
+    # existed anywhere on Quote/Contract before the sales dashboard
+    # (2026-08-04); QuoteVersion.content_json is freeform, not safe to parse
+    # a total out of. Independent of the two net fields below: this is a
+    # single deal-size figure for CRM KPIs (average contract value, weekly/
+    # monthly trend sums in crm_sales_dashboard.py), entered before the VAT
+    # breakdown is necessarily known.
+    value: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    # Net values per VAT rate for the document's Pénzügyi fejléc — a client
+    # contract can legitimately mix 27% and 5% items in one contract (user,
+    # 2026-08-07), so unlike SubcontractorContract there's no single
+    # net_value+vat_type pair here; gross is derived per-bucket in
+    # document_generation.py (net*1.27 + net*1.05), not stored.
+    net_value_standard: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    net_value_reduced: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), default="HUF")
+    payment_due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    payment_method: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Set once, the first time status becomes ACTIVE — from either
+    # crm_quotes.py::create_contract_from_quote (created directly as ACTIVE)
+    # or crm_contracts.py::update_contract_status.
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     customer: Mapped["Customer"] = relationship(back_populates="contracts")
     quote: Mapped["Quote | None"] = relationship(foreign_keys=[quote_id])
+    own_company: Mapped["OwnCompany | None"] = relationship()
 
 
 class CommunicationEvent(Base):

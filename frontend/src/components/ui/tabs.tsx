@@ -73,7 +73,11 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      // Base UI deactivates the inactive panel via the native `inert`
+      // attribute rather than unmounting or hiding it — `inert` alone does
+      // NOT hide an element visually (no user-agent stylesheet rule for
+      // it), so without this every tab's content stacks on screen at once.
+      className={cn("flex-1 text-sm outline-none [&[inert]]:hidden", className)}
       {...props}
     />
   )

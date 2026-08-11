@@ -13,10 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.api.documents import _content_disposition
-from app.api.projects import _can_view_project
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Activity, Project, User
+from app.services.scoping import can_view_project
 
 # No shared prefix: the multi-project endpoint deliberately lives under
 # /reports rather than /projects/gantt.pdf, because Starlette matches routes
@@ -89,7 +89,7 @@ def project_gantt(
     user: User = Depends(get_current_user),
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
-    if not project or not _can_view_project(user, project):
+    if not project or not can_view_project(user, project):
         raise HTTPException(status_code=404, detail="Project not found")
 
     activities = _real_activities(db, [project_id])[project_id]
@@ -140,7 +140,7 @@ def multi_project_gantt(
         raise HTTPException(status_code=400, detail="Nincs kiválasztott projekt")
 
     projects = db.query(Project).filter(Project.id.in_(project_ids)).all()
-    projects = [p for p in projects if _can_view_project(user, p)]
+    projects = [p for p in projects if can_view_project(user, p)]
     if not projects:
         raise HTTPException(status_code=404, detail="Nincs megjeleníthető projekt")
     projects.sort(key=lambda p: p.delivery_date)

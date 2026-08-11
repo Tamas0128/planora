@@ -83,6 +83,26 @@ def scoped_communication_event_query(db: Session, user: User):
     return q.filter(false())
 
 
+def can_view_project(user: User, project: Project) -> bool:
+    if user.role in (UserRole.ADMIN, UserRole.MANAGEMENT):
+        return True
+    if user.role == UserRole.PROJECT_MANAGER:
+        return project.project_manager_id == user.id
+    if user.role == UserRole.SITE_MANAGER:
+        return project.site_manager_id == user.id
+    return True
+
+
+def can_edit_project(user: User, project: Project) -> bool:
+    if user.role in (UserRole.ADMIN, UserRole.MANAGEMENT):
+        return True
+    if user.role == UserRole.PROJECT_MANAGER:
+        return project.project_manager_id == user.id
+    if user.role == UserRole.SITE_MANAGER:
+        return project.site_manager_id == user.id
+    return False
+
+
 def scoped_crm_task_query(db: Session, user: User):
     """CrmTask carries its own owner_id (the assignee), unlike Quote/Contract/
     CommunicationEvent — visibility is by direct assignment rather than by the

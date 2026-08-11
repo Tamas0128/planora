@@ -81,6 +81,15 @@ export const HEALTH_CFG: Record<string, { label: string; badge: string; dot: str
   critical: { label: "Kritikus",   badge: "bg-critical-bg text-critical",      dot: "bg-critical" },
 };
 
+// Same palette as HEALTH_CFG (green=olive accent, yellow=warning, red=critical)
+// — a different concept (financial status, not schedule health), deliberately
+// styled identically so both read as the same kind of traffic-light signal.
+export const FINANCE_STATUS_CFG: Record<string, { label: string; badge: string; dot: string }> = {
+  green:  { label: "Pénzügyileg rendben", badge: "bg-accent-100 text-accent-700",         dot: "bg-accent-600" },
+  yellow: { label: "Figyelendő",          badge: "bg-warning-bg text-warning-foreground", dot: "bg-warning" },
+  red:    { label: "Kritikus",            badge: "bg-critical-bg text-critical",          dot: "bg-critical" },
+};
+
 export const CATEGORY_ORDER = [
   "foundation", "timber_frame", "roofing", "exterior_openings", "electrical",
   "mechanical", "insulation", "flooring", "interior", "finishing", "facade",

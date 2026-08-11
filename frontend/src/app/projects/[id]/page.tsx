@@ -27,17 +27,36 @@ import {
   api,
   AuditLogEntry,
   BUILDING_LABELS,
+  CashFlowSummary,
   CATEGORY_LABELS,
+  CrmContract,
+  CUSTOMER_INVOICE_STATUS_LABELS,
+  CustomerInvoice,
+  DocumentTemplate,
+  DOCUMENT_FAMILY_LABELS,
+  OwnCompany,
   DOCUMENTATION_SUBTYPE_LABELS,
   downloadFile,
+  GENERATED_DOCUMENT_STATUS_COLORS,
+  GENERATED_DOCUMENT_STATUS_LABELS,
+  GeneratedDocument,
   getCachedUser,
+  Partner,
   ProjectDetail,
   ProjectDocument,
   ProjectPhoto,
   ROLE_LABELS,
   STATUS_LABELS,
+  SUBCONTRACTOR_CONTRACT_STATUS_LABELS,
+  SUBCONTRACTOR_INVOICE_STATUS_LABELS,
+  SubcontractorContract,
+  SubcontractorInvoice,
+  Tig,
+  TIG_DOCUMENT_SUBTYPE_LABELS,
+  TIG_STATUS_LABELS,
   User,
   UserBrief,
+  VAT_TYPE_LABELS,
 } from "@/lib/api";
 import { CATEGORY_ORDER, DOCUMENTATION_SUBTYPE_ORDER } from "@/lib/project-utils";
 import {
@@ -142,6 +161,41 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+function todayIsoDate(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function formatHuf(value?: string | number | null): string {
+  if (value === undefined || value === null || value === "") return "—";
+  const num = Number(value);
+  return Number.isFinite(num) ? `${num.toLocaleString("hu-HU")} Ft` : String(value);
+}
+
+const VAT_TYPE_OPTIONS = Object.entries(VAT_TYPE_LABELS) as [string, string][];
+const TIG_STATUS_OPTIONS = Object.entries(TIG_STATUS_LABELS) as [string, string][];
+const SUBCONTRACTOR_CONTRACT_STATUS_OPTIONS = Object.entries(SUBCONTRACTOR_CONTRACT_STATUS_LABELS) as [string, string][];
+const TIG_DOCUMENT_SUBTYPE_OPTIONS = Object.entries(TIG_DOCUMENT_SUBTYPE_LABELS) as [string, string][];
+const SUBCONTRACTOR_INVOICE_STATUS_OPTIONS = Object.entries(SUBCONTRACTOR_INVOICE_STATUS_LABELS) as [string, string][];
+const CUSTOMER_INVOICE_STATUS_OPTIONS = Object.entries(CUSTOMER_INVOICE_STATUS_LABELS) as [string, string][];
+
+const emptyPartnerForm = { name: "", tax_number: "", phone: "", email: "" };
+const emptyTigForm = {
+  partner_id: "", subcontractor_contract_id: "", date: new Date().toISOString().slice(0, 10),
+  period_start: "", period_end: "", net_value: "", vat_type: "standard_27", note: "",
+};
+const emptySubcontractorContractForm = {
+  partner_id: "", own_company_id: "", contract_type: "", scope_of_work: "", value: "", vat_type: "standard_27",
+  currency: "HUF", payment_terms_days: "", payment_method: "",
+  start_date: "", end_date: "", effective_date: "",
+};
+const emptySubcontractorInvoiceForm = {
+  partner_id: "", tig_id: "none", invoice_number: "",
+  performance_date: "", issue_date: "", due_date: "", net_value: "", vat_type: "standard_27",
+};
+const emptyCustomerInvoiceForm = {
+  performance_date: "", issue_date: "", due_date: "", net_value: "", vat_type: "standard_27",
+};
 
 function ProjectThumbnail({
   projectId, hasThumbnail, canEdit, onUploaded,
@@ -426,7 +480,7 @@ export default function ProjectDetailPage() {
   // when AppLayout already resolved /auth/me (avoids a flash of read-only UI).
   const [me, setMe] = useState<User | null>(() => getCachedUser());
   const [tab, setTab] = useState<
-    "info" | "schedule" | "documents" | "photos" | "prep" | "participants" | "log"
+    "info" | "schedule" | "documents" | "photos" | "prep" | "participants" | "log" | "finance"
   >("info");
   const [prepFilter, setPrepFilter] = useState<"all" | "overdue" | "today" | "7d" | "14d">("all");
   const [editing, setEditing] = useState(false);
@@ -447,6 +501,42 @@ export default function ProjectDetailPage() {
     status_text: "", reminder_date: "",
   });
 
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [ownCompanies, setOwnCompanies] = useState<OwnCompany[]>([]);
+  const [tigs, setTigs] = useState<Tig[]>([]);
+  const [subcontractorInvoices, setSubcontractorInvoices] = useState<SubcontractorInvoice[]>([]);
+  const [customerInvoices, setCustomerInvoices] = useState<CustomerInvoice[]>([]);
+  const [cashFlow, setCashFlow] = useState<CashFlowSummary | null>(null);
+  const [showNewPartner, setShowNewPartner] = useState(false);
+  const [creatingPartner, setCreatingPartner] = useState(false);
+  const [partnerForm, setPartnerForm] = useState(emptyPartnerForm);
+  const [showNewTig, setShowNewTig] = useState(false);
+  const [creatingTig, setCreatingTig] = useState(false);
+  const [tigForm, setTigForm] = useState(emptyTigForm);
+  const [subcontractorContracts, setSubcontractorContracts] = useState<SubcontractorContract[]>([]);
+  const [showNewSubContract, setShowNewSubContract] = useState(false);
+  const [creatingSubContract, setCreatingSubContract] = useState(false);
+  const [subContractForm, setSubContractForm] = useState(emptySubcontractorContractForm);
+  const [customerContracts, setCustomerContracts] = useState<CrmContract[]>([]);
+  const [generatedDocuments, setGeneratedDocuments] = useState<GeneratedDocument[]>([]);
+  const [showGenerateDoc, setShowGenerateDoc] = useState(false);
+  const [generatingDoc, setGeneratingDoc] = useState(false);
+  const [generateDocForm, setGenerateDocForm] = useState({
+    family: "tig", source_id: "", doc_subtype: "normal", delay_reason: "", template_id: "",
+  });
+  const [genTemplateOptions, setGenTemplateOptions] = useState<DocumentTemplate[]>([]);
+  const [showNewSubInvoice, setShowNewSubInvoice] = useState(false);
+  const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
+  const [subInvoiceForm, setSubInvoiceForm] = useState(emptySubcontractorInvoiceForm);
+  const [showNewCustInvoice, setShowNewCustInvoice] = useState(false);
+  const [creatingCustInvoice, setCreatingCustInvoice] = useState(false);
+  const [custInvoiceForm, setCustInvoiceForm] = useState(emptyCustomerInvoiceForm);
+  const [editingFinance, setEditingFinance] = useState(false);
+  const [financeForm, setFinanceForm] = useState({ contract_net_value: "", contract_vat_type: "standard_27" });
+  const [savingFinance, setSavingFinance] = useState(false);
+  const [partiallyPaidPrompt, setPartiallyPaidPrompt] = useState<CustomerInvoice | null>(null);
+  const [partiallyPaidAmount, setPartiallyPaidAmount] = useState("");
+
   function loadProject() {
     api.project(id).then((p) => { setProject(p); setDeliveryDate(p.delivery_date); }).catch(console.error);
   }
@@ -456,11 +546,22 @@ export default function ProjectDetailPage() {
   function loadDocuments() {
     api.documents(id).then(setDocuments).catch(console.error);
   }
+  function loadGeneratedDocuments() {
+    api.projectGeneratedDocuments(id).then(setGeneratedDocuments).catch(() => setGeneratedDocuments([]));
+  }
   function loadPhotos() {
     api.photos(id).then(setPhotos).catch(console.error);
   }
   function loadAuditLog() {
     api.auditLogs(id).then(setAuditLog).catch(console.error);
+  }
+  function loadFinance() {
+    api.financePartners().then(setPartners).catch(() => setPartners([]));
+    api.financeTigs(id).then(setTigs).catch(() => setTigs([]));
+    api.financeSubcontractorContracts(id).then(setSubcontractorContracts).catch(() => setSubcontractorContracts([]));
+    api.financeSubcontractorInvoices(id).then(setSubcontractorInvoices).catch(() => setSubcontractorInvoices([]));
+    api.financeCustomerInvoices(id).then(setCustomerInvoices).catch(() => setCustomerInvoices([]));
+    api.financeCashFlow(id).then(setCashFlow).catch(() => setCashFlow(null));
   }
 
   useEffect(() => {
@@ -470,17 +571,253 @@ export default function ProjectDetailPage() {
     loadDocuments();
     loadPhotos();
     loadAuditLog();
+    loadFinance();
+    loadGeneratedDocuments();
     api.me().then(setMe).catch(() => setMe(null));
     api.users().then(setUsers).catch(() => setUsers([]));
     api.usersDirectory().then(setAssignableUsers).catch(() => setAssignableUsers([]));
+    api.listOwnCompanies(true).then(setOwnCompanies).catch(() => setOwnCompanies([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Ügyfél-szerződés dokumentumokhoz a CRM Contract lista kell — csak akkor
+  // tölthető, ha a projekthez már van CRM ügyfél kapcsolva. Ha nincs, a
+  // dialog nem enged tetszőleges (más ügyfélhez tartozó) szerződést
+  // választani innen — az a dokumentum project_id nélkül jönne létre, és
+  // soha nem jelenne meg ennek a projektnek a listáján, csak az ügyfél CRM
+  // adatlapján, ami megtévesztő ("elindult, de nem látszik" élmény).
+  useEffect(() => {
+    if (!project?.customer_id) {
+      setCustomerContracts([]);
+      return;
+    }
+    api.crmContractsForCustomer(project.customer_id).then(setCustomerContracts).catch(() => setCustomerContracts([]));
+  }, [project?.customer_id]);
+
+  // A generálás-dialog sablonválasztójához: aktív sablonok a kiválasztott
+  // dokumentumcsaládhoz, hogy a rendszer automatikus (épülettípus/csúszás
+  // alapú) választása helyett kézzel is kijelölhető legyen egy konkrét
+  // sablon (services/document_templates.py::select_template megkerülése).
+  useEffect(() => {
+    if (!showGenerateDoc) return;
+    api.listDocumentTemplates(generateDocForm.family, true).then(setGenTemplateOptions).catch(() => setGenTemplateOptions([]));
+  }, [showGenerateDoc, generateDocForm.family]);
+
+  // Amíg van "pending" státuszú generált dokumentum (PDF-konverzió fut a
+  // háttérben), pár másodpercenként újratöltjük a listát, amíg készen nem
+  // lesz (vagy hiba nem történik).
+  useEffect(() => {
+    if (!generatedDocuments.some((d) => d.status === "pending")) return;
+    const timer = setTimeout(loadGeneratedDocuments, 2000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generatedDocuments]);
 
   const canEdit = me?.role === "admin" || me?.role === "management" || me?.role === "project_manager" || me?.role === "site_manager";
   // Lezárás is a separate, more restricted function than the rest of the
   // status pipeline — site_manager/procurement/billing/subcontractor never
   // see or use it, even if they can otherwise edit this project.
   const canClose = me?.role === "admin" || me?.role === "management" || me?.role === "project_manager";
+  const canEditFinance = me?.role === "admin" || me?.role === "management" || me?.role === "billing";
+  const canEditTig = canEditFinance || (me?.role === "project_manager" && project?.project_manager_id === me?.id);
+
+  async function createPartner(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingPartner(true);
+    try {
+      const partner = await api.createFinancePartner({
+        name: partnerForm.name,
+        tax_number: partnerForm.tax_number || undefined,
+        phone: partnerForm.phone || undefined,
+        email: partnerForm.email || undefined,
+      });
+      setShowNewPartner(false);
+      setPartnerForm(emptyPartnerForm);
+      await api.financePartners().then(setPartners);
+      setTigForm((f) => ({ ...f, partner_id: String(partner.id) }));
+      setSubInvoiceForm((f) => ({ ...f, partner_id: String(partner.id) }));
+      toast.success("Partner létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingPartner(false);
+    }
+  }
+
+  async function saveFinance(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingFinance(true);
+    try {
+      await api.updateProjectFinance(id, {
+        contract_net_value: financeForm.contract_net_value || undefined,
+        contract_vat_type: financeForm.contract_vat_type,
+      });
+      setEditingFinance(false);
+      loadProject();
+      loadFinance();
+      toast.success("Pénzügyi adatok mentve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    } finally {
+      setSavingFinance(false);
+    }
+  }
+
+  async function createTig(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingTig(true);
+    try {
+      await api.createFinanceTig(id, {
+        partner_id: Number(tigForm.partner_id),
+        subcontractor_contract_id: tigForm.subcontractor_contract_id ? Number(tigForm.subcontractor_contract_id) : undefined,
+        date: tigForm.date,
+        period_start: tigForm.period_start,
+        period_end: tigForm.period_end,
+        net_value: tigForm.net_value,
+        vat_type: tigForm.vat_type,
+        note: tigForm.note || undefined,
+      });
+      setShowNewTig(false);
+      setTigForm(emptyTigForm);
+      loadFinance();
+      toast.success("TIG létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingTig(false);
+    }
+  }
+
+  async function changeTigStatus(tig: Tig, status: string) {
+    try {
+      await api.updateFinanceTigStatus(id, tig.id, status);
+      loadFinance();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba az állapotváltás során");
+    }
+  }
+
+  async function createSubcontractorContract(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingSubContract(true);
+    try {
+      await api.createFinanceSubcontractorContract(id, {
+        partner_id: Number(subContractForm.partner_id),
+        own_company_id: subContractForm.own_company_id ? Number(subContractForm.own_company_id) : undefined,
+        contract_type: subContractForm.contract_type || undefined,
+        scope_of_work: subContractForm.scope_of_work || undefined,
+        value: subContractForm.value || undefined,
+        vat_type: subContractForm.value ? subContractForm.vat_type : undefined,
+        currency: subContractForm.currency,
+        payment_terms_days: subContractForm.payment_terms_days ? Number(subContractForm.payment_terms_days) : undefined,
+        payment_method: subContractForm.payment_method || undefined,
+        start_date: subContractForm.start_date,
+        end_date: subContractForm.end_date,
+        effective_date: subContractForm.effective_date || undefined,
+      });
+      setShowNewSubContract(false);
+      setSubContractForm(emptySubcontractorContractForm);
+      loadFinance();
+      toast.success("Alvállalkozói szerződés létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingSubContract(false);
+    }
+  }
+
+  async function changeSubcontractorContractStatus(contract: SubcontractorContract, status: string) {
+    try {
+      await api.updateFinanceSubcontractorContractStatus(id, contract.id, status);
+      loadFinance();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba az állapotváltás során");
+    }
+  }
+
+  async function createSubcontractorInvoice(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingSubInvoice(true);
+    try {
+      await api.createFinanceSubcontractorInvoice(id, {
+        partner_id: Number(subInvoiceForm.partner_id),
+        tig_id: subInvoiceForm.tig_id === "none" ? undefined : Number(subInvoiceForm.tig_id),
+        invoice_number: subInvoiceForm.invoice_number,
+        performance_date: subInvoiceForm.performance_date,
+        issue_date: subInvoiceForm.issue_date,
+        due_date: subInvoiceForm.due_date,
+        net_value: subInvoiceForm.net_value,
+        vat_type: subInvoiceForm.vat_type,
+      });
+      setShowNewSubInvoice(false);
+      setSubInvoiceForm(emptySubcontractorInvoiceForm);
+      loadFinance();
+      toast.success("Alvállalkozói számla létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingSubInvoice(false);
+    }
+  }
+
+  async function changeSubcontractorInvoiceStatus(invoice: SubcontractorInvoice, status: string) {
+    try {
+      await api.updateFinanceSubcontractorInvoiceStatus(id, invoice.id, status);
+      loadFinance();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba az állapotváltás során");
+    }
+  }
+
+  async function createCustomerInvoice(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingCustInvoice(true);
+    try {
+      await api.createFinanceCustomerInvoice(id, {
+        performance_date: custInvoiceForm.performance_date,
+        issue_date: custInvoiceForm.issue_date,
+        due_date: custInvoiceForm.due_date,
+        net_value: custInvoiceForm.net_value,
+        vat_type: custInvoiceForm.vat_type,
+      });
+      setShowNewCustInvoice(false);
+      setCustInvoiceForm(emptyCustomerInvoiceForm);
+      loadFinance();
+      toast.success("Ügyfél számla létrehozva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a létrehozás során");
+    } finally {
+      setCreatingCustInvoice(false);
+    }
+  }
+
+  async function changeCustomerInvoiceStatus(invoice: CustomerInvoice, status: string) {
+    if (status === "partially_paid") {
+      setPartiallyPaidAmount(invoice.paid_amount ?? "");
+      setPartiallyPaidPrompt(invoice);
+      return;
+    }
+    try {
+      await api.updateFinanceCustomerInvoiceStatus(id, invoice.id, status);
+      loadFinance();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba az állapotváltás során");
+    }
+  }
+
+  async function confirmPartiallyPaid(e: React.FormEvent) {
+    e.preventDefault();
+    if (!partiallyPaidPrompt) return;
+    try {
+      await api.updateFinanceCustomerInvoiceStatus(
+        id, partiallyPaidPrompt.id, "partially_paid", partiallyPaidAmount || undefined
+      );
+      setPartiallyPaidPrompt(null);
+      loadFinance();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba az állapotváltás során");
+    }
+  }
 
   async function updateStatus(activityId: number, status: string) {
     await api.updateActivity(id, activityId, { status });
@@ -593,6 +930,65 @@ export default function ProjectDetailPage() {
     try {
       await api.deleteDocument(id, documentId);
       loadDocuments();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
+    }
+  }
+
+  const generateDocSources: { value: string; label: string }[] =
+    generateDocForm.family === "tig"
+      ? tigs.map((t) => ({
+          value: String(t.id),
+          label: `${partners.find((p) => p.id === t.partner_id)?.name ?? `Partner #${t.partner_id}`} · ${new Date(t.date).toLocaleDateString("hu-HU")}`,
+        }))
+      : generateDocForm.family === "subcontractor_contract"
+        ? subcontractorContracts.map((c) => ({
+            value: String(c.id),
+            label: `${partners.find((p) => p.id === c.partner_id)?.name ?? `Partner #${c.partner_id}`} · ${c.contract_number}`,
+          }))
+        : customerContracts.map((c) => ({ value: String(c.id), label: c.contract_number }));
+
+  async function handleGenerateDocument(e: React.FormEvent) {
+    e.preventDefault();
+    setGeneratingDoc(true);
+    try {
+      await api.generateDocument({
+        family: generateDocForm.family,
+        source_id: Number(generateDocForm.source_id),
+        doc_subtype: generateDocForm.family === "tig" ? generateDocForm.doc_subtype : undefined,
+        delay_reason: generateDocForm.delay_reason || undefined,
+        template_id: generateDocForm.template_id ? Number(generateDocForm.template_id) : undefined,
+      });
+      setShowGenerateDoc(false);
+      setGenerateDocForm({ family: "tig", source_id: "", doc_subtype: "normal", delay_reason: "", template_id: "" });
+      loadGeneratedDocuments();
+      toast.success("Dokumentum generálása elindult");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a generálás során");
+    } finally {
+      setGeneratingDoc(false);
+    }
+  }
+
+  async function handleDownloadGeneratedDocument(docId: number, format: "docx" | "pdf") {
+    const tab = window.open("", "_blank");
+    if (!tab) {
+      toast.error("A böngésző blokkolta a felugró ablakot. Engedélyezd a felugró ablakokat ehhez az oldalhoz, majd próbáld újra.");
+      return;
+    }
+    try {
+      const { url } = await api.downloadGeneratedDocument(docId, format);
+      tab.location.href = url;
+    } catch (err) {
+      tab.close();
+      toast.error(err instanceof Error ? err.message : "Hiba a letöltés során");
+    }
+  }
+
+  async function handleDeleteGeneratedDocument(docId: number) {
+    try {
+      await api.deleteGeneratedDocument(docId);
+      loadGeneratedDocuments();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a törlés során");
     }
@@ -892,6 +1288,7 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="prep">Előkészítés</TabsTrigger>
           <TabsTrigger value="participants">Résztvevők</TabsTrigger>
           <TabsTrigger value="log">Napló</TabsTrigger>
+          <TabsTrigger value="finance">Pénzügy</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="mt-4">
@@ -1747,7 +2144,158 @@ export default function ProjectDetailPage() {
           </Dialog>
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-3">
+        <TabsContent value="documents" className="mt-3 space-y-4">
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Dokumentum generálás</h3>
+              {canEditTig && (
+                <Button size="sm" variant="outline" onClick={() => setShowGenerateDoc(true)}>
+                  <Plus className="size-3.5" /> Generálás
+                </Button>
+              )}
+            </div>
+            <div className="divide-y divide-border">
+              {generatedDocuments.length === 0 && (
+                <p className="p-2 text-xs text-muted-foreground">Nincs generált dokumentum</p>
+              )}
+              {generatedDocuments.map((doc) => (
+                <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">
+                      {DOCUMENT_FAMILY_LABELS[doc.family] ?? doc.family}
+                      {doc.family === "tig" && ` · ${TIG_DOCUMENT_SUBTYPE_LABELS[doc.doc_subtype] ?? doc.doc_subtype}`}
+                      {" · v"}{doc.version}
+                    </p>
+                    <p className="text-muted-foreground">{new Date(doc.created_at).toLocaleString("hu-HU")}</p>
+                  </div>
+                  <Badge className={cn("text-xs", GENERATED_DOCUMENT_STATUS_COLORS[doc.status])}>
+                    {GENERATED_DOCUMENT_STATUS_LABELS[doc.status] ?? doc.status}
+                  </Badge>
+                  <Button variant="link" className="h-auto p-0" onClick={() => handleDownloadGeneratedDocument(doc.id, "docx")}>
+                    Word
+                  </Button>
+                  <Button
+                    variant="link"
+                    className="h-auto p-0"
+                    disabled={!doc.has_pdf}
+                    onClick={() => handleDownloadGeneratedDocument(doc.id, "pdf")}
+                  >
+                    PDF
+                  </Button>
+                  {me?.role === "admin" && (
+                    <Button variant="link" className="h-auto p-0 text-destructive" onClick={() => handleDeleteGeneratedDocument(doc.id)}>
+                      Törlés
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Dialog open={showGenerateDoc} onOpenChange={setShowGenerateDoc}>
+            <DialogContent>
+              <form onSubmit={handleGenerateDocument}>
+                <DialogHeader><DialogTitle>Dokumentum generálása</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label>Dokumentumcsalád</Label>
+                    <Select
+                      value={generateDocForm.family}
+                      onValueChange={(v) => setGenerateDocForm({ ...generateDocForm, family: v as string, source_id: "", template_id: "" })}
+                    >
+                      <SelectTrigger><SelectValue>{(v: string) => DOCUMENT_FAMILY_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tig">{DOCUMENT_FAMILY_LABELS.tig}</SelectItem>
+                        <SelectItem value="subcontractor_contract">{DOCUMENT_FAMILY_LABELS.subcontractor_contract}</SelectItem>
+                        <SelectItem value="client_contract">{DOCUMENT_FAMILY_LABELS.client_contract}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {generateDocForm.family === "tig" && (
+                    <div className="space-y-1.5">
+                      <Label>Altípus</Label>
+                      <Select value={generateDocForm.doc_subtype} onValueChange={(v) => setGenerateDocForm({ ...generateDocForm, doc_subtype: v as string })}>
+                        <SelectTrigger><SelectValue>{(v: string) => TIG_DOCUMENT_SUBTYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                        <SelectContent>
+                          {TIG_DOCUMENT_SUBTYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {generateDocForm.family === "client_contract" && !project.customer_id ? (
+                    <p className="rounded-md border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
+                      Ehhez a projekthez nincs CRM ügyfél kötve, ezért innen nem generálható ügyfél-szerződés
+                      dokumentum — a projekt itt nem tudná megjeleníteni, mert nincs hozzá kapcsolva. Nyisd meg az
+                      ügyfél CRM adatlapját (Ügyfelek → a szerződés → Szerződések tab), ott a szerződéshez
+                      közvetlenül generálhatod.
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label>Forrás</Label>
+                      <Select value={generateDocForm.source_id} onValueChange={(v) => setGenerateDocForm({ ...generateDocForm, source_id: v as string })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Válasszon rekordot">
+                            {(v: string) => generateDocSources.find((s) => s.value === v)?.label ?? v}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {generateDocSources.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                      {generateDocSources.length === 0 && (
+                        <p className="text-[11px] text-muted-foreground">Nincs ehhez választható rekord.</p>
+                      )}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label>Sablon</Label>
+                    <Select
+                      value={generateDocForm.template_id || "auto"}
+                      onValueChange={(v) => setGenerateDocForm({ ...generateDocForm, template_id: v === "auto" ? "" : (v as string) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue>
+                          {(v: string) =>
+                            v === "auto"
+                              ? "Automatikus (rendszer választja)"
+                              : (genTemplateOptions.find((t) => String(t.id) === v)?.name ?? v)
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Automatikus (rendszer választja)</SelectItem>
+                        {genTemplateOptions.map((t) => (
+                          <SelectItem key={t.id} value={String(t.id)}>
+                            {t.name} · v{t.version}
+                            {t.building_type ? ` · ${BUILDING_LABELS[t.building_type] ?? t.building_type}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">
+                      Automatikus esetén a rendszer épülettípus és csúszás-kockázat alapján választ sablont — itt felülbírálható.
+                    </p>
+                  </div>
+                  {generateDocForm.family === "tig" && generateDocForm.doc_subtype === "normal" && project.delay_risk !== "ok" && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="generate-delay-reason">Csúszás indoklása</Label>
+                      <Textarea
+                        id="generate-delay-reason"
+                        value={generateDocForm.delay_reason}
+                        onChange={(e) => setGenerateDocForm({ ...generateDocForm, delay_reason: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={generatingDoc || !generateDocForm.source_id}>
+                    {generatingDoc ? "Generálás..." : "Generálás"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
           <Card className="py-0">
             <div className="flex items-center justify-between border-b p-3">
               <h3 className="text-[13px] font-semibold">Dokumentumok</h3>
@@ -1998,6 +2546,572 @@ export default function ProjectDetailPage() {
               </TableBody>
             </Table>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="finance" className="mt-3 space-y-4">
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Szerződés</h3>
+              {canEditFinance && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setFinanceForm({
+                      contract_net_value: project.contract_net_value || "",
+                      contract_vat_type: project.contract_vat_type || "standard_27",
+                    });
+                    setEditingFinance(true);
+                  }}
+                >
+                  <Pencil className="size-3.5" /> Szerkesztés
+                </Button>
+              )}
+            </div>
+            <dl className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
+              <div><dt className="text-muted-foreground">Nettó érték</dt><dd className="mt-0.5 font-medium">{formatHuf(project.contract_net_value)}</dd></div>
+              <div><dt className="text-muted-foreground">ÁFA típus</dt><dd className="mt-0.5 font-medium">{project.contract_vat_type ? (VAT_TYPE_LABELS[project.contract_vat_type] ?? project.contract_vat_type) : "—"}</dd></div>
+              <div><dt className="text-muted-foreground">Bruttó érték</dt><dd className="mt-0.5 font-medium">{formatHuf(project.contract_gross_value)}</dd></div>
+            </dl>
+          </Card>
+
+          <Dialog open={editingFinance} onOpenChange={setEditingFinance}>
+            <DialogContent>
+              <form onSubmit={saveFinance}>
+                <DialogHeader><DialogTitle>Szerződés szerkesztése</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contract-net">Nettó érték (Ft)</Label>
+                    <Input id="contract-net" type="number" min="0" step="1" value={financeForm.contract_net_value} onChange={(e) => setFinanceForm({ ...financeForm, contract_net_value: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>ÁFA típus</Label>
+                    <Select value={financeForm.contract_vat_type} onValueChange={(v) => setFinanceForm({ ...financeForm, contract_vat_type: v as string })}>
+                      <SelectTrigger><SelectValue>{(v: string) => VAT_TYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                      <SelectContent>
+                        {VAT_TYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={savingFinance}>{savingFinance ? "Mentés..." : "Mentés"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Card className="p-3">
+            <h3 className="mb-2 text-[13px] font-semibold">Cash flow</h3>
+            {cashFlow ? (
+              <dl className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                <div><dt className="text-muted-foreground">Kiszámlázott (bruttó)</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.invoiced_gross)}</dd></div>
+                <div><dt className="text-muted-foreground">Beérkezett</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.received_gross)}</dd></div>
+                <div><dt className="text-muted-foreground">Kintlévőség</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.outstanding_receivable)}</dd></div>
+                <div><dt className="text-muted-foreground">TIG összesen (nettó)</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.tig_total_net)}</dd></div>
+                <div><dt className="text-muted-foreground">Alvállalkozói (bruttó)</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.subcontractor_invoiced_gross)}</dd></div>
+                <div><dt className="text-muted-foreground">Kifizetett alvállalkozói</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.subcontractor_paid_gross)}</dd></div>
+                <div><dt className="text-muted-foreground">Fizetendő kötelezettség</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.payable_obligations)}</dd></div>
+                <div><dt className="text-muted-foreground">Cash flow egyenleg</dt><dd className={cn("mt-0.5 font-medium", Number(cashFlow.cash_flow_balance) < 0 && "text-destructive")}>{formatHuf(cashFlow.cash_flow_balance)}</dd></div>
+                <div><dt className="text-muted-foreground">Várható fedezet</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.expected_margin)}</dd></div>
+                <div><dt className="text-muted-foreground">Aktuális fedezet</dt><dd className="mt-0.5 font-medium">{formatHuf(cashFlow.actual_margin)}</dd></div>
+              </dl>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nincs adat</p>
+            )}
+          </Card>
+
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Partnerek</h3>
+              {canEditFinance && (
+                <Button size="sm" variant="outline" onClick={() => setShowNewPartner(true)}>
+                  <Plus className="size-3.5" /> Új partner
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {partners.length === 0 && <p className="text-xs text-muted-foreground">Nincs partner</p>}
+              {partners.map((p) => (
+                <Badge key={p.id} variant="outline" className="text-xs">{p.name}</Badge>
+              ))}
+            </div>
+          </Card>
+
+          <Dialog open={showNewPartner} onOpenChange={setShowNewPartner}>
+            <DialogContent>
+              <form onSubmit={createPartner}>
+                <DialogHeader><DialogTitle>Új partner</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="partner-name">Név</Label>
+                    <Input id="partner-name" required value={partnerForm.name} onChange={(e) => setPartnerForm({ ...partnerForm, name: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="partner-tax">Adószám</Label>
+                    <Input id="partner-tax" value={partnerForm.tax_number} onChange={(e) => setPartnerForm({ ...partnerForm, tax_number: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="partner-phone">Telefon</Label>
+                    <Input id="partner-phone" value={partnerForm.phone} onChange={(e) => setPartnerForm({ ...partnerForm, phone: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="partner-email">E-mail</Label>
+                    <Input id="partner-email" type="email" value={partnerForm.email} onChange={(e) => setPartnerForm({ ...partnerForm, email: e.target.value })} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creatingPartner}>{creatingPartner ? "Mentés..." : "Létrehozás"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">TIG-ek (teljesítésigazolások)</h3>
+              {canEditTig && (
+                <Button size="sm" variant="outline" onClick={() => setShowNewTig(true)} disabled={partners.length === 0}>
+                  <Plus className="size-3.5" /> Új TIG
+                </Button>
+              )}
+            </div>
+            <div className="divide-y divide-border">
+              {tigs.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nincs TIG</p>}
+              {tigs.map((t) => {
+                const partner = partners.find((p) => p.id === t.partner_id);
+                return (
+                  <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{partner?.name ?? `Partner #${t.partner_id}`}</p>
+                      <p className="text-muted-foreground">
+                        {new Date(t.period_start).toLocaleDateString("hu-HU")} – {new Date(t.period_end).toLocaleDateString("hu-HU")}
+                        {" · "}{formatHuf(t.net_value)} nettó / {formatHuf(t.gross_value)} bruttó
+                      </p>
+                      <p className={cn("mt-0.5", t.invoice_count === 0 ? "text-warning-foreground" : "text-muted-foreground")}>
+                        {t.invoice_count === 0 ? "Nincs hozzá számla" : `${t.invoice_count} kapcsolt számla · felhasznált: ${formatHuf(t.consumed_amount)}`}
+                      </p>
+                    </div>
+                    <Select value={t.status} onValueChange={(v) => changeTigStatus(t, v as string)} disabled={!canEditTig}>
+                      <SelectTrigger size="sm" className="w-36 shrink-0">
+                        <SelectValue>{(v: string) => TIG_STATUS_LABELS[v] ?? v}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIG_STATUS_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Dialog open={showNewTig} onOpenChange={setShowNewTig}>
+            <DialogContent>
+              <form onSubmit={createTig}>
+                <DialogHeader><DialogTitle>Új TIG</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label>Partner</Label>
+                    <Select value={tigForm.partner_id} onValueChange={(v) => setTigForm({ ...tigForm, partner_id: v as string, subcontractor_contract_id: "" })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Válasszon partnert">
+                          {(v: string) => partners.find((p) => String(p.id) === v)?.name ?? v}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {partners.map((p) => (<SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Kapcsolódó szerződés</Label>
+                    <Select value={tigForm.subcontractor_contract_id || "none"} onValueChange={(v) => setTigForm({ ...tigForm, subcontractor_contract_id: v === "none" ? "" : (v as string) })}>
+                      <SelectTrigger>
+                        <SelectValue>
+                          {(v: string) => (v === "none" ? "Nincs (eseti munka)" : subcontractorContracts.find((c) => String(c.id) === v)?.contract_number ?? v)}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nincs (eseti munka)</SelectItem>
+                        {subcontractorContracts
+                          .filter((c) => !tigForm.partner_id || c.partner_id === Number(tigForm.partner_id))
+                          .map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.contract_number}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tig-date">Dátum</Label>
+                    <Input id="tig-date" type="date" required value={tigForm.date} onChange={(e) => setTigForm({ ...tigForm, date: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="tig-period-start">Időszak kezdete</Label>
+                      <Input id="tig-period-start" type="date" required value={tigForm.period_start} onChange={(e) => setTigForm({ ...tigForm, period_start: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="tig-period-end">Időszak vége</Label>
+                      <Input id="tig-period-end" type="date" required value={tigForm.period_end} onChange={(e) => setTigForm({ ...tigForm, period_end: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tig-net">Nettó érték (Ft)</Label>
+                    <Input id="tig-net" type="number" min="0" step="1" required value={tigForm.net_value} onChange={(e) => setTigForm({ ...tigForm, net_value: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>ÁFA típus</Label>
+                    <Select value={tigForm.vat_type} onValueChange={(v) => setTigForm({ ...tigForm, vat_type: v as string })}>
+                      <SelectTrigger><SelectValue>{(v: string) => VAT_TYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                      <SelectContent>
+                        {VAT_TYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tig-note">Megjegyzés</Label>
+                    <Textarea id="tig-note" value={tigForm.note} onChange={(e) => setTigForm({ ...tigForm, note: e.target.value })} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creatingTig || !tigForm.partner_id}>{creatingTig ? "Mentés..." : "Létrehozás"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Alvállalkozói szerződések</h3>
+              {canEditTig && (
+                <Button size="sm" variant="outline" onClick={() => setShowNewSubContract(true)} disabled={partners.length === 0}>
+                  <Plus className="size-3.5" /> Új szerződés
+                </Button>
+              )}
+            </div>
+            <div className="divide-y divide-border">
+              {subcontractorContracts.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nincs alvállalkozói szerződés</p>}
+              {subcontractorContracts.map((c) => {
+                const partner = partners.find((p) => p.id === c.partner_id);
+                return (
+                  <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{partner?.name ?? `Partner #${c.partner_id}`} · {c.contract_number}</p>
+                      <p className="text-muted-foreground">
+                        {new Date(c.start_date).toLocaleDateString("hu-HU")} – {new Date(c.end_date).toLocaleDateString("hu-HU")}
+                        {c.value && <>{" · "}{formatHuf(c.value)}</>}
+                      </p>
+                      {c.scope_of_work && <p className="mt-0.5 text-muted-foreground">{c.scope_of_work}</p>}
+                    </div>
+                    <Select value={c.status} onValueChange={(v) => changeSubcontractorContractStatus(c, v as string)} disabled={!canEditTig}>
+                      <SelectTrigger size="sm" className="w-32 shrink-0">
+                        <SelectValue>{(v: string) => SUBCONTRACTOR_CONTRACT_STATUS_LABELS[v] ?? v}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUBCONTRACTOR_CONTRACT_STATUS_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Dialog open={showNewSubContract} onOpenChange={setShowNewSubContract}>
+            <DialogContent>
+              <form onSubmit={createSubcontractorContract}>
+                <DialogHeader><DialogTitle>Új alvállalkozói szerződés</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label>Partner</Label>
+                    <Select value={subContractForm.partner_id} onValueChange={(v) => setSubContractForm({ ...subContractForm, partner_id: v as string })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Válasszon partnert">
+                          {(v: string) => partners.find((p) => String(p.id) === v)?.name ?? v}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {partners.map((p) => (<SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Megrendelő (saját cég)</Label>
+                    <Select value={subContractForm.own_company_id || "none"} onValueChange={(v) => setSubContractForm({ ...subContractForm, own_company_id: v === "none" ? "" : (v as string) })}>
+                      <SelectTrigger>
+                        <SelectValue>{(v: string) => (v === "none" ? "Nincs megadva" : ownCompanies.find((c) => String(c.id) === v)?.name ?? v)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nincs megadva</SelectItem>
+                        {ownCompanies.map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subcontract-type">Szerződés típusa</Label>
+                    <Input id="subcontract-type" value={subContractForm.contract_type} onChange={(e) => setSubContractForm({ ...subContractForm, contract_type: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subcontract-scope">A szerződés tárgya</Label>
+                    <Textarea id="subcontract-scope" value={subContractForm.scope_of_work} onChange={(e) => setSubContractForm({ ...subContractForm, scope_of_work: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-start">Kezdete</Label>
+                      <Input id="subcontract-start" type="date" required value={subContractForm.start_date} onChange={(e) => setSubContractForm({ ...subContractForm, start_date: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-end">Vége</Label>
+                      <Input id="subcontract-end" type="date" required value={subContractForm.end_date} onChange={(e) => setSubContractForm({ ...subContractForm, end_date: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-effective">Hatálybalépés</Label>
+                      <Input id="subcontract-effective" type="date" value={subContractForm.effective_date} onChange={(e) => setSubContractForm({ ...subContractForm, effective_date: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subcontract-value">Nettó szerződéses érték (Ft)</Label>
+                    <Input id="subcontract-value" type="number" min="0" step="1" value={subContractForm.value} onChange={(e) => setSubContractForm({ ...subContractForm, value: e.target.value })} />
+                  </div>
+                  {subContractForm.value && (
+                    <div className="space-y-1.5">
+                      <Label>ÁFA típus</Label>
+                      <Select value={subContractForm.vat_type} onValueChange={(v) => setSubContractForm({ ...subContractForm, vat_type: v as string })}>
+                        <SelectTrigger><SelectValue>{(v: string) => VAT_TYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                        <SelectContent>
+                          {VAT_TYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-payment-days">Fizetési határidő (nap)</Label>
+                      <Input id="subcontract-payment-days" type="number" min="0" step="1" value={subContractForm.payment_terms_days} onChange={(e) => setSubContractForm({ ...subContractForm, payment_terms_days: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subcontract-payment-method">Fizetési mód</Label>
+                      <Input id="subcontract-payment-method" value={subContractForm.payment_method} onChange={(e) => setSubContractForm({ ...subContractForm, payment_method: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creatingSubContract || !subContractForm.partner_id}>{creatingSubContract ? "Mentés..." : "Létrehozás"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Alvállalkozói számlák</h3>
+              {canEditFinance && (
+                <Button size="sm" variant="outline" onClick={() => setShowNewSubInvoice(true)} disabled={partners.length === 0}>
+                  <Plus className="size-3.5" /> Új számla
+                </Button>
+              )}
+            </div>
+            <div className="divide-y divide-border">
+              {subcontractorInvoices.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nincs alvállalkozói számla</p>}
+              {subcontractorInvoices.map((inv) => {
+                const partner = partners.find((p) => p.id === inv.partner_id);
+                const overdue = inv.due_date < todayIsoDate() && !inv.payment_date;
+                return (
+                  <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{inv.invoice_number} · {partner?.name ?? `Partner #${inv.partner_id}`}</p>
+                      <p className={cn(overdue ? "text-destructive" : "text-muted-foreground")}>
+                        Határidő: {new Date(inv.due_date).toLocaleDateString("hu-HU")}
+                        {" · "}{formatHuf(inv.net_value)} nettó / {formatHuf(inv.gross_value)} bruttó
+                        {!inv.tig_id && " · nincs TIG"}
+                      </p>
+                    </div>
+                    <Select value={inv.status} onValueChange={(v) => changeSubcontractorInvoiceStatus(inv, v as string)} disabled={!canEditFinance}>
+                      <SelectTrigger size="sm" className="w-36 shrink-0">
+                        <SelectValue>{(v: string) => SUBCONTRACTOR_INVOICE_STATUS_LABELS[v] ?? v}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUBCONTRACTOR_INVOICE_STATUS_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Dialog open={showNewSubInvoice} onOpenChange={setShowNewSubInvoice}>
+            <DialogContent>
+              <form onSubmit={createSubcontractorInvoice}>
+                <DialogHeader><DialogTitle>Új alvállalkozói számla</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label>Partner</Label>
+                    <Select value={subInvoiceForm.partner_id} onValueChange={(v) => setSubInvoiceForm({ ...subInvoiceForm, partner_id: v as string })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Válasszon partnert">
+                          {(v: string) => partners.find((p) => String(p.id) === v)?.name ?? v}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {partners.map((p) => (<SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Kapcsolódó TIG (opcionális)</Label>
+                    <Select value={subInvoiceForm.tig_id} onValueChange={(v) => setSubInvoiceForm({ ...subInvoiceForm, tig_id: v as string })}>
+                      <SelectTrigger>
+                        <SelectValue>
+                          {(v: string) => {
+                            if (v === "none") return "Nincs";
+                            const t = tigs.find((tt) => String(tt.id) === v);
+                            return t
+                              ? `${new Date(t.period_start).toLocaleDateString("hu-HU")} – ${new Date(t.period_end).toLocaleDateString("hu-HU")}`
+                              : v;
+                          }}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nincs</SelectItem>
+                        {tigs.filter((t) => String(t.partner_id) === subInvoiceForm.partner_id).map((t) => (
+                          <SelectItem key={t.id} value={String(t.id)}>
+                            {new Date(t.period_start).toLocaleDateString("hu-HU")} – {new Date(t.period_end).toLocaleDateString("hu-HU")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sub-inv-number">Számlaszám</Label>
+                    <Input id="sub-inv-number" required value={subInvoiceForm.invoice_number} onChange={(e) => setSubInvoiceForm({ ...subInvoiceForm, invoice_number: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sub-inv-perf">Teljesítés</Label>
+                      <Input id="sub-inv-perf" type="date" required value={subInvoiceForm.performance_date} onChange={(e) => setSubInvoiceForm({ ...subInvoiceForm, performance_date: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sub-inv-issue">Kiállítás</Label>
+                      <Input id="sub-inv-issue" type="date" required value={subInvoiceForm.issue_date} onChange={(e) => setSubInvoiceForm({ ...subInvoiceForm, issue_date: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sub-inv-due">Fizetési hat.</Label>
+                      <Input id="sub-inv-due" type="date" required value={subInvoiceForm.due_date} onChange={(e) => setSubInvoiceForm({ ...subInvoiceForm, due_date: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sub-inv-net">Nettó összeg (Ft)</Label>
+                    <Input id="sub-inv-net" type="number" min="0" step="1" required value={subInvoiceForm.net_value} onChange={(e) => setSubInvoiceForm({ ...subInvoiceForm, net_value: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>ÁFA típus</Label>
+                    <Select value={subInvoiceForm.vat_type} onValueChange={(v) => setSubInvoiceForm({ ...subInvoiceForm, vat_type: v as string })}>
+                      <SelectTrigger><SelectValue>{(v: string) => VAT_TYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                      <SelectContent>
+                        {VAT_TYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creatingSubInvoice || !subInvoiceForm.partner_id}>{creatingSubInvoice ? "Mentés..." : "Létrehozás"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Card className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold">Ügyfél számlák</h3>
+              {canEditFinance && (
+                <Button size="sm" variant="outline" onClick={() => setShowNewCustInvoice(true)}>
+                  <Plus className="size-3.5" /> Új számla
+                </Button>
+              )}
+            </div>
+            <div className="divide-y divide-border">
+              {customerInvoices.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nincs ügyfél számla</p>}
+              {customerInvoices.map((inv) => {
+                const overdue = inv.due_date < todayIsoDate() && !inv.payment_received_date;
+                return (
+                  <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{inv.invoice_number} · {inv.customer_name ?? "Nincs megrendelő"}</p>
+                      <p className={cn(overdue ? "text-destructive" : "text-muted-foreground")}>
+                        Határidő: {new Date(inv.due_date).toLocaleDateString("hu-HU")}
+                        {" · "}{formatHuf(inv.net_value)} nettó / {formatHuf(inv.gross_value)} bruttó
+                      </p>
+                    </div>
+                    <Select value={inv.status} onValueChange={(v) => changeCustomerInvoiceStatus(inv, v as string)} disabled={!canEditFinance}>
+                      <SelectTrigger size="sm" className="w-40 shrink-0">
+                        <SelectValue>{(v: string) => CUSTOMER_INVOICE_STATUS_LABELS[v] ?? v}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CUSTOMER_INVOICE_STATUS_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Dialog open={showNewCustInvoice} onOpenChange={setShowNewCustInvoice}>
+            <DialogContent>
+              <form onSubmit={createCustomerInvoice}>
+                <DialogHeader><DialogTitle>Új ügyfél számla</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cust-inv-perf">Teljesítés</Label>
+                      <Input id="cust-inv-perf" type="date" required value={custInvoiceForm.performance_date} onChange={(e) => setCustInvoiceForm({ ...custInvoiceForm, performance_date: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cust-inv-issue">Kiállítás</Label>
+                      <Input id="cust-inv-issue" type="date" required value={custInvoiceForm.issue_date} onChange={(e) => setCustInvoiceForm({ ...custInvoiceForm, issue_date: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cust-inv-due">Fizetési hat.</Label>
+                      <Input id="cust-inv-due" type="date" required value={custInvoiceForm.due_date} onChange={(e) => setCustInvoiceForm({ ...custInvoiceForm, due_date: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cust-inv-net">Nettó összeg (Ft)</Label>
+                    <Input id="cust-inv-net" type="number" min="0" step="1" required value={custInvoiceForm.net_value} onChange={(e) => setCustInvoiceForm({ ...custInvoiceForm, net_value: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>ÁFA típus</Label>
+                    <Select value={custInvoiceForm.vat_type} onValueChange={(v) => setCustInvoiceForm({ ...custInvoiceForm, vat_type: v as string })}>
+                      <SelectTrigger><SelectValue>{(v: string) => VAT_TYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                      <SelectContent>
+                        {VAT_TYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creatingCustInvoice}>{creatingCustInvoice ? "Mentés..." : "Létrehozás"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!partiallyPaidPrompt} onOpenChange={(open) => !open && setPartiallyPaidPrompt(null)}>
+            <DialogContent>
+              <form onSubmit={confirmPartiallyPaid}>
+                <DialogHeader><DialogTitle>Részben kiegyenlített összeg</DialogTitle></DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="partial-amount">Befizetett összeg (Ft)</Label>
+                    <Input id="partial-amount" type="number" min="0" step="1" value={partiallyPaidAmount} onChange={(e) => setPartiallyPaidAmount(e.target.value)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Mentés</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </AppLayout>

@@ -36,7 +36,18 @@ from app.services.scoping import scoped_customer_query
 
 router = APIRouter(prefix="/crm/customers", tags=["crm-customers"])
 
-PERSON_ONLY_FIELDS = ("phone", "email", "tax_number", "billing_address")
+PERSON_ONLY_FIELDS = (
+    "phone",
+    "email",
+    "tax_number",
+    "billing_address",
+    "mailing_address",
+    "company_registry_number",
+    "bank_account_number",
+    "representative_name",
+    "representative_title",
+    "contact_name",
+)
 # CustomerUpdate extends ProjectCreationFields so the "Megrendelő" transition
 # can carry them in the same request — but they aren't Customer columns, so
 # they must never reach the generic setattr loop below.
@@ -53,6 +64,12 @@ CSV_FIELDNAMES = [
     "email",
     "tax_number",
     "billing_address",
+    "mailing_address",
+    "company_registry_number",
+    "bank_account_number",
+    "representative_name",
+    "representative_title",
+    "contact_name",
 ]
 
 
@@ -162,6 +179,12 @@ def export_customers(
                 "email": c.email or "",
                 "tax_number": c.tax_number or "",
                 "billing_address": c.billing_address or "",
+                "mailing_address": c.mailing_address or "",
+                "company_registry_number": c.company_registry_number or "",
+                "bank_account_number": c.bank_account_number or "",
+                "representative_name": c.representative_name or "",
+                "representative_title": c.representative_title or "",
+                "contact_name": c.contact_name or "",
             }
         )
     buffer.seek(0)
@@ -190,12 +213,10 @@ def import_customers(
                 raise ValueError("type, name és owner_id kötelező")
             type_ = CustomerType(type_raw)
             owner_id = int(owner_raw)
-            values = {
-                "phone": (row.get("phone") or "").strip() or None,
-                "email": (row.get("email") or "").strip() or None,
-                "tax_number": (row.get("tax_number") or "").strip() or None,
-                "billing_address": (row.get("billing_address") or "").strip() or None,
-            }
+            # Driven by PERSON_ONLY_FIELDS (not a hardcoded subset) so a
+            # future field added there is automatically importable too,
+            # instead of silently staying JSON-API-only.
+            values = {field: (row.get(field) or "").strip() or None for field in PERSON_ONLY_FIELDS}
             _reject_person_contact_fields(type_, values)
             relationship_type = RelationshipType((row.get("relationship_type") or "customer").strip())
             status = CustomerStatus((row.get("status") or "new").strip())
@@ -233,12 +254,7 @@ def create_customer(
 ):
     _reject_person_contact_fields(
         body.type,
-        {
-            "phone": body.phone,
-            "email": body.email,
-            "tax_number": body.tax_number,
-            "billing_address": body.billing_address,
-        },
+        {field: getattr(body, field) for field in PERSON_ONLY_FIELDS},
     )
     owner_id = _resolve_owner_id(user, body.owner_id)
     duplicate = db.query(Customer).filter(Customer.name == body.name).first() is not None
@@ -253,6 +269,13 @@ def create_customer(
         email=body.email,
         tax_number=body.tax_number,
         billing_address=body.billing_address,
+        mailing_address=body.mailing_address,
+        company_registry_number=body.company_registry_number,
+        bank_account_number=body.bank_account_number,
+        representative_name=body.representative_name,
+        representative_title=body.representative_title,
+        contact_name=body.contact_name,
+        source=body.source,
     )
     db.add(customer)
     db.commit()

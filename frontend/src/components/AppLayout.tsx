@@ -9,17 +9,20 @@ import {
   AlarmClock,
   Bell,
   BarChart2,
+  Briefcase,
   Building2,
   CalendarDays,
   CheckSquare,
+  FileStack,
   FolderOpen,
+  Landmark,
   LayoutDashboard,
   LayoutGrid,
   ListChecks,
   LogOut,
-  PieChart,
   Search,
   Users,
+  Wallet,
 } from "lucide-react";
 import { api, clearToken, CrmSearchResult, Notification as NotificationItem, ProjectCard, ROLE_LABELS, User } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -240,12 +243,6 @@ function NotificationBell() {
 
 const NAV_CRM: NavItem[] = [
   {
-    href: "/crm/dashboard",
-    label: "CRM Dashboard",
-    icon: PieChart,
-    roles: ["admin", "management", "project_manager", "site_manager", "billing"],
-  },
-  {
     href: "/crm/customers",
     label: "Ügyfelek (CRM)",
     icon: Building2,
@@ -255,12 +252,34 @@ const NAV_CRM: NavItem[] = [
     // adatlapján, tabként érhetők el (Kanban helyett a részletnézetben).
     roles: ["admin", "management", "project_manager", "site_manager", "billing"],
   },
+  {
+    href: "/crm/sales-dashboard",
+    label: "Értékesítési dashboard",
+    icon: BarChart2,
+    roles: ["admin", "management", "project_manager", "site_manager", "billing"],
+  },
+];
+
+const NAV_FINANCE: NavItem[] = [
+  {
+    href: "/finance",
+    label: "Pénzügy",
+    icon: Wallet,
+    // Spec §15 permission table only names Projektvezető/Pénzügy/Admin for
+    // the cross-project finance views — narrower than CRM's role list above
+    // (no site_manager/procurement here), matching api/finance.py's
+    // _require_overview_role gate exactly.
+    roles: ["admin", "management", "billing", "project_manager"],
+  },
 ];
 
 const NAV_ADMIN: NavItem[] = [
   { href: "/users",             label: "Felhasználók",   icon: Users,      roles: ["admin"] },
   { href: "/audit-log",         label: "Audit napló",    icon: BarChart2,  roles: ["admin", "management"] },
   { href: "/activity-templates", label: "Ütemterv sablon", icon: ListChecks, roles: ["admin", "management"] },
+  { href: "/document-templates", label: "Dokumentumsablonok", icon: FileStack, roles: ["admin"] },
+  { href: "/own-companies",     label: "Cégadatok",      icon: Landmark,   roles: ["admin"] },
+  { href: "/partners",          label: "Alvállalkozói törzs", icon: Briefcase, roles: ["admin"] },
 ];
 
 interface AppLayoutProps {
@@ -333,6 +352,10 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
   }
 
   const visibleCrm = NAV_CRM.filter((item) => {
+    if (!item.roles) return true;
+    return item.roles.includes(user?.role ?? "");
+  });
+  const visibleFinance = NAV_FINANCE.filter((item) => {
     if (!item.roles) return true;
     return item.roles.includes(user?.role ?? "");
   });
@@ -424,6 +447,35 @@ export default function AppLayout({ children, header, mainClassName }: AppLayout
                 <SidebarGroupLabel className="text-white/40">CRM</SidebarGroupLabel>
                 <SidebarMenu>
                   {visibleCrm.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item);
+                    return (
+                      <SidebarMenuItem key={item.label}>
+                        <SidebarMenuButton
+                          isActive={active}
+                          tooltip={item.label}
+                          render={<Link href={item.href} />}
+                          className="h-8 text-[13px] text-white/65 hover:bg-white/10 hover:text-white data-active:bg-white/15 data-active:text-white"
+                        >
+                          <Icon className="size-4" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            </>
+          )}
+
+          {/* Finance nav — kept visually separate from CRM/Admin */}
+          {visibleFinance.length > 0 && (
+            <>
+              <div className="mx-3 my-1 h-px bg-white/10 group-data-[collapsible=icon]:mx-1.5" />
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-white/40">Pénzügy</SidebarGroupLabel>
+                <SidebarMenu>
+                  {visibleFinance.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item);
                     return (
