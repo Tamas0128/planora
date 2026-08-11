@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Building2, Clock, Gauge, GripVertical, Star, TrendingDown } from "lucide-react";
+import { ArrowUpRight, Building2, Clock, Gauge, GripVertical, TrendingDown } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   DndContext,
@@ -24,7 +24,6 @@ import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import {
   api,
-  AuditLogEntry,
   DashboardStats,
   DigestPreview,
   PrepTask,
@@ -52,15 +51,13 @@ const TASK_STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 const WIDGET_ORDER_KEY = "planora_dashboard_widget_order";
-const DEFAULT_WIDGET_ORDER = ["status", "upcoming", "tasks", "favorites", "digest", "gantt", "log"];
+const DEFAULT_WIDGET_ORDER = ["status", "upcoming", "tasks", "digest", "gantt"];
 const WIDGET_SPAN: Record<string, string> = {
   status: "lg:col-span-4",
   upcoming: "lg:col-span-5",
   tasks: "lg:col-span-3",
-  favorites: "lg:col-span-4",
   digest: "lg:col-span-4",
   gantt: "lg:col-span-8",
-  log: "lg:col-span-5",
 };
 
 function loadWidgetOrder(): string[] {
@@ -157,7 +154,6 @@ export default function DashboardPage() {
   const [kanban, setKanban]     = useState<Record<string, ProjectCard[]>>({});
   const [projects, setProjects] = useState<ProjectCard[]>([]);
   const [tasks, setTasks]       = useState<PrepTask[]>([]);
-  const [logs, setLogs]         = useState<AuditLogEntry[]>([]);
   const [digest, setDigest]     = useState<DigestPreview | null>(null);
   const [me, setMe]             = useState<{ full_name: string } | null>(null);
   const [widgetOrder, setWidgetOrder] = useState<string[]>(loadWidgetOrder);
@@ -172,7 +168,6 @@ export default function DashboardPage() {
     api.kanban().then(setKanban).catch(console.error);
     api.projects().then(setProjects).catch(console.error);
     api.prepCenter("all").then(setTasks).catch(console.error);
-    api.auditLogs().then((l) => setLogs(l.slice(0, 10))).catch(console.error);
     api.me().then(setMe).catch(console.error);
     api.digestPreview().then(setDigest).catch(console.error);
   }, []);
@@ -210,8 +205,6 @@ export default function DashboardPage() {
     () => [...projects].sort((a, b) => new Date(a.delivery_date).getTime() - new Date(b.delivery_date).getTime()).slice(0, 8),
     [projects],
   );
-
-  const favoriteProjects = useMemo(() => projects.filter((p) => p.is_favorite), [projects]);
 
   /* Feladatok */
   const overdueTasks = tasks.filter((t) => t.is_overdue).slice(0, 5);
@@ -337,29 +330,6 @@ export default function DashboardPage() {
         </div>
       </Card>
     ),
-    favorites: (
-      <Card className="h-full overflow-hidden py-0">
-        <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <h2 className="text-[13px] font-semibold text-foreground">Kedvencek</h2>
-          <Star className="size-3.5 fill-accent-500 text-accent-500" />
-        </div>
-        <div className="divide-y divide-border">
-          {favoriteProjects.length === 0 ? (
-            <p className="py-6 text-center text-xs text-muted-foreground">Nincs kedvencnek jelölt projekt</p>
-          ) : (
-            favoriteProjects.map((p) => (
-              <Link key={p.id} href={`/projects/${p.id}`} className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-semibold text-foreground">{p.name}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{p.settlement} · {p.client_name}</p>
-                </div>
-                <Badge className="px-1.5 py-0 text-[9px] bg-neutral-100 text-neutral-700">{p.completion_percent}%</Badge>
-              </Link>
-            ))
-          )}
-        </div>
-      </Card>
-    ),
     digest: (
       <Card className="h-full overflow-hidden py-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
@@ -443,47 +413,6 @@ export default function DashboardPage() {
               ))
             )}
           </div>
-        </div>
-      </Card>
-    ),
-    log: (
-      <Card className="h-full overflow-hidden py-0">
-        <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <h2 className="text-[13px] font-semibold text-foreground">Legutóbbi tevékenységek</h2>
-          <Link href="/audit-log" className="flex items-center gap-0.5 text-[11px] text-primary hover:underline">
-            Napló <ArrowUpRight className="size-3" />
-          </Link>
-        </div>
-        <div className="divide-y divide-border">
-          {logs.length === 0 ? (
-            <p className="py-6 text-center text-xs text-muted-foreground">Nincs tevékenység</p>
-          ) : (
-            logs.map((log) => (
-              <div key={log.id} className="flex items-start gap-2 px-3 py-1.5">
-                <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[9px] font-bold text-neutral-700">
-                  {(log.user_name ?? "?")[0].toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] text-foreground">
-                    <span className="font-semibold">{log.user_name ?? "Ismeretlen"}</span>
-                    {" módosította: "}
-                    <span className="text-muted-foreground">{log.field_name}</span>
-                    {log.project_name && (
-                      <>
-                        {" — "}
-                        <Link href={`/projects/${log.project_id}`} className="text-primary hover:underline">
-                          {log.project_name}
-                        </Link>
-                      </>
-                    )}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {new Date(log.created_at).toLocaleString("hu-HU", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
         </div>
       </Card>
     ),
