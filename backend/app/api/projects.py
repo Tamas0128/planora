@@ -107,6 +107,12 @@ def list_projects(
         q = q.filter(Project.project_manager_id == user.id)
     elif user.role == UserRole.SITE_MANAGER:
         q = q.filter(Project.site_manager_id == user.id)
+    elif user.role == UserRole.SUBCONTRACTOR:
+        q = q.filter(
+            Project.activities.any(
+                (Activity.responsible_role == UserRole.SUBCONTRACTOR) & Activity.is_active
+            )
+        )
     projects = q.order_by(Project.delivery_date).all()
     favorite_ids = _favorite_ids(db, user)
     health_map = compute_health_for_projects(db, projects)
@@ -126,6 +132,12 @@ def kanban_board(
         q = q.filter(Project.project_manager_id == user.id)
     elif user.role == UserRole.SITE_MANAGER:
         q = q.filter(Project.site_manager_id == user.id)
+    elif user.role == UserRole.SUBCONTRACTOR:
+        q = q.filter(
+            Project.activities.any(
+                (Activity.responsible_role == UserRole.SUBCONTRACTOR) & Activity.is_active
+            )
+        )
     projects = q.all()
     favorite_ids = _favorite_ids(db, user)
     health_map = compute_health_for_projects(db, projects)

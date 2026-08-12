@@ -135,6 +135,9 @@ def audit_logs(
 ):
     from app.services.scoping import can_view_project
 
+    if user.role in (UserRole.PROCUREMENT, UserRole.BILLING, UserRole.SUBCONTRACTOR):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     q = (
         db.query(AuditLog)
         .options(joinedload(AuditLog.user), joinedload(AuditLog.project))

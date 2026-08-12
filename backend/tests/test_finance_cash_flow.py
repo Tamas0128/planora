@@ -1,7 +1,13 @@
 from datetime import date, timedelta
 
 from tests.conftest import create_project
-from tests.test_finance_core import create_customer_invoice, create_partner, create_subcontractor_invoice, create_tig
+from tests.test_finance_core import (
+    create_customer_invoice,
+    create_partner,
+    create_subcontractor_invoice,
+    create_tig,
+    ensure_active_subcontractor_contract,
+)
 
 YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
 TOMORROW = (date.today() + timedelta(days=30)).isoformat()
@@ -28,6 +34,7 @@ def test_cash_flow_calculation_exact_values(client, admin_headers):
     partner = create_partner(client, admin_headers)
     _set_contract(client, admin_headers, project["id"], "10000000")
 
+    ensure_active_subcontractor_contract(client, admin_headers, project["id"], partner["id"])
     create_tig(client, admin_headers, project["id"], partner["id"], net_value="4000000")
 
     inv1 = create_subcontractor_invoice(

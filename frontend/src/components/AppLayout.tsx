@@ -278,8 +278,8 @@ const NAV_ADMIN: NavItem[] = [
   { href: "/audit-log",         label: "Audit napló",    icon: BarChart2,  roles: ["admin", "management"] },
   { href: "/activity-templates", label: "Ütemterv sablon", icon: ListChecks, roles: ["admin", "management"] },
   { href: "/document-templates", label: "Dokumentumsablonok", icon: FileStack, roles: ["admin"] },
-  { href: "/own-companies",     label: "Cégadatok",      icon: Landmark,   roles: ["admin"] },
-  { href: "/partners",          label: "Alvállalkozói törzs", icon: Briefcase, roles: ["admin"] },
+  { href: "/own-companies",     label: "Cégadatok",      icon: Landmark,   roles: ["admin", "management", "billing"] },
+  { href: "/partners",          label: "Alvállalkozói törzs", icon: Briefcase, roles: ["admin", "management", "billing"] },
 ];
 
 interface AppLayoutProps {

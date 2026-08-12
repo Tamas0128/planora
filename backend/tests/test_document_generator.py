@@ -78,6 +78,16 @@ def create_partner(client, headers, **overrides):
 
 
 def create_tig(client, headers, project_id, partner_id, **overrides):
+    # A TIG requires an ACTIVE subcontractor contract for the same
+    # (project, partner) pair — create and activate one first so callers
+    # don't each have to duplicate this setup.
+    contract = create_subcontractor_contract(client, headers, project_id, partner_id)
+    resp = client.patch(
+        f"/api/finance/projects/{project_id}/subcontractor-contracts/{contract['id']}/status",
+        json={"status": "active"},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
     body = {
         "partner_id": partner_id,
         "date": "2026-08-01",

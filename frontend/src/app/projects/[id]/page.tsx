@@ -2642,11 +2642,27 @@ export default function ProjectDetailPage() {
                 </Button>
               )}
             </div>
+            <p className="mb-2 text-[11px] text-muted-foreground">
+              A teljes alvállalkozói törzs — a kiemeltek már dolgoznak ezen a projekten (van szerződésük/TIG-jük/számlájuk).
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {partners.length === 0 && <p className="text-xs text-muted-foreground">Nincs partner</p>}
-              {partners.map((p) => (
-                <Badge key={p.id} variant="outline" className="text-xs">{p.name}</Badge>
-              ))}
+              {partners.map((p) => {
+                const engaged =
+                  subcontractorContracts.some((c) => c.partner_id === p.id) ||
+                  tigs.some((t) => t.partner_id === p.id) ||
+                  subcontractorInvoices.some((i) => i.partner_id === p.id);
+                return (
+                  <Badge
+                    key={p.id}
+                    variant={engaged ? "secondary" : "outline"}
+                    className={cn("text-xs", !engaged && "border-dashed text-muted-foreground/70")}
+                    title={engaged ? undefined : "Még nincs szerződése/TIG-je/számlája ezen a projekten"}
+                  >
+                    {p.name}
+                  </Badge>
+                );
+              })}
             </div>
           </Card>
 
