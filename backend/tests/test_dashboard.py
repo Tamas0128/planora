@@ -30,15 +30,27 @@ def test_on_time_delivery_pct_excludes_turnkey_and_reflects_slippage(client, adm
     assert late["id"]
 
 
-def test_audit_logs_visible_to_procurement_like_project_view(client, admin_headers):
-    # Audit log visibility now mirrors project-view visibility (see
-    # _can_view_project) rather than being admin/management-only — procurement
-    # can already view any project, so the global feed is unrestricted for them.
+def test_audit_logs_forbidden_for_procurement(client, admin_headers):
+    # Confirmed 2026-08-12: this endpoint previously fell through with no
+    # filter for any role that isn't admin/management/PM/SM — procurement,
+    # billing, and subcontractor got the full, unfiltered org-wide audit
+    # log. The frontend only ever hid the nav link for them; the API itself
+    # had no gate. Fixed to block these roles outright rather than give them
+    # a scoped view, since audit logs aren't part of their job function.
     create_project(client, admin_headers)
     create_user(client, admin_headers, "proc1", "procurement")
     headers = login(client, "proc1")
     resp = client.get("/api/audit-logs", headers=headers)
-    assert resp.status_code == 200
+    assert resp.status_code == 403
+
+
+def test_audit_logs_forbidden_for_billing_and_subcontractor(client, admin_headers):
+    create_project(client, admin_headers)
+    for i, role in enumerate(("billing", "subcontractor")):
+        create_user(client, admin_headers, f"auditblock{i}", role)
+        headers = login(client, f"auditblock{i}")
+        resp = client.get("/api/audit-logs", headers=headers)
+        assert resp.status_code == 403
 
 
 def test_audit_logs_scoped_to_own_projects_for_project_manager(client, admin_headers):

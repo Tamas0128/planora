@@ -45,3 +45,9 @@ postgres_data/
 _docx_extract/
 _spec.zip
 backend/tmp_templates/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/

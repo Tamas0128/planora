@@ -22,6 +22,40 @@ def create_tig(client, headers, project_id, partner_id, **overrides):
     return client.post(f"/api/finance/projects/{project_id}/tigs", json=body, headers=headers)
 
 
+def create_subcontractor_contract(client, headers, project_id, partner_id, **overrides):
+    body = {
+        "partner_id": partner_id,
+        "scope_of_work": "Villanyszerelés",
+        "value": "500000",
+        "vat_type": "standard_27",
+        "start_date": "2026-07-01",
+        "end_date": "2026-12-01",
+    }
+    body.update(overrides)
+    resp = client.post(
+        f"/api/finance/projects/{project_id}/subcontractor-contracts", json=body, headers=headers
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+def ensure_active_subcontractor_contract(client, admin_headers, project_id, partner_id):
+    """A TIG requires an ACTIVE subcontractor contract for the same
+    (project, partner) pair — always set this up via admin_headers,
+    independent of whichever headers the calling test will actually use to
+    create the TIG itself (a non-finance role like PROJECT_MANAGER can
+    create a TIG on their own project but can't create the contract).
+    """
+    contract = create_subcontractor_contract(client, admin_headers, project_id, partner_id)
+    resp = client.patch(
+        f"/api/finance/projects/{project_id}/subcontractor-contracts/{contract['id']}/status",
+        json={"status": "active"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    return contract
+
+
 def create_subcontractor_invoice(client, headers, project_id, partner_id, **overrides):
     body = {
         "partner_id": partner_id,
@@ -96,9 +130,35 @@ def test_project_finance_fields_vat_calc(client, admin_headers):
     assert resp.json()["contract_gross_value"] == "1000000.00"
 
 
+def test_tig_creation_requires_active_subcontractor_contract(client, admin_headers):
+    # Added 2026-08-12: live testing showed a TIG (and the billing it
+    # implies) could be recorded with zero signed subcontractor contract in
+    # place. TIG creation now requires an ACTIVE SubcontractorContract for
+    # the same (project, partner) pair.
+    project = create_project(client, admin_headers)
+    partner = create_partner(client, admin_headers)
+
+    resp = create_tig(client, admin_headers, project["id"], partner["id"])
+    assert resp.status_code == 422
+
+    contract = create_subcontractor_contract(client, admin_headers, project["id"], partner["id"])
+    # Still DRAFT — not yet active.
+    resp = create_tig(client, admin_headers, project["id"], partner["id"])
+    assert resp.status_code == 422
+
+    client.patch(
+        f"/api/finance/projects/{project['id']}/subcontractor-contracts/{contract['id']}/status",
+        json={"status": "active"},
+        headers=admin_headers,
+    )
+    resp = create_tig(client, admin_headers, project["id"], partner["id"])
+    assert resp.status_code == 200, resp.text
+
+
 def test_tig_consumed_amount_and_invoice_count(client, admin_headers):
     project = create_project(client, admin_headers)
     partner = create_partner(client, admin_headers)
+    ensure_active_subcontractor_contract(client, admin_headers, project["id"], partner["id"])
 
     tig = create_tig(client, admin_headers, project["id"], partner["id"], net_value="1000000").json()
     assert tig["gross_value"] == "1270000.00"
@@ -200,7 +260,10 @@ def test_project_manager_can_edit_own_tig_but_not_invoices(client, admin_headers
     resp = create_tig(client, pm_headers, other_project["id"], partner["id"])
     assert resp.status_code == 403
 
-    # PM can create/edit a TIG on their own project
+    # PM can create/edit a TIG on their own project (contract set up by
+    # admin first — creating a subcontractor contract is finance-role-only,
+    # unlike TIG creation which is also opened to the owning PM).
+    ensure_active_subcontractor_contract(client, admin_headers, project["id"], partner["id"])
     tig = create_tig(client, pm_headers, project["id"], partner["id"]).json()
     resp = client.patch(
         f"/api/finance/projects/{project['id']}/tigs/{tig['id']}",

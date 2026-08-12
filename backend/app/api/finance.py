@@ -15,6 +15,7 @@ from app.models_finance import (
     OwnCompany,
     Partner,
     SubcontractorContract,
+    SubcontractorContractStatus,
     SubcontractorInvoice,
     SubcontractorInvoiceStatus,
     Tig,
@@ -103,7 +104,28 @@ def _validate_tig_contract_link(
     number. Only the frontend's dropdown filters candidates this way; this
     is the server-side backstop for direct API calls and for any future
     frontend bug that resubmits a stale selection.
+
+    Also enforces the business rule that a TIG may only be recorded once the
+    partner has an ACTIVE subcontractor contract on this project — a
+    deliberate gate added after live testing showed a TIG (and the billing
+    it implies) could otherwise be created with zero signed contract in
+    place.
     """
+    has_active_contract = (
+        db.query(SubcontractorContract)
+        .filter(
+            SubcontractorContract.project_id == project_id,
+            SubcontractorContract.partner_id == partner_id,
+            SubcontractorContract.status == SubcontractorContractStatus.ACTIVE,
+        )
+        .first()
+        is not None
+    )
+    if not has_active_contract:
+        raise HTTPException(
+            status_code=422,
+            detail="A partnerhez nincs aktív alvállalkozói szerződés ezen a projekten — TIG csak aktív szerződés mellett vehető fel",
+        )
     if subcontractor_contract_id is None:
         return
     contract = db.query(SubcontractorContract).get(subcontractor_contract_id)

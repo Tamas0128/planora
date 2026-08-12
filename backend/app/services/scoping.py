@@ -28,7 +28,13 @@ def scoped_activity_query(db: Session, user: User):
 
 
 def scoped_customer_query(db: Session, user: User):
-    """Base Customer query restricted to what `user` is allowed to see.
+    """Base Customer query restricted to what `user` is allowed to see —
+    and, since every CRM write endpoint (create/update communications,
+    relations, quotes, tasks) also uses this as its "can I touch this
+    customer" gate via each file's own `_visible_customer` helper, this is
+    effectively an EDIT scope too, not just read. Do not broaden this for a
+    role that should stay read-only — add a dedicated read-only variant
+    instead (see scoped_customer_query_readonly below).
 
     Mirrors scoped_activity_query's shape but for the CRM role mapping in
     docs/CRM_modul_fejlesztesi_terv.md 11.1: admin/management see everything,
@@ -43,6 +49,20 @@ def scoped_customer_query(db: Session, user: User):
     if user.role in (UserRole.PROJECT_MANAGER, UserRole.SITE_MANAGER):
         return q.filter(Customer.owner_id == user.id)
     return q.filter(false())
+
+
+def scoped_customer_query_readonly(db: Session, user: User):
+    """Same as scoped_customer_query, plus BILLING can view (never write)
+    every customer — so it can navigate to the contracts it already has
+    full unscoped access to via scoped_contract_query, since a contract has
+    no standalone page, only a tab on its customer's detail page. Only wire
+    this into GET (list/detail/export) endpoints; every write endpoint must
+    keep using scoped_customer_query so BILLING can't create/edit CRM
+    records it merely has read access to browse.
+    """
+    if user.role == UserRole.BILLING:
+        return db.query(Customer)
+    return scoped_customer_query(db, user)
 
 
 def scoped_quote_query(db: Session, user: User):
@@ -83,6 +103,17 @@ def scoped_communication_event_query(db: Session, user: User):
     return q.filter(false())
 
 
+def _has_subcontractor_activity(project: Project) -> bool:
+    """A SUBCONTRACTOR-role user only "works on" a project if it has at
+    least one active Activity assigned to their role — same role-class
+    match scoped_activity_query already uses, not a per-individual link
+    (there's no Activity->specific-subcontractor-user FK in this system).
+    """
+    return any(
+        a.responsible_role == UserRole.SUBCONTRACTOR and a.is_active for a in project.activities
+    )
+
+
 def can_view_project(user: User, project: Project) -> bool:
     if user.role in (UserRole.ADMIN, UserRole.MANAGEMENT):
         return True
@@ -90,6 +121,8 @@ def can_view_project(user: User, project: Project) -> bool:
         return project.project_manager_id == user.id
     if user.role == UserRole.SITE_MANAGER:
         return project.site_manager_id == user.id
+    if user.role == UserRole.SUBCONTRACTOR:
+        return _has_subcontractor_activity(project)
     return True
 
 

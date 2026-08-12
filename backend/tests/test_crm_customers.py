@@ -60,13 +60,49 @@ def test_customer_list_scoped_to_owner_for_project_manager(client, admin_headers
     assert {"Sales1 Kft.", "Sales2 Kft."} <= names_admin
 
 
-def test_billing_role_sees_no_customers(client, admin_headers):
+def test_customer_creation_forbidden_for_procurement_billing_subcontractor(client, admin_headers):
+    # Confirmed 2026-08-12: create_customer previously had no role gate at
+    # all — any authenticated user could create a customer, including roles
+    # with zero later visibility into it (scoped_customer_query returns
+    # nothing for them), leaving an orphaned-in-practice record. Restricted
+    # to the two CRM-mapped roles (Értékesítő/project_manager, Ügyintéző/
+    # site_manager) plus admin/management.
+    for i, role in enumerate(("procurement", "billing", "subcontractor")):
+        create_user(client, admin_headers, f"nocreate{i}", role)
+        headers = login(client, f"nocreate{i}")
+        resp = create_customer(client, headers, name=f"Blocked {role} Kft.")
+        assert resp.status_code == 403
+
+
+def test_customer_creation_allowed_for_site_manager(client, admin_headers):
+    create_user(client, admin_headers, "sm_create", "site_manager")
+    headers = login(client, "sm_create")
+    resp = create_customer(client, headers, name="Ügyintéző Kft.")
+    assert resp.status_code == 200, resp.text
+
+
+def test_billing_role_sees_customers_readonly(client, admin_headers):
+    # Changed 2026-08-12: BILLING was previously blocked from all customer
+    # visibility, but scoped_contract_query already gives it unscoped access
+    # to every Contract — with no way to reach a contract's own page (only a
+    # tab on its customer's detail page), billing had full contract rights
+    # but no way to use them. Now sees every customer (read-only).
     create_user(client, admin_headers, "bill1", "billing")
     headers = login(client, "bill1")
-    create_customer(client, admin_headers, type="company", name="Any Kft.")
+    created = create_customer(client, admin_headers, type="company", name="Any Kft.").json()
     resp = client.get("/api/crm/customers", headers=headers)
     assert resp.status_code == 200
-    assert resp.json() == []
+    assert len(resp.json()) == 1
+    resp = client.get(f"/api/crm/customers/{created['id']}", headers=headers)
+    assert resp.status_code == 200
+    # But still can't edit — visibility only. update_customer still gates via
+    # the unmodified scoped_customer_query (billing excluded there), so this
+    # comes back as 404 "not found" rather than a 403 — the write path never
+    # even considers billing an existing option for this customer.
+    resp = client.patch(
+        f"/api/crm/customers/{created['id']}", json={"phone": "+36301234567"}, headers=headers
+    )
+    assert resp.status_code == 404
 
 
 def test_update_changes_status_and_logs_audit(client, admin_headers):

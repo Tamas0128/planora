@@ -1,7 +1,13 @@
 from datetime import date, timedelta
 
 from tests.conftest import create_project, create_user, login
-from tests.test_finance_core import create_customer_invoice, create_partner, create_subcontractor_invoice, create_tig
+from tests.test_finance_core import (
+    create_customer_invoice,
+    create_partner,
+    create_subcontractor_invoice,
+    create_tig,
+    ensure_active_subcontractor_contract,
+)
 
 YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
 TOMORROW = (date.today() + timedelta(days=30)).isoformat()
@@ -58,6 +64,8 @@ def test_all_tigs_and_invoices_scoped_to_own_projects_for_pm(client, admin_heade
     own_project = create_project(client, admin_headers, project_manager_id=pm["id"])
     other_project = create_project(client, admin_headers)
     partner = create_partner(client, admin_headers)
+    ensure_active_subcontractor_contract(client, admin_headers, own_project["id"], partner["id"])
+    ensure_active_subcontractor_contract(client, admin_headers, other_project["id"], partner["id"])
     create_tig(client, admin_headers, own_project["id"], partner["id"])
     create_tig(client, admin_headers, other_project["id"], partner["id"])
 

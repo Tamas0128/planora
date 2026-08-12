@@ -32,7 +32,7 @@ from app.schemas_crm import (
 from app.services.audit import log_change
 from app.services.crm_project_bridge import ensure_project_for_customer
 from app.services.numbering import next_sequence_number
-from app.services.scoping import scoped_customer_query
+from app.services.scoping import scoped_customer_query, scoped_customer_query_readonly
 
 router = APIRouter(prefix="/crm/customers", tags=["crm-customers"])
 
@@ -130,7 +130,7 @@ def list_customers(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    q = scoped_customer_query(db, user)
+    q = scoped_customer_query_readonly(db, user)
     if name:
         q = q.filter(Customer.name.ilike(f"%{name}%"))
     if type:
@@ -154,7 +154,7 @@ def export_customers(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    q = scoped_customer_query(db, user)
+    q = scoped_customer_query_readonly(db, user)
     if name:
         q = q.filter(Customer.name.ilike(f"%{name}%"))
     if type:
@@ -252,6 +252,13 @@ def create_customer(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    if user.role not in (
+        UserRole.ADMIN,
+        UserRole.MANAGEMENT,
+        UserRole.PROJECT_MANAGER,
+        UserRole.SITE_MANAGER,
+    ):
+        raise HTTPException(status_code=403, detail="Access denied")
     _reject_person_contact_fields(
         body.type,
         {field: getattr(body, field) for field in PERSON_ONLY_FIELDS},
@@ -294,7 +301,7 @@ def get_customer(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    customer = scoped_customer_query(db, user).filter(Customer.id == customer_id).first()
+    customer = scoped_customer_query_readonly(db, user).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Ügyfél nem található")
     return customer

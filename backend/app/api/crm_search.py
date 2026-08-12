@@ -6,7 +6,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
 from app.models_crm import Contract, Customer
-from app.services.scoping import scoped_contract_query, scoped_customer_query
+from app.services.scoping import scoped_contract_query, scoped_customer_query_readonly
 
 router = APIRouter(prefix="/crm/search", tags=["crm-search"])
 
@@ -29,7 +29,7 @@ def crm_search(
     results: list[CrmSearchResult] = []
 
     customers = (
-        scoped_customer_query(db, user)
+        scoped_customer_query_readonly(db, user)
         .filter((Customer.name.ilike(like)) | (Customer.customer_number.ilike(like)))
         .order_by(Customer.name)
         .limit(10)
