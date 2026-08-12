@@ -40,6 +40,10 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-planora}:${POSTGRES_PASSWORD:-planora}@postgres:5432/${POSTGRES_DB:-planora}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # pilot branch only: skips the login form, single "Belépés" button signs
+      # in as the admin user via /auth/pilot-login (no password check) — see
+      # backend/app/api/auth.py::pilot_login. Not set on main.
+      PILOT_MODE: "true"
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://localhost:9443}
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
