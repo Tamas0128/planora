@@ -1,13 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Project, User, UserRole
-from app.models_estimate import CostEstimateRough, RoughEstimateRate
+from app.models_estimate import (
+    CostEstimateRough,
+    PriceCatalogItem,
+    PriceCatalogSource,
+    RoughEstimateRate,
+)
 from app.schemas_estimate import (
     CostEstimateRoughCreate,
     CostEstimateRoughResponse,
+    PriceCatalogItemCreate,
+    PriceCatalogItemResponse,
+    PriceCatalogItemUpdate,
     RoughEstimateRateResponse,
     RoughEstimateRateUpdate,
 )
@@ -163,5 +174,90 @@ def delete_rough_estimate(
     if not estimate:
         raise HTTPException(status_code=404, detail="Becslés nem található")
     db.delete(estimate)
+    db.commit()
+    return {"ok": True}
+
+
+# --- Price catalog (tételes ártábla, Phase 2) -------------------------------
+
+
+@router.get("/price-catalog/chapters", response_model=list[str])
+def list_price_catalog_chapters(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    rows = db.query(PriceCatalogItem.chapter).distinct().order_by(PriceCatalogItem.chapter).all()
+    return [r[0] for r in rows]
+
+
+@router.get("/price-catalog", response_model=list[PriceCatalogItemResponse])
+def list_price_catalog_items(
+    search: Optional[str] = None,
+    chapter: Optional[str] = None,
+    active_only: bool = True,
+    limit: int = Query(50, le=200),
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    q = db.query(PriceCatalogItem)
+    if active_only:
+        q = q.filter(PriceCatalogItem.is_active.is_(True))
+    if chapter:
+        q = q.filter(PriceCatalogItem.chapter == chapter)
+    if search:
+        like = f"%{search}%"
+        q = q.filter(or_(PriceCatalogItem.code.ilike(like), PriceCatalogItem.description.ilike(like)))
+    return (
+        q.order_by(PriceCatalogItem.chapter, PriceCatalogItem.code)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+
+@router.post("/price-catalog", response_model=PriceCatalogItemResponse)
+def create_price_catalog_item(
+    body: PriceCatalogItemCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _require_finance_role(user)
+    item = PriceCatalogItem(**body.model_dump(), source=PriceCatalogSource.OWN)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.patch("/price-catalog/{item_id}", response_model=PriceCatalogItemResponse)
+def update_price_catalog_item(
+    item_id: int,
+    body: PriceCatalogItemUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _require_finance_role(user)
+    item = db.query(PriceCatalogItem).get(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Tétel nem található")
+    for field_name, value in body.model_dump(exclude_unset=True).items():
+        setattr(item, field_name, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/price-catalog/{item_id}")
+def delete_price_catalog_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _require_finance_role(user)
+    item = db.query(PriceCatalogItem).get(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Tétel nem található")
+    db.delete(item)
     db.commit()
     return {"ok": True}

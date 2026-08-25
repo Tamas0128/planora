@@ -10,6 +10,7 @@ The itemized/TERC-based budget (Phase 2+) will live here too once built.
 
 import enum
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -19,6 +20,8 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     JSON,
+    Numeric,
+    String,
     Text,
     UniqueConstraint,
 )
@@ -168,3 +171,45 @@ class CostEstimateRough(Base):
 
     project: Mapped["Project"] = relationship(back_populates="cost_estimates_rough")
     created_by: Mapped["User | None"] = relationship()
+
+
+class PriceCatalogSource(str, enum.Enum):
+    OWN = "own"  # Manuálisan felvitt, saját ártétel
+    TERC_IMPORT = "terc_import"  # TERC exportból importált
+
+
+class PriceCatalogItem(Base):
+    """One row of the tételes (TERC-style) price catalog — code, unit,
+    material/labor unit price, grouped by munkanem/fejezet (a free-text
+    chapter, not an enum: TERC's chapter list is large and changes across
+    editions, so admins type/import it rather than picking from a fixed
+    set). Phase 2 only supports manual entry (source=OWN); Phase 3 adds a
+    TERC Excel/CSV import that also writes into this table
+    (source=TERC_IMPORT).
+
+    This catalog itself has no cost-estimate consumer yet — the itemized
+    (tételes) budget that will pick line items from it is a later phase.
+    """
+
+    __tablename__ = "price_catalog_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), index=True)
+    description: Mapped[str] = mapped_column(String(500))
+    unit: Mapped[str] = mapped_column(String(20))
+    chapter: Mapped[str] = mapped_column(String(255), index=True)
+    unit_price_material: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    unit_price_labor: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    source: Mapped[PriceCatalogSource] = mapped_column(
+        Enum(PriceCatalogSource), default=PriceCatalogSource.OWN
+    )
+    source_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    @property
+    def unit_price_total(self) -> Decimal:
+        return self.unit_price_material + self.unit_price_labor

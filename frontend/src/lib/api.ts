@@ -779,6 +779,24 @@ export interface CostEstimateRough {
   created_at: string;
 }
 
+export type PriceCatalogSource = "own" | "terc_import";
+
+export interface PriceCatalogItem {
+  id: number;
+  code: string;
+  description: string;
+  unit: string;
+  chapter: string;
+  unit_price_material: string;
+  unit_price_labor: string;
+  unit_price_total: string;
+  source: PriceCatalogSource;
+  source_reference?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<{ access_token: string; refresh_token: string }>("/auth/login/json", {
@@ -1370,6 +1388,26 @@ export const api = {
     request<{ ok: boolean }>(`/projects/${projectId}/cost-estimates/rough/${estimateId}`, {
       method: "DELETE",
     }),
+
+  priceCatalogChapters: () => request<string[]>("/price-catalog/chapters"),
+
+  priceCatalogItems: (params: { search?: string; chapter?: string; active_only?: boolean } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set("search", params.search);
+    if (params.chapter) qs.set("chapter", params.chapter);
+    if (params.active_only !== undefined) qs.set("active_only", String(params.active_only));
+    const query = qs.toString();
+    return request<PriceCatalogItem[]>(`/price-catalog${query ? `?${query}` : ""}`);
+  },
+
+  createPriceCatalogItem: (data: Record<string, unknown>) =>
+    request<PriceCatalogItem>("/price-catalog", { method: "POST", body: JSON.stringify(data) }),
+
+  updatePriceCatalogItem: (id: number, data: Record<string, unknown>) =>
+    request<PriceCatalogItem>(`/price-catalog/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deletePriceCatalogItem: (id: number) =>
+    request<{ ok: boolean }>(`/price-catalog/${id}`, { method: "DELETE" }),
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -1646,6 +1684,11 @@ export const FOUNDATION_TYPE_LABELS: Record<string, string> = {
   strip: "Sávalap",
   slab: "Lemezalap",
   point: "Pontalap",
+};
+
+export const PRICE_CATALOG_SOURCE_LABELS: Record<string, string> = {
+  own: "Saját",
+  terc_import: "TERC import",
 };
 
 export const ROUGH_ESTIMATE_CATEGORY_LABELS: Record<string, string> = {

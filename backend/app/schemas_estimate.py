@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel
@@ -6,6 +7,7 @@ from pydantic import BaseModel
 from app.models_estimate import (
     FinishLevel,
     FoundationType,
+    PriceCatalogSource,
     RoofCoveringType,
     RoughEstimateCategory,
     WallType,
@@ -83,5 +85,47 @@ class CostEstimateRoughResponse(BaseModel):
     created_by_id: Optional[int] = None
     created_by_name: Optional[str] = None
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# --- Price catalog (tételes ártábla, Phase 2) -------------------------------
+
+
+class PriceCatalogItemCreate(BaseModel):
+    code: str
+    description: str
+    unit: str
+    chapter: str
+    unit_price_material: Decimal = Decimal("0")
+    unit_price_labor: Decimal = Decimal("0")
+    source_reference: Optional[str] = None
+
+
+class PriceCatalogItemUpdate(BaseModel):
+    code: Optional[str] = None
+    description: Optional[str] = None
+    unit: Optional[str] = None
+    chapter: Optional[str] = None
+    unit_price_material: Optional[Decimal] = None
+    unit_price_labor: Optional[Decimal] = None
+    source_reference: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class PriceCatalogItemResponse(BaseModel):
+    id: int
+    code: str
+    description: str
+    unit: str
+    chapter: str
+    unit_price_material: Decimal
+    unit_price_labor: Decimal
+    unit_price_total: Decimal
+    source: PriceCatalogSource
+    source_reference: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
