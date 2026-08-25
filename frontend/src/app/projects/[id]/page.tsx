@@ -22,7 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
-import CostEstimateRoughTab from "@/components/CostEstimateRoughTab";
+import CostEstimateTab from "@/components/CostEstimateTab";
 import {
   Activity,
   api,
@@ -3153,9 +3153,10 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="cost-estimate" className="mt-3">
-          <CostEstimateRoughTab
+          <CostEstimateTab
             projectId={project.id}
             defaultFloorAreaSqm={project.floor_area_sqm}
+            hasCustomer={Boolean(project.customer_id)}
             canEdit={canEdit}
           />
         </TabsContent>

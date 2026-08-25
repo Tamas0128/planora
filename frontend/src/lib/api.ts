@@ -797,6 +797,62 @@ export interface PriceCatalogItem {
   updated_at: string;
 }
 
+export interface CostEstimateDetailedItem {
+  id: number;
+  catalog_item_id?: number;
+  code?: string;
+  description: string;
+  unit: string;
+  chapter: string;
+  quantity: string;
+  unit_price_material: string;
+  unit_price_labor: string;
+  line_total: string;
+  sort_order: number;
+}
+
+export interface ChapterSubtotal {
+  chapter: string;
+  total: string;
+}
+
+export interface CostEstimateDetailed {
+  id: number;
+  project_id: number;
+  name: string;
+  notes?: string;
+  items: CostEstimateDetailedItem[];
+  chapter_subtotals: ChapterSubtotal[];
+  grand_total: string;
+  created_by_id?: number;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CostEstimateDetailedSummary {
+  id: number;
+  project_id: number;
+  name: string;
+  grand_total: string;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransferToQuoteResult {
+  quote_id: number;
+  quote_number: string;
+  customer_id: number;
+}
+
+export interface PriceCatalogImportParseResult {
+  columns: string[];
+  rows: (string | null)[][];
+  suggested_mapping: Record<string, number>;
+  row_count: number;
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<{ access_token: string; refresh_token: string }>("/auth/login/json", {
@@ -1408,6 +1464,80 @@ export const api = {
 
   deletePriceCatalogItem: (id: number) =>
     request<{ ok: boolean }>(`/price-catalog/${id}`, { method: "DELETE" }),
+
+  parsePriceCatalogImport: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<PriceCatalogImportParseResult>("/price-catalog/import/parse", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  commitPriceCatalogImport: (data: {
+    rows: (string | null)[][];
+    mapping: Record<string, number>;
+    source_reference: string;
+  }) =>
+    request<{ created: number; updated: number; skipped: number }>("/price-catalog/import/commit", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  detailedEstimates: (projectId: number) =>
+    request<CostEstimateDetailedSummary[]>(`/projects/${projectId}/cost-estimates/detailed`),
+
+  createDetailedEstimate: (projectId: number, data: { name: string; notes?: string }) =>
+    request<CostEstimateDetailed>(`/projects/${projectId}/cost-estimates/detailed`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getDetailedEstimate: (projectId: number, estimateId: number) =>
+    request<CostEstimateDetailed>(`/projects/${projectId}/cost-estimates/detailed/${estimateId}`),
+
+  updateDetailedEstimate: (projectId: number, estimateId: number, data: Record<string, unknown>) =>
+    request<CostEstimateDetailed>(`/projects/${projectId}/cost-estimates/detailed/${estimateId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteDetailedEstimate: (projectId: number, estimateId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/cost-estimates/detailed/${estimateId}`, {
+      method: "DELETE",
+    }),
+
+  addDetailedEstimateItem: (projectId: number, estimateId: number, data: Record<string, unknown>) =>
+    request<CostEstimateDetailed>(`/projects/${projectId}/cost-estimates/detailed/${estimateId}/items`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateDetailedEstimateItem: (
+    projectId: number,
+    estimateId: number,
+    itemId: number,
+    data: Record<string, unknown>
+  ) =>
+    request<CostEstimateDetailed>(
+      `/projects/${projectId}/cost-estimates/detailed/${estimateId}/items/${itemId}`,
+      { method: "PATCH", body: JSON.stringify(data) }
+    ),
+
+  deleteDetailedEstimateItem: (projectId: number, estimateId: number, itemId: number) =>
+    request<CostEstimateDetailed>(
+      `/projects/${projectId}/cost-estimates/detailed/${estimateId}/items/${itemId}`,
+      { method: "DELETE" }
+    ),
+
+  transferDetailedEstimateToQuote: (projectId: number, estimateId: number) =>
+    request<TransferToQuoteResult>(
+      `/projects/${projectId}/cost-estimates/detailed/${estimateId}/transfer-to-quote`,
+      { method: "POST" }
+    ),
+
+  exportDetailedEstimateXlsx: (projectId: number, estimateId: number, filename: string) =>
+    downloadFile(`/projects/${projectId}/cost-estimates/detailed/${estimateId}/export.xlsx`, filename),
 };
 
 export const STATUS_LABELS: Record<string, string> = {

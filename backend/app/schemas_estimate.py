@@ -129,3 +129,123 @@ class PriceCatalogItemResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# --- Detailed (tételes) budget, Phase 4 -------------------------------------
+
+
+class CostEstimateDetailedItemCreate(BaseModel):
+    # Either reference a catalog row (its code/description/unit/chapter/
+    # prices are snapshotted server-side) or supply every field manually —
+    # exactly one of the two paths, enforced in the endpoint, not here.
+    catalog_item_id: Optional[int] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    unit: Optional[str] = None
+    chapter: Optional[str] = None
+    unit_price_material: Optional[Decimal] = None
+    unit_price_labor: Optional[Decimal] = None
+    quantity: Decimal = Decimal("1")
+
+
+class CostEstimateDetailedItemUpdate(BaseModel):
+    description: Optional[str] = None
+    unit: Optional[str] = None
+    chapter: Optional[str] = None
+    quantity: Optional[Decimal] = None
+    unit_price_material: Optional[Decimal] = None
+    unit_price_labor: Optional[Decimal] = None
+    sort_order: Optional[int] = None
+
+
+class CostEstimateDetailedItemResponse(BaseModel):
+    id: int
+    catalog_item_id: Optional[int] = None
+    code: Optional[str] = None
+    description: str
+    unit: str
+    chapter: str
+    quantity: Decimal
+    unit_price_material: Decimal
+    unit_price_labor: Decimal
+    line_total: Decimal
+    sort_order: int
+
+    model_config = {"from_attributes": True}
+
+
+class CostEstimateDetailedCreate(BaseModel):
+    name: str
+    notes: Optional[str] = None
+
+
+class CostEstimateDetailedUpdate(BaseModel):
+    name: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ChapterSubtotal(BaseModel):
+    chapter: str
+    total: Decimal
+
+
+class CostEstimateDetailedResponse(BaseModel):
+    id: int
+    project_id: int
+    name: str
+    notes: Optional[str] = None
+    items: list[CostEstimateDetailedItemResponse]
+    chapter_subtotals: list[ChapterSubtotal]
+    grand_total: Decimal
+    created_by_id: Optional[int] = None
+    created_by_name: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CostEstimateDetailedSummaryResponse(BaseModel):
+    """Lightweight row for the per-project list view — no items, so listing
+    several estimates doesn't pull every line of every one of them."""
+
+    id: int
+    project_id: int
+    name: str
+    grand_total: Decimal
+    created_by_name: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TransferToQuoteResponse(BaseModel):
+    quote_id: int
+    quote_number: str
+    customer_id: int
+
+
+# --- TERC price-list import, Phase 3 ----------------------------------------
+
+
+class PriceCatalogImportParseResponse(BaseModel):
+    columns: list[str]
+    rows: list[list[Optional[str]]]
+    suggested_mapping: dict[str, int]
+    row_count: int
+
+
+class PriceCatalogImportCommitRequest(BaseModel):
+    rows: list[list[Optional[str]]]
+    # target field name -> 0-based column index into `rows`. Required keys:
+    # code, description, unit, chapter, and either unit_price (a single
+    # combined column) or unit_price_material/unit_price_labor.
+    mapping: dict[str, int]
+    source_reference: str
+
+
+class PriceCatalogImportCommitResponse(BaseModel):
+    created: int
+    updated: int
+    skipped: int

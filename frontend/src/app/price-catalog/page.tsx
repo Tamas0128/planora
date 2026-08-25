@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import {
   api,
   getCachedUser,
   PRICE_CATALOG_SOURCE_LABELS,
+  PriceCatalogImportParseResult,
   PriceCatalogItem,
   User,
 } from "@/lib/api";
@@ -39,6 +40,16 @@ const emptyForm = {
 
 type ItemForm = typeof emptyForm;
 
+const IMPORT_TARGET_FIELDS: { key: string; label: string; required?: boolean }[] = [
+  { key: "code", label: "Kód", required: true },
+  { key: "description", label: "Megnevezés", required: true },
+  { key: "unit", label: "Egység" },
+  { key: "chapter", label: "Munkanem" },
+  { key: "unit_price_material", label: "Anyag ár" },
+  { key: "unit_price_labor", label: "Díj ár" },
+  { key: "unit_price", label: "Egységár (ha nincs külön anyag/díj)" },
+];
+
 function toForm(item: PriceCatalogItem): ItemForm {
   return {
     code: item.code,
@@ -61,6 +72,14 @@ export default function PriceCatalogPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ItemForm>(emptyForm);
+
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [parsed, setParsed] = useState<PriceCatalogImportParseResult | null>(null);
+  const [mapping, setMapping] = useState<Record<string, number | undefined>>({});
+  const [sourceReference, setSourceReference] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function load() {
     api
@@ -147,6 +166,56 @@ export default function PriceCatalogPage() {
     }
   }
 
+  function openImport() {
+    setParsed(null);
+    setMapping({});
+    setSourceReference("");
+    setShowImportDialog(true);
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setParsing(true);
+    try {
+      const result = await api.parsePriceCatalogImport(file);
+      setParsed(result);
+      setMapping(result.suggested_mapping);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a fájl beolvasása során");
+    } finally {
+      setParsing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleCommitImport() {
+    if (!parsed) return;
+    if (mapping.code === undefined || mapping.description === undefined) {
+      toast.error("A kód és a megnevezés oszlop hozzárendelése kötelező");
+      return;
+    }
+    setImporting(true);
+    try {
+      const cleanMapping = Object.fromEntries(
+        Object.entries(mapping).filter(([, v]) => v !== undefined)
+      ) as Record<string, number>;
+      const result = await api.commitPriceCatalogImport({
+        rows: parsed.rows,
+        mapping: cleanMapping,
+        source_reference: sourceReference.trim() || "TERC import",
+      });
+      toast.success(`Import kész: ${result.created} új, ${result.updated} frissítve, ${result.skipped} kihagyva`);
+      setShowImportDialog(false);
+      load();
+      api.priceCatalogChapters().then(setChapters).catch(() => {});
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba az importálás során");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <AppLayout>
       <div className="mb-3 flex items-center justify-between gap-4">
@@ -158,9 +227,14 @@ export default function PriceCatalogPage() {
           </p>
         </div>
         {canEdit && (
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="size-3.5" /> Új tétel
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={openImport}>
+              <Upload className="size-3.5" /> TERC import
+            </Button>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="size-3.5" /> Új tétel
+            </Button>
+          </div>
         )}
       </div>
 
@@ -300,6 +374,101 @@ export default function PriceCatalogPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>TERC / árlista import</DialogTitle>
+          </DialogHeader>
+
+          {!parsed ? (
+            <div className="py-4">
+              <p className="mb-3 text-xs text-muted-foreground">
+                Excel (.xlsx) vagy CSV fájl tölthető fel — a rendszer megpróbálja felismerni az
+                oszlopokat, amit a következő lépésben ellenőrizhetsz/módosíthatsz.
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xlsm,.csv"
+                onChange={handleFileSelected}
+                disabled={parsing}
+                className="text-xs"
+              />
+              {parsing && <p className="mt-2 text-xs text-muted-foreground">Beolvasás...</p>}
+            </div>
+          ) : (
+            <div className="space-y-3 py-2">
+              <p className="text-xs text-muted-foreground">{parsed.row_count} sor beolvasva. Rendeld hozzá az oszlopokat:</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {IMPORT_TARGET_FIELDS.map((field) => (
+                  <div key={field.key} className="space-y-1.5">
+                    <Label>{field.label}{field.required && " *"}</Label>
+                    <Select
+                      value={mapping[field.key] !== undefined ? String(mapping[field.key]) : "none"}
+                      onValueChange={(v) =>
+                        setMapping({ ...mapping, [field.key]: v === "none" ? undefined : Number(v) })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue>
+                          {(v: string) =>
+                            v === "none" || v === undefined ? "— nincs —" : parsed.columns[Number(v)]
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">— nincs —</SelectItem>
+                        {parsed.columns.map((col, idx) => (
+                          <SelectItem key={idx} value={String(idx)}>{col || `(${idx + 1}. oszlop)`}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="import-source-ref">Forrás hivatkozás</Label>
+                <Input
+                  id="import-source-ref"
+                  placeholder="pl. TERC 2026/1"
+                  value={sourceReference}
+                  onChange={(e) => setSourceReference(e.target.value)}
+                />
+              </div>
+
+              <div className="overflow-x-auto rounded border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {parsed.columns.map((col, idx) => (
+                        <TableHead key={idx}>{col}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {parsed.rows.slice(0, 5).map((row, ridx) => (
+                      <TableRow key={ridx}>
+                        {row.map((cell, cidx) => (
+                          <TableCell key={cidx} className="text-xs">{cell}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setParsed(null)}>Másik fájl</Button>
+                <Button onClick={handleCommitImport} disabled={importing}>
+                  {importing ? "Importálás..." : `Importálás (${parsed.row_count} sor)`}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>

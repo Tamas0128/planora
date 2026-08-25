@@ -5,9 +5,14 @@ the total is what makes this an order-of-magnitude estimate rather than a
 budget (the itemized/TERC-based budget is a separate, later phase).
 """
 
+import io
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
 from sqlalchemy.orm import Session
 
 from app.models_estimate import (
+    CostEstimateDetailed,
     FinishLevel,
     FoundationType,
     RoofCoveringType,
@@ -188,3 +193,69 @@ def seed_rough_estimate_rates(db: Session) -> None:
         _add(RoughEstimateCategory.ROOF_COVERING, prices, roof_covering_type=roof_covering_type)
 
     db.commit()
+
+
+# --- Detailed (tételes) budget XLSX export, Phase 5 -------------------------
+
+
+def build_detailed_estimate_workbook(estimate: CostEstimateDetailed) -> bytes:
+    """Chapter-grouped XLSX export of a CostEstimateDetailed — the format
+    site staff/subcontractors expect a tételes költségvetés in, unlike the
+    rough estimate which stays on-screen only.
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Tételes költségvetés"
+
+    bold = Font(bold=True)
+    headers = ["Kód", "Megnevezés", "Egység", "Mennyiség", "Anyag (Ft)", "Díj (Ft)", "Összesen (Ft)"]
+    ws.append([estimate.name])
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.append([])
+    ws.append(headers)
+    for cell in ws[3]:
+        cell.font = bold
+
+    chapters: dict[str, list] = {}
+    for item in estimate.items:
+        chapters.setdefault(item.chapter, []).append(item)
+
+    grand_total = 0
+    for chapter, items in chapters.items():
+        ws.append([chapter])
+        ws.cell(row=ws.max_row, column=1).font = bold
+        chapter_total = 0
+        for item in items:
+            line_total = float(item.line_total)
+            chapter_total += line_total
+            ws.append(
+                [
+                    item.code or "",
+                    item.description,
+                    item.unit,
+                    float(item.quantity),
+                    float(item.unit_price_material),
+                    float(item.unit_price_labor),
+                    line_total,
+                ]
+            )
+        ws.append(["", "", "", "", "", "Részösszeg:", chapter_total])
+        ws.cell(row=ws.max_row, column=6).font = bold
+        ws.cell(row=ws.max_row, column=7).font = bold
+        ws.append([])
+        grand_total += chapter_total
+
+    ws.append(["", "", "", "", "", "Mindösszesen:", grand_total])
+    ws.cell(row=ws.max_row, column=6).font = Font(bold=True, size=12)
+    ws.cell(row=ws.max_row, column=7).font = Font(bold=True, size=12)
+
+    for col, width in zip("ABCDEFG", (16, 45, 10, 12, 14, 14, 16)):
+        ws.column_dimensions[col].width = width
+    for row in ws.iter_rows(min_row=3):
+        for cell in row:
+            if isinstance(cell.value, (int, float)):
+                cell.alignment = Alignment(horizontal="right")
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()

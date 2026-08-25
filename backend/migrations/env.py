@@ -38,6 +38,8 @@ from app.models_documents import (  # noqa: F401 — register document generator
     GeneratedDocument,
 )
 from app.models_estimate import (  # noqa: F401 — register cost estimate models on Base.metadata
+    CostEstimateDetailed,
+    CostEstimateDetailedItem,
     CostEstimateRough,
     PriceCatalogItem,
     RoughEstimateRate,

@@ -213,3 +213,72 @@ class PriceCatalogItem(Base):
     @property
     def unit_price_total(self) -> Decimal:
         return self.unit_price_material + self.unit_price_labor
+
+
+class CostEstimateDetailed(Base):
+    """One itemized (tételes) budget "document" for a project — a named,
+    editable collection of line items drawn from PriceCatalogItem (or typed
+    in manually). A project can hold several, e.g. a first pass and a
+    revised version after client negotiation; each is independently
+    transferable to a CRM Quote (see the transfer-to-quote endpoint).
+    """
+
+    __tablename__ = "cost_estimate_detailed"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(255))
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    project: Mapped["Project"] = relationship(back_populates="cost_estimates_detailed")
+    created_by: Mapped["User | None"] = relationship()
+    items: Mapped[list["CostEstimateDetailedItem"]] = relationship(
+        back_populates="estimate",
+        cascade="all, delete-orphan",
+        order_by="CostEstimateDetailedItem.sort_order",
+    )
+
+
+class CostEstimateDetailedItem(Base):
+    """One line of a CostEstimateDetailed. code/description/unit/chapter/
+    prices are snapshotted from the PriceCatalogItem at the moment the line
+    is added (catalog_item_id kept only as a soft back-reference, SET NULL
+    if the catalog row is later deleted) — a saved budget must not silently
+    change if the catalog is edited afterwards, and the user must be able to
+    override any field on a line (e.g. a negotiated price) without that
+    edit leaking back into the shared catalog.
+    """
+
+    __tablename__ = "cost_estimate_detailed_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    estimate_id: Mapped[int] = mapped_column(
+        ForeignKey("cost_estimate_detailed.id", ondelete="CASCADE"), index=True
+    )
+    catalog_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("price_catalog_items.id", ondelete="SET NULL"), nullable=True
+    )
+    code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    description: Mapped[str] = mapped_column(String(500))
+    unit: Mapped[str] = mapped_column(String(20))
+    chapter: Mapped[str] = mapped_column(String(255))
+    quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3), default=1)
+    unit_price_material: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    unit_price_labor: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    estimate: Mapped["CostEstimateDetailed"] = relationship(back_populates="items")
+    catalog_item: Mapped["PriceCatalogItem | None"] = relationship()
+
+    @property
+    def line_total(self) -> Decimal:
+        return self.quantity * (self.unit_price_material + self.unit_price_labor)
