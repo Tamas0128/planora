@@ -727,6 +727,58 @@ export interface ProjectFinanceOverviewRow {
   finance_status: string;
 }
 
+export type FinishLevel = "economy" | "standard" | "premium";
+export type WallType = "light_steel" | "clt" | "timber_frame" | "brick";
+export type RoofCoveringType = "tile" | "metal_sheet" | "shingle" | "flat_roof";
+export type FoundationType = "strip" | "slab" | "point";
+
+export interface RoughEstimateRate {
+  id: number;
+  category: string;
+  wall_type?: WallType;
+  roof_covering_type?: RoofCoveringType;
+  foundation_type?: FoundationType;
+  price_economy: number;
+  price_standard: number;
+  price_premium: number;
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface CostEstimateBreakdownLine {
+  category: string;
+  wall_type?: string | null;
+  roof_covering_type?: string | null;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+}
+
+export interface CostEstimateRough {
+  id: number;
+  project_id: number;
+  finish_level: FinishLevel;
+  floor_area_sqm: number;
+  exterior_wall_fm: number;
+  exterior_wall_type: WallType;
+  interior_wall_fm: number;
+  interior_wall_type: WallType;
+  has_basement: boolean;
+  basement_wall_fm: number;
+  walkable_slab_sqm: number;
+  light_slab_sqm: number;
+  roof_area_sqm: number;
+  roof_covering_type: RoofCoveringType;
+  foundation_type: FoundationType;
+  breakdown: CostEstimateBreakdownLine[];
+  total_net_min: number;
+  total_net_max: number;
+  notes?: string;
+  created_by_id?: number;
+  created_by_name?: string;
+  created_at: string;
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<{ access_token: string; refresh_token: string }>("/auth/login/json", {
@@ -1296,6 +1348,28 @@ export const api = {
 
   deleteGeneratedDocument: (docId: number) =>
     request<{ ok: boolean }>(`/generated-documents/${docId}`, { method: "DELETE" }),
+
+  costEstimateRates: () => request<RoughEstimateRate[]>("/cost-estimate-rates"),
+
+  updateCostEstimateRate: (id: number, data: Record<string, unknown>) =>
+    request<RoughEstimateRate>(`/cost-estimate-rates/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  roughEstimates: (projectId: number) =>
+    request<CostEstimateRough[]>(`/projects/${projectId}/cost-estimates/rough`),
+
+  createRoughEstimate: (projectId: number, data: Record<string, unknown>) =>
+    request<CostEstimateRough>(`/projects/${projectId}/cost-estimates/rough`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  deleteRoughEstimate: (projectId: number, estimateId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/cost-estimates/rough/${estimateId}`, {
+      method: "DELETE",
+    }),
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -1546,4 +1620,45 @@ export const GENERATED_DOCUMENT_STATUS_COLORS: Record<string, string> = {
   pending: "bg-warning-bg text-warning-foreground",
   ready: "bg-accent-200 text-accent-800",
   failed: "bg-destructive/10 text-destructive",
+};
+
+export const FINISH_LEVEL_LABELS: Record<string, string> = {
+  economy: "Gazdaságos",
+  standard: "Standard",
+  premium: "Prémium",
+};
+
+export const WALL_TYPE_LABELS: Record<string, string> = {
+  light_steel: "Könnyűszerkezet",
+  clt: "CLT",
+  timber_frame: "Faváz",
+  brick: "Tégla",
+};
+
+export const ROOF_COVERING_LABELS: Record<string, string> = {
+  tile: "Cserép",
+  metal_sheet: "Trapézlemez",
+  shingle: "Zsindely",
+  flat_roof: "Lapostető szigetelés",
+};
+
+export const FOUNDATION_TYPE_LABELS: Record<string, string> = {
+  strip: "Sávalap",
+  slab: "Lemezalap",
+  point: "Pontalap",
+};
+
+export const ROUGH_ESTIMATE_CATEGORY_LABELS: Record<string, string> = {
+  earthwork_foundation: "Földmunka + alapozás",
+  basement_wall: "Pinceszint (fal + szigetelés)",
+  exterior_wall: "Külső teherhordó fal",
+  interior_wall: "Belső válaszfal",
+  walkable_slab: "Járható födém",
+  light_slab: "Könnyű födém",
+  roof_structure: "Tetőszerkezet",
+  roof_covering: "Tetőhéjazat",
+  openings: "Nyílászárók",
+  mechanical: "Gépészet",
+  electrical: "Villamosság",
+  finishes: "Belső burkolat + festés",
 };

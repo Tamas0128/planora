@@ -6,7 +6,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import activity_templates, auth, dashboard, document_generator, documents, gantt, notifications, photos, projects, search, tasks
+from app.api import activity_templates, auth, dashboard, document_generator, documents, estimates, gantt, notifications, photos, projects, search, tasks
 from app.api import (
     crm_communications,
     crm_contracts,
@@ -27,6 +27,8 @@ from app.models import User, UserRole
 import app.models_crm  # noqa: F401 — register CRM models on Base.metadata
 import app.models_finance  # noqa: F401 — register finance models on Base.metadata
 import app.models_documents  # noqa: F401 — register document generator models on Base.metadata
+import app.models_estimate  # noqa: F401 — register cost estimate models on Base.metadata
+from app.services.cost_estimate import seed_rough_estimate_rates
 from app.services.notifications import send_daily_digest
 from app.services.schedule_engine import seed_activity_templates
 
@@ -39,6 +41,7 @@ def seed_admin():
     db = SessionLocal()
     try:
         seed_activity_templates(db)
+        seed_rough_estimate_rates(db)
         admin = db.query(User).filter(User.username == "admin").first()
         password = settings.admin_password
         if not admin:
@@ -127,6 +130,7 @@ app.include_router(crm_sales_dashboard.router, prefix="/api")
 app.include_router(crm_search.router, prefix="/api")
 app.include_router(finance.router, prefix="/api")
 app.include_router(document_generator.router, prefix="/api")
+app.include_router(estimates.router, prefix="/api")
 
 
 @app.get("/api/health")

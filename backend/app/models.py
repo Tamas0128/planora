@@ -233,6 +233,9 @@ class Project(Base):
     subcontractor_contracts: Mapped[list["SubcontractorContract"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    cost_estimates_rough: Mapped[list["CostEstimateRough"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
     @property
     def has_thumbnail(self) -> bool:
