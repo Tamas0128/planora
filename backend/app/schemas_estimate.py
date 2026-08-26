@@ -20,9 +20,8 @@ class RoughEstimateRateResponse(BaseModel):
     wall_type: Optional[WallType] = None
     roof_covering_type: Optional[RoofCoveringType] = None
     foundation_type: Optional[FoundationType] = None
-    price_economy: float
-    price_standard: float
-    price_premium: float
+    base_price: float
+    unit_label: str
     is_active: bool
     updated_at: datetime
 
@@ -30,10 +29,21 @@ class RoughEstimateRateResponse(BaseModel):
 
 
 class RoughEstimateRateUpdate(BaseModel):
-    price_economy: Optional[float] = None
-    price_standard: Optional[float] = None
-    price_premium: Optional[float] = None
+    base_price: Optional[float] = None
     is_active: Optional[bool] = None
+
+
+class RoughEstimateSettingsResponse(BaseModel):
+    economy_adjustment_pct: float
+    premium_adjustment_pct: float
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RoughEstimateSettingsUpdate(BaseModel):
+    economy_adjustment_pct: Optional[float] = None
+    premium_adjustment_pct: Optional[float] = None
 
 
 class CostEstimateRoughCreate(BaseModel):

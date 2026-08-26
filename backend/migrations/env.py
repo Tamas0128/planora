@@ -43,6 +43,7 @@ from app.models_estimate import (  # noqa: F401 — register cost estimate model
     CostEstimateRough,
     PriceCatalogItem,
     RoughEstimateRate,
+    RoughEstimateSettings,
 )
 
 config = context.config

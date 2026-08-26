@@ -38,12 +38,15 @@ from app.schemas_estimate import (
     PriceCatalogItemUpdate,
     RoughEstimateRateResponse,
     RoughEstimateRateUpdate,
+    RoughEstimateSettingsResponse,
+    RoughEstimateSettingsUpdate,
     TransferToQuoteResponse,
 )
 from app.services.cost_estimate import (
     MissingRateError,
     build_detailed_estimate_workbook,
     calculate_rough_estimate,
+    get_or_create_settings,
 )
 from app.services.numbering import next_sequence_number
 from app.services.price_catalog_import import build_parse_response, commit_import
@@ -101,6 +104,29 @@ def update_rough_estimate_rate(
     db.commit()
     db.refresh(rate)
     return rate
+
+
+@router.get("/cost-estimate-settings", response_model=RoughEstimateSettingsResponse)
+def get_rough_estimate_settings(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return get_or_create_settings(db)
+
+
+@router.patch("/cost-estimate-settings", response_model=RoughEstimateSettingsResponse)
+def update_rough_estimate_settings(
+    body: RoughEstimateSettingsUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _require_finance_role(user)
+    settings = get_or_create_settings(db)
+    for field_name, value in body.model_dump(exclude_unset=True).items():
+        setattr(settings, field_name, value)
+    db.commit()
+    db.refresh(settings)
+    return settings
 
 
 # --- Rough (paraméteres) cost estimates, per project ------------------------

@@ -80,11 +80,37 @@ ROOF_COVERING_CATEGORIES = (RoughEstimateCategory.ROOF_COVERING,)
 FOUNDATION_TYPE_CATEGORIES = (RoughEstimateCategory.EARTHWORK_FOUNDATION,)
 
 
+# Ft/m² or Ft/fm — fully determined by category (see
+# services/cost_estimate.py's _CATEGORY_SPECS, the single source of truth
+# for which quantity field each category multiplies against). Duplicated
+# here as a display-only label so the rate admin UI can show what a
+# category's base_price is actually priced per, without a DB column that
+# could drift out of sync with _CATEGORY_SPECS.
+CATEGORY_UNIT_LABELS: dict[RoughEstimateCategory, str] = {
+    RoughEstimateCategory.EARTHWORK_FOUNDATION: "Ft/m²",
+    RoughEstimateCategory.BASEMENT_WALL: "Ft/fm",
+    RoughEstimateCategory.EXTERIOR_WALL: "Ft/fm",
+    RoughEstimateCategory.INTERIOR_WALL: "Ft/fm",
+    RoughEstimateCategory.WALKABLE_SLAB: "Ft/m²",
+    RoughEstimateCategory.LIGHT_SLAB: "Ft/m²",
+    RoughEstimateCategory.ROOF_STRUCTURE: "Ft/m²",
+    RoughEstimateCategory.ROOF_COVERING: "Ft/m²",
+    RoughEstimateCategory.OPENINGS: "Ft/m²",
+    RoughEstimateCategory.MECHANICAL: "Ft/m²",
+    RoughEstimateCategory.ELECTRICAL: "Ft/m²",
+    RoughEstimateCategory.FINISHES: "Ft/m²",
+}
+
+
 class RoughEstimateRate(Base):
-    """Admin-managed Ft/m² or Ft/fm rate for one cost category — and, for
-    categories in WALL_TYPE_CATEGORIES/ROOF_COVERING_CATEGORIES/
-    FOUNDATION_TYPE_CATEGORIES, one variant of the relevant type — across
-    the three finish levels. Seeded with illustrative defaults by
+    """Admin-managed Ft/m² or Ft/fm BASE price for one cost category —
+    and, for categories in WALL_TYPE_CATEGORIES/ROOF_COVERING_CATEGORIES/
+    FOUNDATION_TYPE_CATEGORIES, one variant of the relevant type. Only one
+    price per row (the "standard" tier) — gazdaságos/prémium are derived
+    from it at calculation time via RoughEstimateSettings' global
+    percentage adjustment, not stored per row (avoids an admin having to
+    keep 3 numbers in sync per category when the estimate is re-tuned).
+    Seeded with illustrative defaults by
     services.cost_estimate.seed_rough_estimate_rates; an admin is expected
     to tune these to real market prices.
     """
@@ -111,20 +137,33 @@ class RoughEstimateRate(Base):
     foundation_type: Mapped[FoundationType | None] = mapped_column(
         Enum(FoundationType), nullable=True
     )
-    price_economy: Mapped[float] = mapped_column(Float)
-    price_standard: Mapped[float] = mapped_column(Float)
-    price_premium: Mapped[float] = mapped_column(Float)
+    base_price: Mapped[float] = mapped_column(Float)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    def price_for(self, level: FinishLevel) -> float:
-        return {
-            FinishLevel.ECONOMY: self.price_economy,
-            FinishLevel.STANDARD: self.price_standard,
-            FinishLevel.PREMIUM: self.price_premium,
-        }[level]
+    @property
+    def unit_label(self) -> str:
+        return CATEGORY_UNIT_LABELS[self.category]
+
+
+class RoughEstimateSettings(Base):
+    """Singleton (always exactly one row, id=1) holding the global
+    gazdaságos/prémium % adjustment applied to every RoughEstimateRate's
+    base_price — e.g. economy_adjustment_pct=-20 means the economy-tier
+    price is base_price × 0.80. Standard tier is always base_price itself
+    (0% adjustment), so it isn't stored.
+    """
+
+    __tablename__ = "rough_estimate_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    economy_adjustment_pct: Mapped[float] = mapped_column(Float, default=-20.0)
+    premium_adjustment_pct: Mapped[float] = mapped_column(Float, default=25.0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
 
 class CostEstimateRough(Base):

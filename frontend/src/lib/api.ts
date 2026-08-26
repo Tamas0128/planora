@@ -738,10 +738,15 @@ export interface RoughEstimateRate {
   wall_type?: WallType;
   roof_covering_type?: RoofCoveringType;
   foundation_type?: FoundationType;
-  price_economy: number;
-  price_standard: number;
-  price_premium: number;
+  base_price: number;
+  unit_label: string;
   is_active: boolean;
+  updated_at: string;
+}
+
+export interface RoughEstimateSettings {
+  economy_adjustment_pct: number;
+  premium_adjustment_pct: number;
   updated_at: string;
 }
 
@@ -1427,6 +1432,14 @@ export const api = {
 
   updateCostEstimateRate: (id: number, data: Record<string, unknown>) =>
     request<RoughEstimateRate>(`/cost-estimate-rates/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  costEstimateSettings: () => request<RoughEstimateSettings>("/cost-estimate-settings"),
+
+  updateCostEstimateSettings: (data: Record<string, unknown>) =>
+    request<RoughEstimateSettings>("/cost-estimate-settings", {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
