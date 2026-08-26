@@ -856,6 +856,8 @@ export interface PriceCatalogImportParseResult {
   rows: (string | null)[][];
   suggested_mapping: Record<string, number>;
   row_count: number;
+  sheet_names: string[];
+  sheet_name: string;
 }
 
 export const api = {
@@ -1460,13 +1462,17 @@ export const api = {
 
   priceCatalogChapters: () => request<string[]>("/price-catalog/chapters"),
 
-  priceCatalogItems: (params: { search?: string; chapter?: string; active_only?: boolean } = {}) => {
+  priceCatalogItems: (params: { search?: string; chapter?: string; active_only?: boolean; limit?: number } = {}) => {
     const qs = new URLSearchParams();
     if (params.search) qs.set("search", params.search);
     if (params.chapter) qs.set("chapter", params.chapter);
     if (params.active_only !== undefined) qs.set("active_only", String(params.active_only));
+    // Backend default is 50 — the admin list page wants the full catalog
+    // (up to the backend's own 200 cap) unless a caller asks for fewer,
+    // e.g. the detailed-budget "add from catalog" search box.
+    qs.set("limit", String(params.limit ?? 200));
     const query = qs.toString();
-    return request<PriceCatalogItem[]>(`/price-catalog${query ? `?${query}` : ""}`);
+    return request<PriceCatalogItem[]>(`/price-catalog?${query}`);
   },
 
   createPriceCatalogItem: (data: Record<string, unknown>) =>
@@ -1478,9 +1484,10 @@ export const api = {
   deletePriceCatalogItem: (id: number) =>
     request<{ ok: boolean }>(`/price-catalog/${id}`, { method: "DELETE" }),
 
-  parsePriceCatalogImport: (file: File) => {
+  parsePriceCatalogImport: (file: File, sheet?: string) => {
     const formData = new FormData();
     formData.append("file", file);
+    if (sheet) formData.append("sheet", sheet);
     return request<PriceCatalogImportParseResult>("/price-catalog/import/parse", {
       method: "POST",
       body: formData,

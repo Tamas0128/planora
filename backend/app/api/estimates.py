@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
@@ -319,11 +319,12 @@ def delete_price_catalog_item(
 @router.post("/price-catalog/import/parse", response_model=PriceCatalogImportParseResponse)
 async def parse_price_catalog_import(
     file: UploadFile = File(...),
+    sheet: Optional[str] = Form(None),
     user: User = Depends(get_current_user),
 ):
     _require_finance_role(user)
     content = await file.read()
-    return build_parse_response(file.filename or "", content)
+    return build_parse_response(file.filename or "", content, sheet)
 
 
 @router.post("/price-catalog/import/commit", response_model=PriceCatalogImportCommitResponse)

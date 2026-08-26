@@ -79,6 +79,7 @@ export default function PriceCatalogPage() {
   const [parsed, setParsed] = useState<PriceCatalogImportParseResult | null>(null);
   const [mapping, setMapping] = useState<Record<string, number | undefined>>({});
   const [sourceReference, setSourceReference] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function load() {
@@ -170,23 +171,34 @@ export default function PriceCatalogPage() {
     setParsed(null);
     setMapping({});
     setSourceReference("");
+    setSelectedFile(null);
     setShowImportDialog(true);
   }
 
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function parseFile(file: File, sheet?: string) {
     setParsing(true);
     try {
-      const result = await api.parsePriceCatalogImport(file);
+      const result = await api.parsePriceCatalogImport(file, sheet);
       setParsed(result);
       setMapping(result.suggested_mapping);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a fájl beolvasása során");
     } finally {
       setParsing(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    await parseFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleSheetChange(sheet: string) {
+    if (!selectedFile) return;
+    await parseFile(selectedFile, sheet);
   }
 
   async function handleCommitImport() {
@@ -401,6 +413,22 @@ export default function PriceCatalogPage() {
             </div>
           ) : (
             <div className="space-y-3 py-2">
+              {parsed.sheet_names.length > 1 && (
+                <div className="max-w-xs space-y-1.5">
+                  <Label>Munkalap</Label>
+                  <Select value={parsed.sheet_name} onValueChange={(v) => v && handleSheetChange(v)} disabled={parsing}>
+                    <SelectTrigger>
+                      <SelectValue>{(v: string) => v}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parsed.sheet_names.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {parsing && <p className="text-xs text-muted-foreground">Beolvasás...</p>}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">{parsed.row_count} sor beolvasva. Rendeld hozzá az oszlopokat:</p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {IMPORT_TARGET_FIELDS.map((field) => (

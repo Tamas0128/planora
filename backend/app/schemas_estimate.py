@@ -244,6 +244,8 @@ class PriceCatalogImportParseResponse(BaseModel):
     rows: list[list[Optional[str]]]
     suggested_mapping: dict[str, int]
     row_count: int
+    sheet_names: list[str] = []
+    sheet_name: str = ""
 
 
 class PriceCatalogImportCommitRequest(BaseModel):

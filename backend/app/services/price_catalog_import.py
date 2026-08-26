@@ -26,6 +26,8 @@ _HEADER_KEYWORDS: dict[str, tuple[str, ...]] = {
     "unit_price": ("egységár", "egysegar", "ár", "price", "összesen"),
 }
 
+CHAPTER_COLUMN_LABEL = "Felismert munkanem (szekció)"
+
 
 def _guess_mapping(columns: list[str]) -> dict[str, int]:
     """First-match-wins per target field, scanning columns left to right —
@@ -41,18 +43,20 @@ def _guess_mapping(columns: list[str]) -> dict[str, int]:
     return mapping
 
 
-def parse_upload(filename: str, content: bytes) -> tuple[list[str], list[list[Optional[str]]]]:
+def _read_all_rows(
+    filename: str, content: bytes, sheet_name: Optional[str]
+) -> tuple[list[list[Optional[str]]], list[str], str]:
+    """Returns every raw row of the chosen sheet/file, completely
+    unprocessed (title rows, blank rows, section headers and all) — header
+    detection and section collapsing happen afterwards, once, shared
+    between the xlsx and csv paths.
+    """
     if filename.lower().endswith((".xlsx", ".xlsm")):
         workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-        sheet = workbook.active
-        rows_iter = sheet.iter_rows(values_only=True)
-        try:
-            header = next(rows_iter)
-        except StopIteration:
-            return [], []
-        columns = [str(c).strip() if c is not None else "" for c in header]
-        rows = [[None if c is None else str(c) for c in row] for row in rows_iter]
-        return columns, rows
+        sheet_names = workbook.sheetnames
+        sheet = workbook[sheet_name] if sheet_name and sheet_name in sheet_names else workbook.active
+        rows = [[None if c is None else str(c) for c in row] for row in sheet.iter_rows(values_only=True)]
+        return rows, sheet_names, sheet.title
 
     # CSV (or anything else) fallback — sniff the delimiter since TERC-style
     # exports vary between comma and semicolon depending on locale.
@@ -61,19 +65,83 @@ def parse_upload(filename: str, content: bytes) -> tuple[list[str], list[list[Op
         dialect = csv.Sniffer().sniff(text[:2048], delimiters=",;\t")
     except csv.Error:
         dialect = csv.excel
-    all_rows = list(csv.reader(io.StringIO(text), dialect))
+    rows = list(csv.reader(io.StringIO(text), dialect))
+    return rows, [], ""
+
+
+def _score_row_as_header(row: list[Optional[str]]) -> int:
+    lowered = [str(c).strip().lower() if c is not None else "" for c in row]
+    score = 0
+    for keywords in _HEADER_KEYWORDS.values():
+        if any(any(kw in col for kw in keywords) for col in lowered):
+            score += 1
+    return score
+
+
+def _find_header_index(rows: list[list[Optional[str]]]) -> int:
+    """Real-world exports often carry a title/legend above the actual
+    column-header row (e.g. two title lines + a blank line before the
+    'TERC-kód | Megnevezés | ...' row). Score the first 15 rows by how many
+    target fields they look like a header for, and pick the best one —
+    falling back to row 0 (the old fixed assumption) when nothing scores
+    well, so a plain single-header CSV still works exactly as before.
+    """
+    best_idx, best_score = 0, -1
+    for i, row in enumerate(rows[:15]):
+        score = _score_row_as_header(row)
+        if score > best_score:
+            best_idx, best_score = i, score
+    return best_idx if best_score >= 2 else 0
+
+
+def _collapse_sections(data_rows: list[list[Optional[str]]]) -> list[list[Optional[str]]]:
+    """Folds Hungarian munkanem-style section-header rows (exactly one
+    non-empty cell, e.g. "02. Földmunkák") and "...összesen" subtotal
+    marker rows (also exactly one non-empty cell) out of the row list,
+    appending the most recently seen section header's text as a
+    synthesized trailing column on every real data row — the common shape
+    of a tételes költségvetés export, where the munkanem is a heading
+    above a block of items rather than its own per-row column. A row that
+    already carries its chapter as one of several populated cells (the
+    flat-CSV case) is untouched apart from gaining the extra, harmless,
+    empty trailing column.
+    """
+    current_chapter = ""
+    out_rows: list[list[Optional[str]]] = []
+    for row in data_rows:
+        non_empty = [c for c in row if c not in (None, "")]
+        if not non_empty:
+            continue
+        if len(non_empty) == 1:
+            text = str(non_empty[0])
+            if "összesen" not in text.lower():
+                current_chapter = text.strip()
+            continue
+        out_rows.append(list(row) + [current_chapter])
+    return out_rows
+
+
+def parse_upload(filename: str, content: bytes, sheet_name: Optional[str] = None) -> dict:
+    all_rows, sheet_names, used_sheet = _read_all_rows(filename, content, sheet_name)
     if not all_rows:
-        return [], []
-    return [c.strip() for c in all_rows[0]], all_rows[1:]
+        return {"columns": [], "rows": [], "sheet_names": sheet_names, "sheet_name": used_sheet}
+    header_idx = _find_header_index(all_rows)
+    columns = [str(c).strip() if c is not None else "" for c in all_rows[header_idx]] + [
+        CHAPTER_COLUMN_LABEL
+    ]
+    rows = _collapse_sections(all_rows[header_idx + 1 :])
+    return {"columns": columns, "rows": rows, "sheet_names": sheet_names, "sheet_name": used_sheet}
 
 
-def build_parse_response(filename: str, content: bytes) -> dict:
-    columns, rows = parse_upload(filename, content)
+def build_parse_response(filename: str, content: bytes, sheet_name: Optional[str] = None) -> dict:
+    parsed = parse_upload(filename, content, sheet_name)
     return {
-        "columns": columns,
-        "rows": rows,
-        "suggested_mapping": _guess_mapping(columns),
-        "row_count": len(rows),
+        "columns": parsed["columns"],
+        "rows": parsed["rows"],
+        "suggested_mapping": _guess_mapping(parsed["columns"]),
+        "row_count": len(parsed["rows"]),
+        "sheet_names": parsed["sheet_names"],
+        "sheet_name": parsed["sheet_name"],
     }
 
 
