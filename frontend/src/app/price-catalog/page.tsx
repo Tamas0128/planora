@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Download, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import {
@@ -238,16 +238,21 @@ export default function PriceCatalogPage() {
             mennyiségi egység, anyag/díj egységár, munkanem szerint csoportosítva.
           </p>
         </div>
-        {canEdit && (
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={openImport}>
-              <Upload className="size-3.5" /> TERC import
-            </Button>
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="size-3.5" /> Új tétel
-            </Button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" render={<a href="/csaladi_haz_munkatetel_katalogus.xlsx" download />}>
+            <Download className="size-3.5" /> Munkatétel-katalógus letöltése
+          </Button>
+          {canEdit && (
+            <>
+              <Button size="sm" variant="outline" onClick={openImport}>
+                <Upload className="size-3.5" /> TERC import
+              </Button>
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="size-3.5" /> Új tétel
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="mb-3 flex gap-2">

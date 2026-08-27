@@ -245,7 +245,7 @@ def list_price_catalog_items(
     search: Optional[str] = None,
     chapter: Optional[str] = None,
     active_only: bool = True,
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, le=1000),
     offset: int = 0,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),

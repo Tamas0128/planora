@@ -19,7 +19,7 @@ from app.models_estimate import PriceCatalogItem, PriceCatalogSource
 _HEADER_KEYWORDS: dict[str, tuple[str, ...]] = {
     "code": ("kód", "kod", "code", "tételszám", "azonosító"),
     "description": ("megnevezés", "megnevezes", "description", "leírás", "leiras", "name"),
-    "unit": ("mennyiségi egység", "menny. egys", "egység", "egyseg", "unit"),
+    "unit": ("mennyiségi egység", "menny. egys", "m.e.", "egység", "egyseg", "unit"),
     "chapter": ("munkanem", "fejezet", "chapter", "csoport"),
     "unit_price_material": ("anyagár", "anyag ár", "anyag", "material"),
     "unit_price_labor": ("díjár", "díj", "dij", "munkadíj", "labor", "fee"),

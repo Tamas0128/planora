@@ -1468,9 +1468,9 @@ export const api = {
     if (params.chapter) qs.set("chapter", params.chapter);
     if (params.active_only !== undefined) qs.set("active_only", String(params.active_only));
     // Backend default is 50 — the admin list page wants the full catalog
-    // (up to the backend's own 200 cap) unless a caller asks for fewer,
-    // e.g. the detailed-budget "add from catalog" search box.
-    qs.set("limit", String(params.limit ?? 200));
+    // (up to the backend's own 1000-row cap) unless a caller asks for
+    // fewer, e.g. the detailed-budget "add from catalog" search box.
+    qs.set("limit", String(params.limit ?? 1000));
     const query = qs.toString();
     return request<PriceCatalogItem[]>(`/price-catalog?${query}`);
   },
