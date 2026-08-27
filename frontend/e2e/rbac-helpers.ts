@@ -29,10 +29,78 @@ export const USER_IDS: Record<string, number> = {
 
 // Pre-existing seed data (owned by seed_pm/seed_sm, ids 2/3 — passwords unknown to us)
 export const SEED_OWNED_PROJECT_IDS = [1, 2, 3];
-// Project created by admin for this audit, owned by e2e_role_project_manager (4) / e2e_role_site_manager (5)
-export const E2E_PROJECT_ID = 6;
-export const E2E_PROJECT_CODE = "LTF-006";
-export const ALL_PROJECT_CODES = ["LTF-001", "LTF-002", "LTF-003", "LTF-004", "LTF-005", "LTF-006"];
+
+// The audit project/partner used to be created once by hand (a fixed id/code
+// comment left here as "created by admin for this audit") and hardcoded —
+// that row silently vanished at some point (DB reset, manual cleanup) and
+// every test depending on it failed with a *masking* symptom (the login
+// rate limiter tripping from cascading retries), not the real "project not
+// found" cause. ensureE2eFixtures() below finds-or-creates both by a stable
+// name instead, so this file is self-sufficient against any DB state —
+// these holders are mutated in place (not reassigned) after that call so
+// every importer sees the same live values.
+export const E2E_PROJECT = { id: 0, code: "" };
+export const E2E_PARTNER = { id: 0 };
+export const ALL_PROJECT_CODES: string[] = [];
+
+const E2E_PROJECT_NAME = "E2E RBAC Test Projekt";
+const E2E_PARTNER_NAME = "E2E RBAC Test Partner";
+
+/** Finds-or-creates the fixed project/partner this spec file depends on
+ * (by name, since ids drift across DB resets) and refreshes
+ * ALL_PROJECT_CODES from live data — call once from a `beforeAll` hook
+ * before any test in the file runs. Idempotent: safe to call every run. */
+export async function ensureE2eFixtures(request: APIRequestContext): Promise<void> {
+  const adminToken = await apiToken(request, "admin");
+  const headers = authHeader(adminToken);
+
+  const projectsRes = await request.get("/api/projects", { headers });
+  const projects = await projectsRes.json();
+  let project = projects.find((p: { name: string }) => p.name === E2E_PROJECT_NAME);
+  if (!project) {
+    const createRes = await request.post("/api/projects", {
+      headers,
+      data: {
+        name: E2E_PROJECT_NAME,
+        settlement: "Szeged",
+        address: "RBAC teszt utca 1.",
+        client_name: "E2E RBAC Ügyfél",
+        building_type: "light_steel",
+        floor_area_sqm: 100,
+        delivery_date: "2027-01-01",
+        project_manager_id: USER_IDS.project_manager,
+        site_manager_id: USER_IDS.site_manager,
+      },
+    });
+    if (!createRes.ok()) {
+      throw new Error(`Failed to create ${E2E_PROJECT_NAME}: ${createRes.status()} ${await createRes.text()}`);
+    }
+    project = await createRes.json();
+  }
+  E2E_PROJECT.id = project.id;
+  E2E_PROJECT.code = project.project_code;
+
+  const partnersRes = await request.get("/api/finance/partners", { headers });
+  const partners = await partnersRes.json();
+  let partner = partners.find((p: { name: string }) => p.name === E2E_PARTNER_NAME);
+  if (!partner) {
+    const createRes = await request.post("/api/finance/partners", {
+      headers,
+      data: { name: E2E_PARTNER_NAME },
+    });
+    if (!createRes.ok()) {
+      throw new Error(`Failed to create ${E2E_PARTNER_NAME}: ${createRes.status()} ${await createRes.text()}`);
+    }
+    partner = await createRes.json();
+  }
+  E2E_PARTNER.id = partner.id;
+
+  // Refresh after creating the E2E project (in case it was just created).
+  const refreshedRes = await request.get("/api/projects", { headers });
+  const refreshed = await refreshedRes.json();
+  ALL_PROJECT_CODES.length = 0;
+  ALL_PROJECT_CODES.push(...refreshed.map((p: { project_code: string }) => p.project_code));
+}
 
 // The backend rate-limits /api/auth/login to 10 attempts/60s per IP
 // (auth.py::_check_login_rate). With 7 roles exercised across ~15 test cases

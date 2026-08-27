@@ -40,8 +40,20 @@ _MAX_ATTEMPTS = 10
 _WINDOW_SECONDS = 60
 
 
+def _client_ip(request: Request) -> str:
+    """`request.client.host` is the peer that opened the TCP connection —
+    behind nginx (the only path into this app per docker-compose.yml/
+    infra/nginx/nginx.conf), that's always the nginx container itself, not
+    the real caller. nginx sets X-Real-IP (a single address, simpler to
+    trust than the comma-separated X-Forwarded-For) on every proxied
+    request, so prefer that; fall back to the raw peer for direct/test
+    access that bypasses nginx.
+    """
+    return request.headers.get("x-real-ip") or (request.client.host if request.client else "unknown")
+
+
 def _check_login_rate(request: Request) -> None:
-    ip = request.client.host if request.client else "unknown"
+    ip = _client_ip(request)
     now = time.time()
     with _login_lock:
         _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < _WINDOW_SECONDS]
