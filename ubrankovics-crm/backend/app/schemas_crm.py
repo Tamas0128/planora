@@ -326,6 +326,8 @@ class ProjektTetelUpdate(BaseModel):
     szakasz: Optional[TetelSzakasz] = None
     duration_days: Optional[int] = None
     prep_days: Optional[int] = None
+    tenyleges_kezdes: Optional[date] = None
+    tenyleges_befejezes: Optional[date] = None
 
 
 class TetelFuggosegCreate(BaseModel):
@@ -345,6 +347,7 @@ class AnyagRendelesCreate(BaseModel):
     beszallito: Optional[str] = None
     mennyiseg: Optional[Decimal] = None
     mertekegyseg: Optional[str] = None
+    osszeg: Optional[Decimal] = None
     allapot: RendelesAllapot = RendelesAllapot.TERVEZETT
     megrendeles_datum: Optional[date] = None
     varhato_erkezes: Optional[date] = None
@@ -357,6 +360,7 @@ class AnyagRendelesUpdate(BaseModel):
     beszallito: Optional[str] = None
     mennyiseg: Optional[Decimal] = None
     mertekegyseg: Optional[str] = None
+    osszeg: Optional[Decimal] = None
     allapot: Optional[RendelesAllapot] = None
     megrendeles_datum: Optional[date] = None
     varhato_erkezes: Optional[date] = None
@@ -370,6 +374,7 @@ class AnyagRendelesResponse(BaseModel):
     beszallito: Optional[str]
     mennyiseg: Optional[Decimal]
     mertekegyseg: Optional[str]
+    osszeg: Optional[Decimal]
     allapot: RendelesAllapot
     megrendeles_datum: Optional[date]
     varhato_erkezes: Optional[date]
@@ -396,6 +401,10 @@ class ProjektTetelResponse(BaseModel):
     start_date: Optional[date]
     end_date: Optional[date]
     prep_date: Optional[date]
+    terv_kezdes: Optional[date]
+    terv_befejezes: Optional[date]
+    tenyleges_kezdes: Optional[date]
+    tenyleges_befejezes: Optional[date]
     vallalasok: list[VallalasResponse]
     esemenyek: list[TetelEsemenyResponse]
     specifikaciok: list[SpecifikacioResponse]

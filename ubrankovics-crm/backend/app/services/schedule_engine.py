@@ -80,6 +80,12 @@ def recalculate_schedule(db: Session, projekt: Projekt) -> None:
 
         tetel.start_date = subtract_workdays(tetel.end_date, tetel.duration_days - 1)
         tetel.prep_date = subtract_workdays(tetel.start_date, tetel.prep_days)
+        # A terv dátumot csak első alkalommal rögzítjük — utána a projekt
+        # csúszhat, de az eredeti ígéret nem írható felül némán.
+        if tetel.terv_kezdes is None:
+            tetel.terv_kezdes = tetel.start_date
+        if tetel.terv_befejezes is None:
+            tetel.terv_befejezes = tetel.end_date
         start_dates[tetel.id] = tetel.start_date
         slot = subtract_workdays(tetel.start_date, 1)
 

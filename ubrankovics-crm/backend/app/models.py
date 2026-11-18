@@ -355,9 +355,20 @@ class ProjektTetel(Base):
     # egység, hogy ne kelljen két párhuzamos munkalistát karbantartani.
     duration_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     prep_days: Mapped[int] = mapped_column(Integer, default=0)
+    # "Várható" (jelenlegi előrejelzés) — minden recalculate_schedule hívás
+    # felülírja.
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     prep_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # "Terv" — az ELSŐ kiszámított ütemezés, utána soha nem íródik felül,
+    # hogy látszódjon, mennyit csúszott a projekt az eredeti ígérethez
+    # képest (piaci térkép elemzés 101. sor szerinti elv).
+    terv_kezdes: Mapped[date | None] = mapped_column(Date, nullable=True)
+    terv_befejezes: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # "Tényleges" — a felhasználó manuálisan rögzíti, amikor a munka
+    # ténylegesen elkezdődött/befejeződött.
+    tenyleges_kezdes: Mapped[date | None] = mapped_column(Date, nullable=True)
+    tenyleges_befejezes: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     projekt: Mapped[Projekt] = relationship(back_populates="tetelek")
@@ -394,6 +405,10 @@ class AnyagRendeles(Base):
     beszallito: Mapped[str | None] = mapped_column(String(255), nullable=True)
     mennyiseg: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     mertekegyseg: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Ft, a projekt költségkerethez köthetőség miatt (piaci térkép elemzés
+    # "javasolt minimális adatmodell" pontja) — a tényleges lekötött/
+    # tényleges költség-összesítés a pénzügyi modul portolásakor kerül rá.
+    osszeg: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
     allapot: Mapped[RendelesAllapot] = mapped_column(Enum(RendelesAllapot), default=RendelesAllapot.TERVEZETT)
     megrendeles_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
     varhato_erkezes: Mapped[date | None] = mapped_column(Date, nullable=True)
