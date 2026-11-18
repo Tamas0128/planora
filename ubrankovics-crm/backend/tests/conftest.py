@@ -43,6 +43,11 @@ def fresh_db():
 def client(fresh_db, monkeypatch):
     monkeypatch.setattr(main_module, "SessionLocal", TestingSessionLocal)
     monkeypatch.setattr("app.main.settings.admin_password", "admin123")
+    # docker-compose.yml sets SMTP_HOST=mailpit for the real dev container;
+    # tests must not depend on what the compose file happens to set, so the
+    # "no SMTP configured" code path stays exercisable regardless of how
+    # pytest is invoked.
+    monkeypatch.setattr("app.main.settings.smtp_host", "")
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c

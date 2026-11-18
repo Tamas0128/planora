@@ -103,6 +103,14 @@ class RendelesAllapot(str, enum.Enum):
     MEGERKEZETT = "megerkezett"
 
 
+class DokumentumSablonTipus(str, enum.Enum):
+    AJANLATKERES = "ajanlatkeres"
+    AJANLAT = "ajanlat"
+    MEGRENDELES = "megrendeles"
+    SZERZODES = "szerzodes"
+    TIG = "tig"
+
+
 # ---------------------------------------------------------------------------
 # User / auth
 # ---------------------------------------------------------------------------
@@ -496,3 +504,21 @@ class TetelFuggoseg(Base):
     @property
     def prerequisite_nev(self) -> str:
         return self.prerequisite.munkanem.nev
+
+
+class KikuldottEmail(Base):
+    """Napló a sablonból (ajánlatkérés/ajánlat/megrendelés/szerződés/TIG)
+    generált és elküldött levelekről — mit, kinek, mikor, melyik tételekkel."""
+
+    __tablename__ = "kikuldott_emailek"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    projekt_id: Mapped[int] = mapped_column(ForeignKey("projektek.id", ondelete="CASCADE"), index=True)
+    tipus: Mapped[DokumentumSablonTipus] = mapped_column(Enum(DokumentumSablonTipus))
+    cimzett: Mapped[str] = mapped_column(String(255))
+    targy: Mapped[str] = mapped_column(String(255))
+    tetel_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
+    uzenet: Mapped[str | None] = mapped_column(Text, nullable=True)
+    elkuldve_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    projekt: Mapped[Projekt] = relationship()

@@ -125,6 +125,21 @@ export interface ProjektFazis {
   lepesek: ProjektLepes[];
 }
 
+export interface SablonElonezet {
+  targy: string;
+  html: string;
+}
+
+export interface KikuldottEmail {
+  id: number;
+  tipus: string;
+  cimzett: string;
+  targy: string;
+  tetel_ids?: string | null;
+  uzenet?: string | null;
+  elkuldve_at: string;
+}
+
 export interface Vallalas {
   id: number;
   tipus: string;
@@ -404,6 +419,21 @@ export const api = {
     }),
 
   listProjektTipusok: () => request<ProjektTipus[]>("/projekt-tipusok"),
+
+  sablonElonezet: (projektId: number, body: { tipus: string; tetel_ids: number[]; uzenet?: string | null }) =>
+    request<SablonElonezet>(`/projektek/${projektId}/sablon-elonezet`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  kuldEmail: (
+    projektId: number,
+    body: { tipus: string; tetel_ids: number[]; cimzett: string; targy?: string | null; uzenet?: string | null }
+  ) =>
+    request<KikuldottEmail>(`/projektek/${projektId}/email`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  listKikuldottEmailek: (projektId: number) => request<KikuldottEmail[]>(`/projektek/${projektId}/emailek`),
 
   listFazisok: (projektId: number) => request<ProjektFazis[]>(`/projektek/${projektId}/fazisok`),
   addFazis: (projektId: number, nev: string) =>

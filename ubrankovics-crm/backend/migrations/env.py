@@ -9,6 +9,7 @@ from app.models import (  # noqa: F401 — register all models on Base.metadata
     Alvallalkozo,
     AnyagRendeles,
     Dokumentum,
+    KikuldottEmail,
     Munkanem,
     Projekt,
     ProjektFazis,

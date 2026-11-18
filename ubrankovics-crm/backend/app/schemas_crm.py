@@ -2,9 +2,10 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from app.models import (
+    DokumentumSablonTipus,
     MunkanemCsoport,
     ProjektAllapot,
     ProjektSzerepTipus,
@@ -496,5 +497,39 @@ class ProjektFazisResponse(BaseModel):
     nev: str
     sorrend: int
     lepesek: list[ProjektLepesResponse]
+
+    model_config = _from_attrs
+
+
+# --- Dokumentum-sablon előnézet / e-mail küldés ----------------------------------------
+
+
+class SablonElonezetRequest(BaseModel):
+    tipus: DokumentumSablonTipus
+    tetel_ids: list[int]
+    uzenet: Optional[str] = None
+
+
+class SablonElonezetResponse(BaseModel):
+    targy: str
+    html: str
+
+
+class EmailKuldesCreate(BaseModel):
+    tipus: DokumentumSablonTipus
+    tetel_ids: list[int]
+    cimzett: EmailStr
+    targy: Optional[str] = None
+    uzenet: Optional[str] = None
+
+
+class KikuldottEmailResponse(BaseModel):
+    id: int
+    tipus: DokumentumSablonTipus
+    cimzett: str
+    targy: str
+    tetel_ids: Optional[str]
+    uzenet: Optional[str]
+    elkuldve_at: datetime
 
     model_config = _from_attrs

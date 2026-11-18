@@ -6,10 +6,12 @@ import { ChevronDown, ChevronRight, Plus, X } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import {
   Alvallalkozo,
+  KikuldottEmail,
   Munkanem,
   ProjektDetail,
   ProjektFazis,
   ProjektTetel,
+  SablonElonezet,
   Szemely,
   api,
 } from "@/lib/api";
@@ -275,6 +277,7 @@ function TetelekTab({
 }) {
   const [munkanemId, setMunkanemId] = useState("");
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [kivalasztott, setKivalasztott] = useState<Set<number>>(new Set());
 
   async function addTetel(e: FormEvent) {
     e.preventDefault();
@@ -282,6 +285,15 @@ function TetelekTab({
     await api.createTetel(projektId, { munkanem_id: Number(munkanemId) });
     setMunkanemId("");
     onChange();
+  }
+
+  function toggleKivalasztott(id: number) {
+    setKivalasztott((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   return (
@@ -307,16 +319,24 @@ function TetelekTab({
       <div className="space-y-2">
         {tetelek.map((t) => (
           <div key={t.id} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
-            <button
-              onClick={() => setExpanded(expanded === t.id ? null : t.id)}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium"
-            >
-              <span className="flex items-center gap-2">
-                {expanded === t.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                {t.munkanem.nev}
-              </span>
-              <span className="text-xs text-[var(--muted)]">{SZAKASZ_LABEL[t.szakasz] || t.szakasz}</span>
-            </button>
+            <div className="flex w-full items-center gap-2 px-3 py-2">
+              <input
+                type="checkbox"
+                checked={kivalasztott.has(t.id)}
+                onChange={() => toggleKivalasztott(t.id)}
+                title="Kijelölés levélhez"
+              />
+              <button
+                onClick={() => setExpanded(expanded === t.id ? null : t.id)}
+                className="flex flex-1 items-center justify-between text-left text-sm font-medium"
+              >
+                <span className="flex items-center gap-2">
+                  {expanded === t.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  {t.munkanem.nev}
+                </span>
+                <span className="text-xs text-[var(--muted)]">{SZAKASZ_LABEL[t.szakasz] || t.szakasz}</span>
+              </button>
+            </div>
             {expanded === t.id && (
               <TetelDetail
                 projektId={projektId}
@@ -329,6 +349,8 @@ function TetelekTab({
         ))}
         {tetelek.length === 0 && <p className="text-sm text-[var(--muted)]">Nincs még tétel ezen a projekten.</p>}
       </div>
+
+      <EmailKuldesPanel projektId={projektId} tetelIds={[...kivalasztott]} />
     </div>
   );
 }
@@ -998,6 +1020,145 @@ function FazisCard({
           Hozzáad
         </button>
       </form>
+    </div>
+  );
+}
+
+const SABLON_TIPUS_LABEL: Record<string, string> = {
+  ajanlatkeres: "Ajánlatkérés",
+  ajanlat: "Ajánlat",
+  megrendeles: "Megrendelés",
+  szerzodes: "Szerződés",
+  tig: "Teljesítésigazolás (TIG)",
+};
+
+function EmailKuldesPanel({ projektId, tetelIds }: { projektId: number; tetelIds: number[] }) {
+  const [tipus, setTipus] = useState("ajanlat");
+  const [cimzett, setCimzett] = useState("");
+  const [uzenet, setUzenet] = useState("");
+  const [elonezet, setElonezet] = useState<SablonElonezet | null>(null);
+  const [emailek, setEmailek] = useState<KikuldottEmail[]>([]);
+  const [error, setError] = useState("");
+  const [siker, setSiker] = useState("");
+
+  function loadEmailek() {
+    api.listKikuldottEmailek(projektId).then(setEmailek).catch(() => {});
+  }
+
+  useEffect(() => {
+    loadEmailek();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projektId]);
+
+  async function eloneznez() {
+    setError("");
+    setSiker("");
+    if (tetelIds.length === 0) {
+      setError("Jelölj ki legalább egy tételt a Tételek listájában (checkbox).");
+      return;
+    }
+    try {
+      const res = await api.sablonElonezet(projektId, { tipus, tetel_ids: tetelIds, uzenet: uzenet || null });
+      setElonezet(res);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hiba");
+    }
+  }
+
+  async function kuldes(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSiker("");
+    if (tetelIds.length === 0) {
+      setError("Jelölj ki legalább egy tételt a Tételek listájában (checkbox).");
+      return;
+    }
+    try {
+      await api.kuldEmail(projektId, { tipus, tetel_ids: tetelIds, cimzett, uzenet: uzenet || null });
+      setSiker(`Elküldve: ${cimzett}`);
+      setCimzett("");
+      setUzenet("");
+      setElonezet(null);
+      loadEmailek();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hiba");
+    }
+  }
+
+  return (
+    <div className="mt-6 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
+      <h3 className="mb-2 font-heading font-semibold">Dokumentum / levél küldése</h3>
+      <p className="mb-3 text-xs text-[var(--muted)]">
+        Jelöld ki a tétel(eke)t fent a listában, válaszd ki a sablont, és küldd el. Az e-mail dev módban
+        Mailpit-re megy (nem valódi címre).
+      </p>
+      <form onSubmit={kuldes} className="grid max-w-xl gap-2">
+        <select
+          value={tipus}
+          onChange={(e) => setTipus(e.target.value)}
+          className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+        >
+          {Object.entries(SABLON_TIPUS_LABEL).map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
+        <input
+          type="email"
+          placeholder="Címzett e-mail címe"
+          required
+          value={cimzett}
+          onChange={(e) => setCimzett(e.target.value)}
+          className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+        />
+        <textarea
+          placeholder="Kiegészítő üzenet (opcionális)"
+          value={uzenet}
+          onChange={(e) => setUzenet(e.target.value)}
+          className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+          rows={2}
+        />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={eloneznez}
+            className="rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm"
+          >
+            Előnézet
+          </button>
+          <button
+            type="submit"
+            className="rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm text-[var(--primary-foreground)]"
+          >
+            Küldés
+          </button>
+        </div>
+      </form>
+
+      {error && <div className="mt-3 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
+      {siker && <div className="mt-3 rounded-[var(--radius)] bg-[var(--color-accent-100)] px-3 py-2 text-sm">{siker}</div>}
+
+      {elonezet && (
+        <div className="mt-4 rounded-[var(--radius)] border border-[var(--border)] bg-white p-3">
+          <p className="mb-2 text-xs font-semibold text-[var(--muted)]">Tárgy: {elonezet.targy}</p>
+          <div dangerouslySetInnerHTML={{ __html: elonezet.html }} />
+        </div>
+      )}
+
+      {emailek.length > 0 && (
+        <div className="mt-4">
+          <h4 className="mb-1 text-sm font-semibold">Korábban elküldött levelek</h4>
+          <ul className="space-y-1 text-xs text-[var(--muted)]">
+            {emailek.map((e) => (
+              <li key={e.id}>
+                {new Date(e.elkuldve_at).toLocaleString("hu-HU")} — {SABLON_TIPUS_LABEL[e.tipus] || e.tipus} →{" "}
+                {e.cimzett} ({e.targy})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
