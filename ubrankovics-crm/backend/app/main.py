@@ -3,10 +3,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, projektek, tetelek, torzsadatok, ugyfelek
+from app.api import auth, projektek, tetelek, tipusok, torzsadatok, ugyfelek
 from app.config import settings
 from app.database import SessionLocal
-from app.services.seed import seed_admin, seed_munkanemek, seed_szemelyek, seed_torzsadatok
+from app.services.seed import (
+    seed_admin,
+    seed_munkanemek,
+    seed_projekt_tipusok,
+    seed_szemelyek,
+    seed_torzsadatok,
+)
 
 
 @asynccontextmanager
@@ -19,6 +25,7 @@ async def lifespan(app: FastAPI):
         seed_munkanemek(db)
         seed_torzsadatok(db)
         seed_szemelyek(db)
+        seed_projekt_tipusok(db)
     finally:
         db.close()
     yield
@@ -40,6 +47,7 @@ app.include_router(ugyfelek.router, prefix="/api")
 app.include_router(projektek.router, prefix="/api")
 app.include_router(tetelek.router, prefix="/api")
 app.include_router(torzsadatok.router, prefix="/api")
+app.include_router(tipusok.router, prefix="/api")
 
 
 @app.get("/api/health")

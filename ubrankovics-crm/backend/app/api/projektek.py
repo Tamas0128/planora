@@ -3,10 +3,24 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import Projekt, ProjektSzerep, ProjektUgyfel, User
+from app.models import (
+    Projekt,
+    ProjektFazis,
+    ProjektLepes,
+    ProjektSzerep,
+    ProjektTipus,
+    ProjektTipusFazis,
+    ProjektUgyfel,
+    User,
+)
 from app.schemas_crm import (
     ProjektCreate,
     ProjektDetail,
+    ProjektFazisCreate,
+    ProjektFazisResponse,
+    ProjektLepesCreate,
+    ProjektLepesUpdate,
+    ProjektLepesResponse,
     ProjektListItem,
     ProjektSzerepCreate,
     ProjektSzerepResponse,
@@ -26,6 +40,29 @@ def _detail_query(db: Session):
     )
 
 
+def _copy_tipus_into_projekt(db: Session, projekt: Projekt, projekt_tipus_id: int) -> None:
+    tipus = (
+        db.query(ProjektTipus)
+        .options(joinedload(ProjektTipus.fazisok).joinedload(ProjektTipusFazis.lepesek))
+        .get(projekt_tipus_id)
+    )
+    if not tipus:
+        raise HTTPException(status_code=404, detail="Projekttípus not found")
+    for fazis_sablon in tipus.fazisok:
+        fazis = ProjektFazis(projekt_id=projekt.id, nev=fazis_sablon.nev, sorrend=fazis_sablon.sorrend)
+        db.add(fazis)
+        db.flush()
+        for lepes_sablon in fazis_sablon.lepesek:
+            db.add(
+                ProjektLepes(
+                    fazis_id=fazis.id,
+                    nev=lepes_sablon.nev,
+                    sorrend=lepes_sablon.sorrend,
+                    merfoldko=lepes_sablon.merfoldko,
+                )
+            )
+
+
 @router.get("", response_model=list[ProjektListItem])
 def list_projektek(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return db.query(Projekt).order_by(Projekt.created_at.desc()).all()
@@ -43,6 +80,8 @@ def create_projekt(
     db.flush()
     for link in body.ugyfelek:
         db.add(ProjektUgyfel(projekt_id=projekt.id, **link.model_dump()))
+    if body.projekt_tipus_id:
+        _copy_tipus_into_projekt(db, projekt, body.projekt_tipus_id)
     db.commit()
     return _detail_query(db).get(projekt.id)
 
@@ -158,4 +197,143 @@ def remove_projekt_szerep(
     if not szerep:
         raise HTTPException(status_code=404, detail="Szerep not found")
     db.delete(szerep)
+    db.commit()
+
+
+def _fazis_query(db: Session):
+    return db.query(ProjektFazis).options(joinedload(ProjektFazis.lepesek))
+
+
+@router.get("/{projekt_id}/fazisok", response_model=list[ProjektFazisResponse])
+def list_fazisok(
+    projekt_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    if not db.query(Projekt).get(projekt_id):
+        raise HTTPException(status_code=404, detail="Projekt not found")
+    return _fazis_query(db).filter(ProjektFazis.projekt_id == projekt_id).order_by(ProjektFazis.sorrend).all()
+
+
+@router.post("/{projekt_id}/fazisok", response_model=ProjektFazisResponse, status_code=201)
+def add_fazis(
+    projekt_id: int,
+    body: ProjektFazisCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    if not db.query(Projekt).get(projekt_id):
+        raise HTTPException(status_code=404, detail="Projekt not found")
+    max_sorrend = (
+        db.query(ProjektFazis.sorrend)
+        .filter(ProjektFazis.projekt_id == projekt_id)
+        .order_by(ProjektFazis.sorrend.desc())
+        .first()
+    )
+    fazis = ProjektFazis(
+        projekt_id=projekt_id, nev=body.nev, sorrend=(max_sorrend[0] + 1) if max_sorrend else 0
+    )
+    db.add(fazis)
+    db.commit()
+    db.refresh(fazis)
+    return fazis
+
+
+@router.delete("/{projekt_id}/fazisok/{fazis_id}", status_code=204)
+def remove_fazis(
+    projekt_id: int,
+    fazis_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    fazis = (
+        db.query(ProjektFazis)
+        .filter(ProjektFazis.id == fazis_id, ProjektFazis.projekt_id == projekt_id)
+        .first()
+    )
+    if not fazis:
+        raise HTTPException(status_code=404, detail="Fázis not found")
+    db.delete(fazis)
+    db.commit()
+
+
+def _get_fazis_or_404(db: Session, projekt_id: int, fazis_id: int) -> ProjektFazis:
+    fazis = (
+        db.query(ProjektFazis)
+        .filter(ProjektFazis.id == fazis_id, ProjektFazis.projekt_id == projekt_id)
+        .first()
+    )
+    if not fazis:
+        raise HTTPException(status_code=404, detail="Fázis not found")
+    return fazis
+
+
+@router.post("/{projekt_id}/fazisok/{fazis_id}/lepesek", response_model=ProjektLepesResponse, status_code=201)
+def add_lepes(
+    projekt_id: int,
+    fazis_id: int,
+    body: ProjektLepesCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    _get_fazis_or_404(db, projekt_id, fazis_id)
+    max_sorrend = (
+        db.query(ProjektLepes.sorrend)
+        .filter(ProjektLepes.fazis_id == fazis_id)
+        .order_by(ProjektLepes.sorrend.desc())
+        .first()
+    )
+    lepes = ProjektLepes(
+        fazis_id=fazis_id,
+        nev=body.nev,
+        merfoldko=body.merfoldko,
+        sorrend=(max_sorrend[0] + 1) if max_sorrend else 0,
+    )
+    db.add(lepes)
+    db.commit()
+    db.refresh(lepes)
+    return lepes
+
+
+@router.patch("/{projekt_id}/fazisok/{fazis_id}/lepesek/{lepes_id}", response_model=ProjektLepesResponse)
+def update_lepes(
+    projekt_id: int,
+    fazis_id: int,
+    lepes_id: int,
+    body: ProjektLepesUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    _get_fazis_or_404(db, projekt_id, fazis_id)
+    lepes = (
+        db.query(ProjektLepes)
+        .filter(ProjektLepes.id == lepes_id, ProjektLepes.fazis_id == fazis_id)
+        .first()
+    )
+    if not lepes:
+        raise HTTPException(status_code=404, detail="Lépés not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(lepes, field, value)
+    db.commit()
+    db.refresh(lepes)
+    return lepes
+
+
+@router.delete("/{projekt_id}/fazisok/{fazis_id}/lepesek/{lepes_id}", status_code=204)
+def remove_lepes(
+    projekt_id: int,
+    fazis_id: int,
+    lepes_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    _get_fazis_or_404(db, projekt_id, fazis_id)
+    lepes = (
+        db.query(ProjektLepes)
+        .filter(ProjektLepes.id == lepes_id, ProjektLepes.fazis_id == fazis_id)
+        .first()
+    )
+    if not lepes:
+        raise HTTPException(status_code=404, detail="Lépés not found")
+    db.delete(lepes)
     db.commit()

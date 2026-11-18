@@ -84,8 +84,45 @@ export interface ProjektDetail extends ProjektListItem {
   mappa_utvonal?: string | null;
   delivery_date?: string | null;
   completion_percent: string;
+  projekt_tipus_id?: number | null;
   ugyfel_linkek: ProjektUgyfelLink[];
   szerepek: ProjektSzerep[];
+}
+
+export interface ProjektTipusLepesSablon {
+  id: number;
+  nev: string;
+  sorrend: number;
+  merfoldko: boolean;
+}
+
+export interface ProjektTipusFazisSablon {
+  id: number;
+  nev: string;
+  sorrend: number;
+  lepesek: ProjektTipusLepesSablon[];
+}
+
+export interface ProjektTipus {
+  id: number;
+  nev: string;
+  fazisok: ProjektTipusFazisSablon[];
+}
+
+export interface ProjektLepes {
+  id: number;
+  nev: string;
+  sorrend: number;
+  merfoldko: boolean;
+  kesz: boolean;
+  datum?: string | null;
+}
+
+export interface ProjektFazis {
+  id: number;
+  nev: string;
+  sorrend: number;
+  lepesek: ProjektLepes[];
 }
 
 export interface Vallalas {
@@ -120,6 +157,19 @@ export interface TetelFuggoseg {
   prerequisite_nev: string;
 }
 
+export interface AnyagRendeles {
+  id: number;
+  megnevezes: string;
+  beszallito?: string | null;
+  mennyiseg?: string | null;
+  mertekegyseg?: string | null;
+  allapot: string;
+  megrendeles_datum?: string | null;
+  varhato_erkezes?: string | null;
+  tenyleges_erkezes?: string | null;
+  megjegyzes?: string | null;
+}
+
 export interface ProjektTetel {
   id: number;
   munkanem_id: number;
@@ -132,8 +182,6 @@ export interface ProjektTetel {
   varhato_szoveg?: string | null;
   varhato_datum?: string | null;
   szakasz: string;
-  beszallito?: string | null;
-  rendeles_hatarido?: string | null;
   duration_days?: number | null;
   prep_days: number;
   start_date?: string | null;
@@ -143,6 +191,7 @@ export interface ProjektTetel {
   esemenyek: TetelEsemeny[];
   specifikaciok: Specifikacio[];
   fuggosegek: TetelFuggoseg[];
+  rendelesek: AnyagRendeles[];
 }
 
 let accessToken: string | null = null;
@@ -331,6 +380,46 @@ export const api = {
     }),
   removeSpecifikacio: (projektId: number, tetelId: number, specId: number) =>
     request<void>(`/projektek/${projektId}/tetelek/${tetelId}/specifikaciok/${specId}`, {
+      method: "DELETE",
+    }),
+
+  addRendeles: (projektId: number, tetelId: number, body: Record<string, unknown>) =>
+    request<AnyagRendeles>(`/projektek/${projektId}/tetelek/${tetelId}/rendelesek`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateRendeles: (projektId: number, tetelId: number, rendelesId: number, body: Record<string, unknown>) =>
+    request<AnyagRendeles>(`/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  removeRendeles: (projektId: number, tetelId: number, rendelesId: number) =>
+    request<void>(`/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}`, {
+      method: "DELETE",
+    }),
+
+  listProjektTipusok: () => request<ProjektTipus[]>("/projekt-tipusok"),
+
+  listFazisok: (projektId: number) => request<ProjektFazis[]>(`/projektek/${projektId}/fazisok`),
+  addFazis: (projektId: number, nev: string) =>
+    request<ProjektFazis>(`/projektek/${projektId}/fazisok`, {
+      method: "POST",
+      body: JSON.stringify({ nev }),
+    }),
+  removeFazis: (projektId: number, fazisId: number) =>
+    request<void>(`/projektek/${projektId}/fazisok/${fazisId}`, { method: "DELETE" }),
+  addLepes: (projektId: number, fazisId: number, body: Record<string, unknown>) =>
+    request<ProjektLepes>(`/projektek/${projektId}/fazisok/${fazisId}/lepesek`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateLepes: (projektId: number, fazisId: number, lepesId: number, body: Record<string, unknown>) =>
+    request<ProjektLepes>(`/projektek/${projektId}/fazisok/${fazisId}/lepesek/${lepesId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  removeLepes: (projektId: number, fazisId: number, lepesId: number) =>
+    request<void>(`/projektek/${projektId}/fazisok/${fazisId}/lepesek/${lepesId}`, {
       method: "DELETE",
     }),
 

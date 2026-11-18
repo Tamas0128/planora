@@ -97,6 +97,12 @@ class TetelEsemenyAllapot(str, enum.Enum):
     KESZ = "kesz"
 
 
+class RendelesAllapot(str, enum.Enum):
+    TERVEZETT = "tervezett"
+    MEGRENDELVE = "megrendelve"
+    MEGERKEZETT = "megerkezett"
+
+
 # ---------------------------------------------------------------------------
 # User / auth
 # ---------------------------------------------------------------------------
@@ -148,6 +154,10 @@ class Projekt(Base):
     utemezes_aktiv: Mapped[bool] = mapped_column(Boolean, default=False)
     delivery_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     completion_percent: Mapped[float] = mapped_column(Numeric(5, 1), default=0)
+    # Épülettípus-sablon, amiből a fázis/lépés checklist egyszer, létrehozáskor
+    # átmásolódik a projektre — utána a sablontól függetlenül szabadon
+    # szerkeszthető (lásd ProjektFazis/ProjektLepes).
+    projekt_tipus_id: Mapped[int | None] = mapped_column(ForeignKey("projekt_tipusok.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     ugyfel_linkek: Mapped[list["ProjektUgyfel"]] = relationship(
@@ -161,6 +171,10 @@ class Projekt(Base):
     )
     dokumentumok: Mapped[list["Dokumentum"]] = relationship(
         back_populates="projekt", cascade="all, delete-orphan"
+    )
+    projekt_tipus: Mapped["ProjektTipus | None"] = relationship()
+    fazisok: Mapped[list["ProjektFazis"]] = relationship(
+        back_populates="projekt", cascade="all, delete-orphan", order_by="ProjektFazis.sorrend"
     )
 
 
@@ -238,6 +252,82 @@ class Torzsadat(Base):
 
 
 # ---------------------------------------------------------------------------
+# Projekttípus-sablon (fázis/lépés checklist, pl. "Könnyűszerkezetes készház"
+# vs. "Boronafalas gerendaház") és a projektre másolt, onnantól önállóan
+# szerkeszthető példánya.
+# ---------------------------------------------------------------------------
+
+
+class ProjektTipus(Base):
+    __tablename__ = "projekt_tipusok"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nev: Mapped[str] = mapped_column(String(255), unique=True)
+
+    fazisok: Mapped[list["ProjektTipusFazis"]] = relationship(
+        back_populates="projekt_tipus", cascade="all, delete-orphan", order_by="ProjektTipusFazis.sorrend"
+    )
+
+
+class ProjektTipusFazis(Base):
+    __tablename__ = "projekt_tipus_fazisok"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    projekt_tipus_id: Mapped[int] = mapped_column(
+        ForeignKey("projekt_tipusok.id", ondelete="CASCADE"), index=True
+    )
+    nev: Mapped[str] = mapped_column(String(255))
+    sorrend: Mapped[int] = mapped_column(Integer, default=0)
+
+    projekt_tipus: Mapped[ProjektTipus] = relationship(back_populates="fazisok")
+    lepesek: Mapped[list["ProjektTipusLepes"]] = relationship(
+        back_populates="fazis", cascade="all, delete-orphan", order_by="ProjektTipusLepes.sorrend"
+    )
+
+
+class ProjektTipusLepes(Base):
+    __tablename__ = "projekt_tipus_lepesek"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    fazis_id: Mapped[int] = mapped_column(
+        ForeignKey("projekt_tipus_fazisok.id", ondelete="CASCADE"), index=True
+    )
+    nev: Mapped[str] = mapped_column(String(500))
+    sorrend: Mapped[int] = mapped_column(Integer, default=0)
+    merfoldko: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    fazis: Mapped[ProjektTipusFazis] = relationship(back_populates="lepesek")
+
+
+class ProjektFazis(Base):
+    __tablename__ = "projekt_fazisok"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    projekt_id: Mapped[int] = mapped_column(ForeignKey("projektek.id", ondelete="CASCADE"), index=True)
+    nev: Mapped[str] = mapped_column(String(255))
+    sorrend: Mapped[int] = mapped_column(Integer, default=0)
+
+    projekt: Mapped[Projekt] = relationship(back_populates="fazisok")
+    lepesek: Mapped[list["ProjektLepes"]] = relationship(
+        back_populates="fazis", cascade="all, delete-orphan", order_by="ProjektLepes.sorrend"
+    )
+
+
+class ProjektLepes(Base):
+    __tablename__ = "projekt_lepesek"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    fazis_id: Mapped[int] = mapped_column(ForeignKey("projekt_fazisok.id", ondelete="CASCADE"), index=True)
+    nev: Mapped[str] = mapped_column(String(500))
+    sorrend: Mapped[int] = mapped_column(Integer, default=0)
+    merfoldko: Mapped[bool] = mapped_column(Boolean, default=False)
+    kesz: Mapped[bool] = mapped_column(Boolean, default=False)
+    datum: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    fazis: Mapped[ProjektFazis] = relationship(back_populates="lepesek")
+
+
+# ---------------------------------------------------------------------------
 # Projekt tétel / vállalás / esemény / specifikáció
 # ---------------------------------------------------------------------------
 
@@ -259,11 +349,6 @@ class ProjektTetel(Base):
     varhato_szoveg: Mapped[str | None] = mapped_column(String(255), nullable=True)
     varhato_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
     szakasz: Mapped[TetelSzakasz] = mapped_column(Enum(TetelSzakasz), default=TetelSzakasz.AJANLAT)
-    # Anyagrendelés-támogatás: a teljes beszerzési modul helyett egyszerű
-    # "ki, mit, mikorra rendelt" mezők a tételen — a tényleges esemény
-    # (megrendelve/megjött) a TetelEsemeny-ben, dátummal.
-    beszallito: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    rendeles_hatarido: Mapped[date | None] = mapped_column(Date, nullable=True)
     # Ütemezés (opcionális, csak ha a projekt utemezes_aktiv=true): a tétel
     # csak akkor vesz részt a visszafelé ütemezésben, ha duration_days ki van
     # töltve — nincs külön "Activity" entitás, a tétel maga az ütemezhető
@@ -291,6 +376,32 @@ class ProjektTetel(Base):
         foreign_keys="TetelFuggoseg.tetel_id",
         cascade="all, delete-orphan",
     )
+    rendelesek: Mapped[list["AnyagRendeles"]] = relationship(
+        back_populates="tetel", cascade="all, delete-orphan", order_by="AnyagRendeles.id"
+    )
+
+
+class AnyagRendeles(Base):
+    """Egy tételen (munkanemen) belül több konkrét anyagtétel is rendelhető
+    — pl. a "Kültéri nyílászáró" tételen több ablak, az "Eresz" tételen több
+    ereszszakasz külön-külön nyomon követve."""
+
+    __tablename__ = "anyag_rendelesek"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tetel_id: Mapped[int] = mapped_column(ForeignKey("projekt_tetelek.id", ondelete="CASCADE"), index=True)
+    megnevezes: Mapped[str] = mapped_column(String(255))
+    beszallito: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mennyiseg: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    mertekegyseg: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    allapot: Mapped[RendelesAllapot] = mapped_column(Enum(RendelesAllapot), default=RendelesAllapot.TERVEZETT)
+    megrendeles_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
+    varhato_erkezes: Mapped[date | None] = mapped_column(Date, nullable=True)
+    tenyleges_erkezes: Mapped[date | None] = mapped_column(Date, nullable=True)
+    megjegyzes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    tetel: Mapped[ProjektTetel] = relationship(back_populates="rendelesek")
 
 
 class ProjektTetelVallalas(Base):

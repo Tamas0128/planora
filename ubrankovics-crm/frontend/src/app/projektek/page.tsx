@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
-import { api, ProjektListItem, Ugyfel } from "@/lib/api";
+import { api, ProjektListItem, ProjektTipus, Ugyfel } from "@/lib/api";
 
 const ALLAPOT_LABEL: Record<string, string> = {
   uj: "Új",
@@ -17,11 +17,13 @@ const ALLAPOT_LABEL: Record<string, string> = {
 export default function ProjektekPage() {
   const [projektek, setProjektek] = useState<ProjektListItem[]>([]);
   const [ugyfelek, setUgyfelek] = useState<Ugyfel[]>([]);
+  const [tipusok, setTipusok] = useState<ProjektTipus[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [projektNev, setProjektNev] = useState("");
   const [ugyfelId, setUgyfelId] = useState<string>("");
   const [epitesiCim, setEpitesiCim] = useState("");
   const [utemezesAktiv, setUtemezesAktiv] = useState(false);
+  const [projektTipusId, setProjektTipusId] = useState<string>("");
   const [error, setError] = useState("");
 
   function load() {
@@ -31,6 +33,7 @@ export default function ProjektekPage() {
   useEffect(() => {
     load();
     api.listUgyfelek().then(setUgyfelek).catch(() => {});
+    api.listProjektTipusok().then(setTipusok).catch(() => {});
   }, []);
 
   async function handleCreate(e: FormEvent) {
@@ -40,6 +43,7 @@ export default function ProjektekPage() {
       await api.createProjekt({
         projekt_nev: projektNev,
         utemezes_aktiv: utemezesAktiv,
+        projekt_tipus_id: projektTipusId ? Number(projektTipusId) : null,
         ugyfelek: ugyfelId
           ? [{ ugyfel_id: Number(ugyfelId), epitesi_cim: epitesiCim || null }]
           : [],
@@ -48,6 +52,7 @@ export default function ProjektekPage() {
       setUgyfelId("");
       setEpitesiCim("");
       setUtemezesAktiv(false);
+      setProjektTipusId("");
       setShowForm(false);
       load();
     } catch (err) {
@@ -96,6 +101,18 @@ export default function ProjektekPage() {
             onChange={(e) => setEpitesiCim(e.target.value)}
             className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
           />
+          <select
+            value={projektTipusId}
+            onChange={(e) => setProjektTipusId(e.target.value)}
+            className="col-span-2 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+          >
+            <option value="">Épülettípus (opcionális fázis-sablon)</option>
+            {tipusok.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nev}
+              </option>
+            ))}
+          </select>
           <label className="col-span-2 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={utemezesAktiv} onChange={(e) => setUtemezesAktiv(e.target.checked)} />
             Ütemező bekapcsolása ennél a projektnél

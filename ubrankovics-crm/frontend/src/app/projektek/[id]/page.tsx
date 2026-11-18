@@ -8,6 +8,7 @@ import {
   Alvallalkozo,
   Munkanem,
   ProjektDetail,
+  ProjektFazis,
   ProjektTetel,
   Szemely,
   api,
@@ -54,6 +55,12 @@ const ESEMENY_ALLAPOT_LABEL: Record<string, string> = {
   kesz: "Kész",
 };
 
+const RENDELES_ALLAPOT_LABEL: Record<string, string> = {
+  tervezett: "Tervezett",
+  megrendelve: "Megrendelve",
+  megerkezett: "Megérkezett",
+};
+
 const SZEREP_LABEL: Record<string, string> = {
   epitesvezeto: "Építésvezető",
   projektfelelos: "Projektfelelős",
@@ -65,12 +72,13 @@ const SZEREP_LABEL: Record<string, string> = {
 export default function ProjektDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projektId = Number(id);
-  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes">("attekintes");
+  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok">("attekintes");
   const [projekt, setProjekt] = useState<ProjektDetail | null>(null);
   const [tetelek, setTetelek] = useState<ProjektTetel[]>([]);
   const [munkanemek, setMunkanemek] = useState<Munkanem[]>([]);
   const [alvallalkozok, setAlvallalkozok] = useState<Alvallalkozo[]>([]);
   const [szemelyek, setSzemelyek] = useState<Szemely[]>([]);
+  const [fazisok, setFazisok] = useState<ProjektFazis[]>([]);
   const [error, setError] = useState("");
 
   function loadProjekt() {
@@ -78,6 +86,9 @@ export default function ProjektDetailPage() {
   }
   function loadTetelek() {
     api.listTetelek(projektId).then(setTetelek).catch((e) => setError(e.message));
+  }
+  function loadFazisok() {
+    api.listFazisok(projektId).then(setFazisok).catch((e) => setError(e.message));
   }
   function loadAll() {
     loadProjekt();
@@ -87,6 +98,7 @@ export default function ProjektDetailPage() {
   useEffect(() => {
     loadProjekt();
     loadTetelek();
+    loadFazisok();
     api.listMunkanemek().then(setMunkanemek).catch(() => {});
     api.listAlvallalkozok().then(setAlvallalkozok).catch(() => {});
     api.listSzemelyek().then(setSzemelyek).catch(() => {});
@@ -112,8 +124,8 @@ export default function ProjektDetailPage() {
       <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
         {(
           projekt.utemezes_aktiv
-            ? (["attekintes", "tetelek", "utemezes"] as const)
-            : (["attekintes", "tetelek"] as const)
+            ? (["attekintes", "tetelek", "utemezes", "fazisok"] as const)
+            : (["attekintes", "tetelek", "fazisok"] as const)
         ).map((t) => (
           <button
             key={t}
@@ -122,7 +134,7 @@ export default function ProjektDetailPage() {
               tab === t ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
             }`}
           >
-            {t === "attekintes" ? "Áttekintés" : t === "tetelek" ? "Tételek" : "Ütemezés"}
+            {t === "attekintes" ? "Áttekintés" : t === "tetelek" ? "Tételek" : t === "utemezes" ? "Ütemezés" : "Fázisok"}
           </button>
         ))}
       </div>
@@ -141,6 +153,9 @@ export default function ProjektDetailPage() {
       )}
       {tab === "utemezes" && projekt.utemezes_aktiv && (
         <UtemezesTab projekt={projekt} projektId={projektId} tetelek={tetelek} onChange={loadAll} />
+      )}
+      {tab === "fazisok" && (
+        <FazisokTab projektId={projektId} fazisok={fazisok} onChange={loadFazisok} />
       )}
     </AppLayout>
   );
@@ -336,6 +351,8 @@ function TetelDetail({
   const [esemenyDatum, setEsemenyDatum] = useState("");
   const [specKulcs, setSpecKulcs] = useState("");
   const [specErtek, setSpecErtek] = useState("");
+  const [rendMegnevezes, setRendMegnevezes] = useState("");
+  const [rendBeszallito, setRendBeszallito] = useState("");
 
   async function saveSzakasz() {
     await api.updateTetel(projektId, tetel.id, { szakasz });
@@ -372,8 +389,20 @@ function TetelDetail({
     onChange();
   }
 
+  async function addRendeles(e: FormEvent) {
+    e.preventDefault();
+    if (!rendMegnevezes) return;
+    await api.addRendeles(projektId, tetel.id, {
+      megnevezes: rendMegnevezes,
+      beszallito: rendBeszallito || null,
+    });
+    setRendMegnevezes("");
+    setRendBeszallito("");
+    onChange();
+  }
+
   return (
-    <div className="grid gap-4 border-t border-[var(--border)] p-3 text-sm md:grid-cols-3">
+    <div className="grid gap-4 border-t border-[var(--border)] p-3 text-sm md:grid-cols-4">
       <div>
         <h3 className="mb-1 font-semibold">Szakasz</h3>
         <div className="flex gap-2">
@@ -521,6 +550,62 @@ function TetelDetail({
             placeholder="Érték"
             value={specErtek}
             onChange={(e) => setSpecErtek(e.target.value)}
+            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
+          />
+          <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+            Hozzáadás
+          </button>
+        </form>
+      </div>
+
+      <div>
+        <h3 className="mb-1 font-semibold">Beszerzés (anyagrendelés)</h3>
+        <ul className="mb-2 space-y-1">
+          {tetel.rendelesek.map((r) => (
+            <li key={r.id} className="space-y-0.5 border-b border-[var(--border)] pb-1 last:border-b-0">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{r.megnevezes}</span>
+                <button
+                  onClick={async () => {
+                    await api.removeRendeles(projektId, tetel.id, r.id);
+                    onChange();
+                  }}
+                >
+                  <X size={12} className="text-[var(--muted)]" />
+                </button>
+              </div>
+              <div className="flex items-center justify-between text-[var(--muted)]">
+                <span>{r.beszallito || "—"}</span>
+                <select
+                  value={r.allapot}
+                  onChange={async (e) => {
+                    await api.updateRendeles(projektId, tetel.id, r.id, { allapot: e.target.value });
+                    onChange();
+                  }}
+                  className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+                >
+                  {Object.entries(RENDELES_ALLAPOT_LABEL).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </li>
+          ))}
+          {tetel.rendelesek.length === 0 && <li className="text-[var(--muted)]">Nincs még rendelés.</li>}
+        </ul>
+        <form onSubmit={addRendeles} className="flex flex-col gap-1">
+          <input
+            placeholder="Megnevezés (pl. Ablak - nappali)"
+            value={rendMegnevezes}
+            onChange={(e) => setRendMegnevezes(e.target.value)}
+            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
+          />
+          <input
+            placeholder="Beszállító"
+            value={rendBeszallito}
+            onChange={(e) => setRendBeszallito(e.target.value)}
             className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
           />
           <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
@@ -740,5 +825,132 @@ function TetelUtemezesRow({
         </div>
       </td>
     </tr>
+  );
+}
+
+function FazisokTab({
+  projektId,
+  fazisok,
+  onChange,
+}: {
+  projektId: number;
+  fazisok: ProjektFazis[];
+  onChange: () => void;
+}) {
+  const [ujFazisNev, setUjFazisNev] = useState("");
+
+  async function addFazis(e: FormEvent) {
+    e.preventDefault();
+    if (!ujFazisNev) return;
+    await api.addFazis(projektId, ujFazisNev);
+    setUjFazisNev("");
+    onChange();
+  }
+
+  const osszesLepes = fazisok.reduce((a, f) => a + f.lepesek.length, 0);
+  const keszLepes = fazisok.reduce((a, f) => a + f.lepesek.filter((l) => l.kesz).length, 0);
+
+  return (
+    <div className="max-w-3xl">
+      <div className="mb-4 flex items-center justify-between rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3 text-sm">
+        <span>
+          Kész lépések: {keszLepes} / {osszesLepes}
+        </span>
+        <form onSubmit={addFazis} className="flex gap-2">
+          <input
+            placeholder="Új fázis neve"
+            value={ujFazisNev}
+            onChange={(e) => setUjFazisNev(e.target.value)}
+            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-sm"
+          />
+          <button type="submit" className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1 text-sm text-[var(--primary-foreground)]">
+            <Plus size={14} /> Fázis
+          </button>
+        </form>
+      </div>
+
+      <div className="space-y-3">
+        {fazisok.map((f) => (
+          <FazisCard key={f.id} projektId={projektId} fazis={f} onChange={onChange} />
+        ))}
+        {fazisok.length === 0 && (
+          <p className="text-sm text-[var(--muted)]">
+            Nincs még fázis — válassz épülettípust a projekt létrehozásakor, vagy adj hozzá sajátot.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FazisCard({
+  projektId,
+  fazis,
+  onChange,
+}: {
+  projektId: number;
+  fazis: ProjektFazis;
+  onChange: () => void;
+}) {
+  const [ujLepesNev, setUjLepesNev] = useState("");
+
+  async function addLepes(e: FormEvent) {
+    e.preventDefault();
+    if (!ujLepesNev) return;
+    await api.addLepes(projektId, fazis.id, { nev: ujLepesNev });
+    setUjLepesNev("");
+    onChange();
+  }
+
+  return (
+    <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2">
+        <h3 className="font-heading font-semibold">{fazis.nev}</h3>
+        <button
+          onClick={async () => {
+            await api.removeFazis(projektId, fazis.id);
+            onChange();
+          }}
+        >
+          <X size={14} className="text-[var(--muted)]" />
+        </button>
+      </div>
+      <ul className="divide-y divide-[var(--border)]">
+        {fazis.lepesek.map((l) => (
+          <li key={l.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              checked={l.kesz}
+              onChange={async (e) => {
+                await api.updateLepes(projektId, fazis.id, l.id, { kesz: e.target.checked });
+                onChange();
+              }}
+            />
+            <span className={`flex-1 ${l.merfoldko ? "font-semibold" : ""} ${l.kesz ? "line-through text-[var(--muted)]" : ""}`}>
+              {l.nev}
+            </span>
+            <button
+              onClick={async () => {
+                await api.removeLepes(projektId, fazis.id, l.id);
+                onChange();
+              }}
+            >
+              <X size={12} className="text-[var(--muted)]" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={addLepes} className="flex gap-2 p-3">
+        <input
+          placeholder="Új lépés"
+          value={ujLepesNev}
+          onChange={(e) => setUjLepesNev(e.target.value)}
+          className="flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-sm"
+        />
+        <button type="submit" className="rounded-[var(--radius)] border border-[var(--border)] px-3 py-1 text-sm">
+          Hozzáad
+        </button>
+      </form>
+    </div>
   );
 }

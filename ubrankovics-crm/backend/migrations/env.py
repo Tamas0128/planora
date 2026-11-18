@@ -7,12 +7,18 @@ from app.config import settings
 from app.database import Base
 from app.models import (  # noqa: F401 — register all models on Base.metadata
     Alvallalkozo,
+    AnyagRendeles,
     Dokumentum,
     Munkanem,
     Projekt,
+    ProjektFazis,
+    ProjektLepes,
     ProjektSzerep,
     ProjektTetel,
     ProjektTetelVallalas,
+    ProjektTipus,
+    ProjektTipusFazis,
+    ProjektTipusLepes,
     ProjektUgyfel,
     Specifikacio,
     Szemely,

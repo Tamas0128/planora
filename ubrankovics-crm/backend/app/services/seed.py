@@ -17,7 +17,17 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.security import hash_password
-from app.models import Munkanem, MunkanemCsoport, Szemely, Torzsadat, User, UserRole
+from app.models import (
+    Munkanem,
+    MunkanemCsoport,
+    ProjektTipus,
+    ProjektTipusFazis,
+    ProjektTipusLepes,
+    Szemely,
+    Torzsadat,
+    User,
+    UserRole,
+)
 
 logger = logging.getLogger("ubrankovics.seed")
 
@@ -106,6 +116,34 @@ def seed_szemelyek(db: Session) -> None:
     for item in _SZEMELY_SEED:
         if item["nev"] not in existing_names:
             db.add(Szemely(**item))
+    db.commit()
+
+
+def seed_projekt_tipusok(db: Session) -> None:
+    """Épülettípus-sablonok (fázis/lépés checklist), a felhasználó
+    `epitoipari-tevekenyseglistak.md` dokumentumából — projekt létrehozásakor
+    másolódnak át egy adott projektre, onnantól attól függetlenül
+    szerkeszthetők."""
+    existing_names = {t.nev for t in db.query(ProjektTipus.nev).all()}
+    for tipus_data in _PROJEKT_TIPUS_SEED:
+        if tipus_data["nev"] in existing_names:
+            continue
+        tipus = ProjektTipus(nev=tipus_data["nev"])
+        db.add(tipus)
+        db.flush()
+        for fazis_sorrend, fazis_data in enumerate(tipus_data["fazisok"]):
+            fazis = ProjektTipusFazis(projekt_tipus_id=tipus.id, nev=fazis_data["nev"], sorrend=fazis_sorrend)
+            db.add(fazis)
+            db.flush()
+            for lepes_sorrend, lepes_data in enumerate(fazis_data["lepesek"]):
+                db.add(
+                    ProjektTipusLepes(
+                        fazis_id=fazis.id,
+                        nev=lepes_data["nev"],
+                        sorrend=lepes_sorrend,
+                        merfoldko=lepes_data["merfoldko"],
+                    )
+                )
     db.commit()
 
 
@@ -682,4 +720,239 @@ _SZEMELY_SEED: list[dict] = [
     {"nev": "Vadkerti Tóth Balázs", "telefon": "30/999-6530", "email": "vadkertitb@ubrankovics.hu"},
     {"nev": "Hajós Márió", "telefon": "30/999-2368", "email": "hm@ubrankovics.hu"},
     {"nev": "Nemes Péter", "telefon": None, "email": "nemes@ubrankovics.hu"},
+]
+_PROJEKT_TIPUS_SEED: list[dict] = [
+    {
+        "nev": "Könnyűszerkezetes, üzemben szerelt készház",
+        "fazisok": [
+            {
+                "nev": "Előkészítés és tervezés",
+                "lepesek": [
+                    {"nev": "Helyszíni felmérés", "merfoldko": False},
+                    {"nev": "Műszaki tartalom és készültségi szint rögzítése", "merfoldko": False},
+                    {"nev": "Építészeti, tartószerkezeti, gépészeti és villamos tervek egyeztetése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Gyártmánytervezés",
+                "lepesek": [
+                    {"nev": "Panelkiosztás és falrétegrend véglegesítése", "merfoldko": False},
+                    {"nev": "Nyílászárók, árnyékolótokok, gépészeti és villamos áttörések egyeztetése", "merfoldko": False},
+                    {"nev": "Fal-, födém- és tetőcsatlakozások kidolgozása", "merfoldko": False},
+                    {"nev": "Gyártmánytervek jóváhagyása", "merfoldko": True},
+                ],
+            },
+            {
+                "nev": "Anyagkiválasztás és beszerzés",
+                "lepesek": [
+                    {"nev": "Nyílászárók, tetőfedés, bádogozás, homlokzat, párkányok és árnyékolók kiválasztása", "merfoldko": False},
+                    {"nev": "Építtetői jóváhagyás", "merfoldko": False},
+                    {"nev": "Anyagok és termékek megrendelése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Alapozás és fogadószerkezet",
+                "lepesek": [
+                    {"nev": "Kitűzés és földmunka", "merfoldko": False},
+                    {"nev": "Alapozás, fogadólemez és közműkiállások elkészítése", "merfoldko": False},
+                    {"nev": "Méretek, szintek és kiállások ellenőrzése", "merfoldko": False},
+                    {"nev": "Fogadószerkezet átvétele", "merfoldko": True},
+                ],
+            },
+            {
+                "nev": "Üzemi panelgyártás",
+                "lepesek": [
+                    {"nev": "Faelemek megmunkálása", "merfoldko": False},
+                    {"nev": "Falvázak összeállítása", "merfoldko": False},
+                    {"nev": "Burkolólemezek, hőszigetelés és a tervezett fóliarétegek beépítése", "merfoldko": False},
+                    {"nev": "Nyílászárók és egyéb elemek beépítése a gyári készültség szerint", "merfoldko": False},
+                    {"nev": "Panelek ellenőrzése és jelölése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Szállítás és daruzás",
+                "lepesek": [
+                    {"nev": "Behajtás és daruállás ellenőrzése", "merfoldko": False},
+                    {"nev": "Fuvar és daru ütemezése", "merfoldko": False},
+                    {"nev": "Panelek rakodása szerelési sorrendben", "merfoldko": False},
+                    {"nev": "Helyszínre szállítás", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Helyszíni szerkezetépítés",
+                "lepesek": [
+                    {"nev": "Talpgerendák elhelyezése", "merfoldko": False},
+                    {"nev": "Falpanelek daruzása és rögzítése", "merfoldko": False},
+                    {"nev": "Panelillesztések tömítése és légzáró csatlakozások kialakítása", "merfoldko": False},
+                    {"nev": "Födém- és tetőszerkezet szerelése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Külső munkák",
+                "lepesek": [
+                    {"nev": "Tetőfedés", "merfoldko": False},
+                    {"nev": "Tetőablakok beépítése", "merfoldko": False},
+                    {"nev": "Bádogozás és eresz szerelése", "merfoldko": False},
+                    {"nev": "Külső nyílászárók beépítése vagy a gyári nyílászáró-csatlakozások befejezése", "merfoldko": False},
+                    {"nev": "Vakolt vagy faburkolatos homlokzat kialakítása", "merfoldko": False},
+                    {"nev": "Lábazat kialakítása", "merfoldko": False},
+                    {"nev": "Külső párkányok beépítése", "merfoldko": False},
+                    {"nev": "Árnyékolók felszerelése", "merfoldko": False},
+                    {"nev": "Garázskapu beépítése", "merfoldko": False},
+                    {"nev": "„Kívül kész” műszaki átadás, ha szerződéses mérföldkő", "merfoldko": True},
+                ],
+            },
+            {
+                "nev": "Gépészeti és villamos alapszerelés",
+                "lepesek": [
+                    {"nev": "Víz- és csatornahálózat kiépítése", "merfoldko": False},
+                    {"nev": "Fűtés, hűtés és szellőzés alapszerelése", "merfoldko": False},
+                    {"nev": "Villamos és gyengeáramú hálózat kiépítése", "merfoldko": False},
+                    {"nev": "Kiállások ellenőrzése és takarás előtti dokumentálása", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Belső befejező munkák",
+                "lepesek": [
+                    {"nev": "Szerelőrétegek és előtétfalak lezárása", "merfoldko": False},
+                    {"nev": "Mennyezetek kialakítása", "merfoldko": False},
+                    {"nev": "Padlórétegek kialakítása és aljzatkészítés", "merfoldko": False},
+                    {"nev": "Vizes helyiségek szigetelése", "merfoldko": False},
+                    {"nev": "Burkolás", "merfoldko": False},
+                    {"nev": "Festés", "merfoldko": False},
+                    {"nev": "Beltéri ajtók beépítése", "merfoldko": False},
+                    {"nev": "Szaniterek beépítése", "merfoldko": False},
+                    {"nev": "Villamos szerelvények beépítése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Átadás és lezárás",
+                "lepesek": [
+                    {"nev": "Mérések és próbaüzem", "merfoldko": False},
+                    {"nev": "Műszaki bejárás", "merfoldko": False},
+                    {"nev": "Hibajegyzék és javítások", "merfoldko": False},
+                    {"nev": "Átadási dokumentáció összeállítása", "merfoldko": False},
+                    {"nev": "Kulcsátadás", "merfoldko": False},
+                ],
+            },
+        ],
+    },
+    {
+        "nev": "Boronafalas gerendaház",
+        "fazisok": [
+            {
+                "nev": "Előkészítés és tervezés",
+                "lepesek": [
+                    {"nev": "Helyszíni felmérés", "merfoldko": False},
+                    {"nev": "Műszaki tartalom és készültségi szint rögzítése", "merfoldko": False},
+                    {"nev": "Építészeti, tartószerkezeti, gépészeti és villamos tervek egyeztetése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Gyártmánytervezés",
+                "lepesek": [
+                    {"nev": "Gerendasorok kiosztása", "merfoldko": False},
+                    {"nev": "Sarokkötések, falcsatlakozások és nyílások kidolgozása", "merfoldko": False},
+                    {"nev": "Áttörések és vezetéknyomvonalak egyeztetése", "merfoldko": False},
+                    {"nev": "A faanyagmozgást követő csomópontok megtervezése", "merfoldko": False},
+                    {"nev": "Gyártmánytervek jóváhagyása", "merfoldko": True},
+                ],
+            },
+            {
+                "nev": "Anyagkiválasztás és beszerzés",
+                "lepesek": [
+                    {"nev": "Gerendaanyag és felületkezelés meghatározása", "merfoldko": False},
+                    {"nev": "Nyílászárók, tetőfedés, bádogozás, párkányok és árnyékolók kiválasztása", "merfoldko": False},
+                    {"nev": "Építtetői jóváhagyás", "merfoldko": False},
+                    {"nev": "Anyagok és termékek megrendelése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Alapozás és fogadószerkezet",
+                "lepesek": [
+                    {"nev": "Kitűzés és földmunka", "merfoldko": False},
+                    {"nev": "Alapozás, fogadólemez és közműkiállások elkészítése", "merfoldko": False},
+                    {"nev": "Méretek, szintek és kiállások ellenőrzése", "merfoldko": False},
+                    {"nev": "Fogadószerkezet átvétele", "merfoldko": True},
+                ],
+            },
+            {
+                "nev": "Üzemi gerendagyártás",
+                "lepesek": [
+                    {"nev": "Gerendák méretre vágása és CNC-megmunkálása", "merfoldko": False},
+                    {"nev": "Sarokkötések, csatlakozások és tervezett áttörések kialakítása", "merfoldko": False},
+                    {"nev": "Elemek méretellenőrzése és sorszámozása", "merfoldko": False},
+                    {"nev": "Csomagolás falszakaszonként, szerelési sorrendben", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Szállítás és helyszíni előkészítés",
+                "lepesek": [
+                    {"nev": "Behajtás, rakodó- és tárolóhely ellenőrzése", "merfoldko": False},
+                    {"nev": "Fuvar és emelés ütemezése", "merfoldko": False},
+                    {"nev": "Gerendacsomagok helyszínre szállítása", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Helyszíni szerkezetépítés",
+                "lepesek": [
+                    {"nev": "Fogadócsatlakozás kialakítása", "merfoldko": False},
+                    {"nev": "Első gerendasor beállítása", "merfoldko": False},
+                    {"nev": "Gerendasorok összeépítése és tömítése", "merfoldko": False},
+                    {"nev": "Sarok- és falcsatlakozások kialakítása", "merfoldko": False},
+                    {"nev": "Födém- és tetőszerkezet szerelése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Külső munkák",
+                "lepesek": [
+                    {"nev": "Tetőfedés", "merfoldko": False},
+                    {"nev": "Tetőablakok beépítése", "merfoldko": False},
+                    {"nev": "Bádogozás és eresz szerelése", "merfoldko": False},
+                    {"nev": "Külső nyílászárók beépítése a tervezett mozgást követő csatlakozásokkal", "merfoldko": False},
+                    {"nev": "Külső faanyag felületkezelése", "merfoldko": False},
+                    {"nev": "Lábazat kialakítása", "merfoldko": False},
+                    {"nev": "Külső párkányok beépítése", "merfoldko": False},
+                    {"nev": "Árnyékolók felszerelése", "merfoldko": False},
+                    {"nev": "Garázskapu beépítése", "merfoldko": False},
+                    {"nev": "„Kívül kész” műszaki átadás, ha szerződéses mérföldkő", "merfoldko": True},
+                ],
+            },
+            {
+                "nev": "Gépészeti és villamos alapszerelés",
+                "lepesek": [
+                    {"nev": "Víz- és csatornahálózat kiépítése", "merfoldko": False},
+                    {"nev": "Fűtés, hűtés és szellőzés alapszerelése", "merfoldko": False},
+                    {"nev": "Villamos és gyengeáramú hálózat kiépítése", "merfoldko": False},
+                    {"nev": "Kiállások ellenőrzése és takarás előtti dokumentálása", "merfoldko": False},
+                    {"nev": "Vezetékek és szerelvények csatlakozásainak ellenőrzése a mozgó falszerkezetnél", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Belső befejező munkák",
+                "lepesek": [
+                    {"nev": "Belső válaszfalak, előtétfalak és mennyezetek kialakítása", "merfoldko": False},
+                    {"nev": "Látszó fa felületek kezelése", "merfoldko": False},
+                    {"nev": "Padlórétegek kialakítása és aljzatkészítés", "merfoldko": False},
+                    {"nev": "Vizes helyiségek szigetelése", "merfoldko": False},
+                    {"nev": "Burkolás", "merfoldko": False},
+                    {"nev": "Festés", "merfoldko": False},
+                    {"nev": "Beltéri ajtók beépítése", "merfoldko": False},
+                    {"nev": "Szaniterek beépítése", "merfoldko": False},
+                    {"nev": "Villamos szerelvények beépítése", "merfoldko": False},
+                ],
+            },
+            {
+                "nev": "Átadás és lezárás",
+                "lepesek": [
+                    {"nev": "Mérések és próbaüzem", "merfoldko": False},
+                    {"nev": "Műszaki bejárás", "merfoldko": False},
+                    {"nev": "Hibajegyzék és javítások", "merfoldko": False},
+                    {"nev": "Átadási dokumentáció összeállítása", "merfoldko": False},
+                    {"nev": "Kulcsátadás", "merfoldko": False},
+                    {"nev": "A szerződésben vállalt utóellenőrzés ütemezése", "merfoldko": False},
+                ],
+            },
+        ],
+    },
 ]

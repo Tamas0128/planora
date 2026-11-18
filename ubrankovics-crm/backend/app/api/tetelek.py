@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import (
+    AnyagRendeles,
     Dokumentum,
     Projekt,
     ProjektTetel,
@@ -14,6 +15,9 @@ from app.models import (
     User,
 )
 from app.schemas_crm import (
+    AnyagRendelesCreate,
+    AnyagRendelesResponse,
+    AnyagRendelesUpdate,
     DokumentumCreate,
     DokumentumResponse,
     ProjektTetelCreate,
@@ -41,6 +45,7 @@ def _tetel_query(db: Session):
         joinedload(ProjektTetel.esemenyek),
         joinedload(ProjektTetel.specifikaciok),
         joinedload(ProjektTetel.fuggosegek).joinedload(TetelFuggoseg.prerequisite).joinedload(ProjektTetel.munkanem),
+        joinedload(ProjektTetel.rendelesek),
     )
 
 
@@ -341,3 +346,63 @@ def add_dokumentum(
     db.commit()
     db.refresh(dok)
     return dok
+
+
+@router.post("/tetelek/{tetel_id}/rendelesek", response_model=AnyagRendelesResponse, status_code=201)
+def add_rendeles(
+    projekt_id: int,
+    tetel_id: int,
+    body: AnyagRendelesCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    _get_tetel(db, projekt_id, tetel_id)
+    rendeles = AnyagRendeles(tetel_id=tetel_id, **body.model_dump())
+    db.add(rendeles)
+    db.commit()
+    db.refresh(rendeles)
+    return rendeles
+
+
+@router.patch("/tetelek/{tetel_id}/rendelesek/{rendeles_id}", response_model=AnyagRendelesResponse)
+def update_rendeles(
+    projekt_id: int,
+    tetel_id: int,
+    rendeles_id: int,
+    body: AnyagRendelesUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    _get_tetel(db, projekt_id, tetel_id)
+    rendeles = (
+        db.query(AnyagRendeles)
+        .filter(AnyagRendeles.id == rendeles_id, AnyagRendeles.tetel_id == tetel_id)
+        .first()
+    )
+    if not rendeles:
+        raise HTTPException(status_code=404, detail="Rendelés not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(rendeles, field, value)
+    db.commit()
+    db.refresh(rendeles)
+    return rendeles
+
+
+@router.delete("/tetelek/{tetel_id}/rendelesek/{rendeles_id}", status_code=204)
+def remove_rendeles(
+    projekt_id: int,
+    tetel_id: int,
+    rendeles_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    _get_tetel(db, projekt_id, tetel_id)
+    rendeles = (
+        db.query(AnyagRendeles)
+        .filter(AnyagRendeles.id == rendeles_id, AnyagRendeles.tetel_id == tetel_id)
+        .first()
+    )
+    if not rendeles:
+        raise HTTPException(status_code=404, detail="Rendelés not found")
+    db.delete(rendeles)
+    db.commit()

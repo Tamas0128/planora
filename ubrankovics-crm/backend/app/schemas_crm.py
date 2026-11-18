@@ -8,6 +8,7 @@ from app.models import (
     MunkanemCsoport,
     ProjektAllapot,
     ProjektSzerepTipus,
+    RendelesAllapot,
     SzemelySzervezet,
     TetelEsemenyAllapot,
     TetelEsemenyTipus,
@@ -186,6 +187,7 @@ class ProjektCreate(BaseModel):
     allapot: ProjektAllapot = ProjektAllapot.UJ
     utemezes_aktiv: bool = False
     delivery_date: Optional[date] = None
+    projekt_tipus_id: Optional[int] = None
     ugyfelek: list[ProjektUgyfelCreate] = []
 
 
@@ -219,6 +221,7 @@ class ProjektDetail(BaseModel):
     utemezes_aktiv: bool
     delivery_date: Optional[date]
     completion_percent: Decimal
+    projekt_tipus_id: Optional[int]
     created_at: datetime
     ugyfel_linkek: list[ProjektUgyfelResponse]
     szerepek: list[ProjektSzerepResponse]
@@ -307,8 +310,6 @@ class ProjektTetelCreate(BaseModel):
     varhato_szoveg: Optional[str] = None
     varhato_datum: Optional[date] = None
     szakasz: TetelSzakasz = TetelSzakasz.AJANLAT
-    beszallito: Optional[str] = None
-    rendeles_hatarido: Optional[date] = None
     duration_days: Optional[int] = None
     prep_days: int = 0
     vallalasok: list[VallalasCreate] = []
@@ -323,8 +324,6 @@ class ProjektTetelUpdate(BaseModel):
     varhato_szoveg: Optional[str] = None
     varhato_datum: Optional[date] = None
     szakasz: Optional[TetelSzakasz] = None
-    beszallito: Optional[str] = None
-    rendeles_hatarido: Optional[date] = None
     duration_days: Optional[int] = None
     prep_days: Optional[int] = None
 
@@ -341,6 +340,45 @@ class TetelFuggosegResponse(BaseModel):
     model_config = _from_attrs
 
 
+class AnyagRendelesCreate(BaseModel):
+    megnevezes: str
+    beszallito: Optional[str] = None
+    mennyiseg: Optional[Decimal] = None
+    mertekegyseg: Optional[str] = None
+    allapot: RendelesAllapot = RendelesAllapot.TERVEZETT
+    megrendeles_datum: Optional[date] = None
+    varhato_erkezes: Optional[date] = None
+    tenyleges_erkezes: Optional[date] = None
+    megjegyzes: Optional[str] = None
+
+
+class AnyagRendelesUpdate(BaseModel):
+    megnevezes: Optional[str] = None
+    beszallito: Optional[str] = None
+    mennyiseg: Optional[Decimal] = None
+    mertekegyseg: Optional[str] = None
+    allapot: Optional[RendelesAllapot] = None
+    megrendeles_datum: Optional[date] = None
+    varhato_erkezes: Optional[date] = None
+    tenyleges_erkezes: Optional[date] = None
+    megjegyzes: Optional[str] = None
+
+
+class AnyagRendelesResponse(BaseModel):
+    id: int
+    megnevezes: str
+    beszallito: Optional[str]
+    mennyiseg: Optional[Decimal]
+    mertekegyseg: Optional[str]
+    allapot: RendelesAllapot
+    megrendeles_datum: Optional[date]
+    varhato_erkezes: Optional[date]
+    tenyleges_erkezes: Optional[date]
+    megjegyzes: Optional[str]
+
+    model_config = _from_attrs
+
+
 class ProjektTetelResponse(BaseModel):
     id: int
     munkanem_id: int
@@ -353,8 +391,6 @@ class ProjektTetelResponse(BaseModel):
     varhato_szoveg: Optional[str]
     varhato_datum: Optional[date]
     szakasz: TetelSzakasz
-    beszallito: Optional[str]
-    rendeles_hatarido: Optional[date]
     duration_days: Optional[int]
     prep_days: int
     start_date: Optional[date]
@@ -364,6 +400,7 @@ class ProjektTetelResponse(BaseModel):
     esemenyek: list[TetelEsemenyResponse]
     specifikaciok: list[SpecifikacioResponse]
     fuggosegek: list[TetelFuggosegResponse]
+    rendelesek: list[AnyagRendelesResponse]
 
     model_config = _from_attrs
 
@@ -383,5 +420,72 @@ class DokumentumResponse(BaseModel):
     utvonal: str
     megjegyzes: Optional[str]
     created_at: datetime
+
+    model_config = _from_attrs
+
+
+# --- Projekttípus-sablon (fázis/lépés checklist) --------------------------------------
+
+
+class ProjektTipusLepesResponse(BaseModel):
+    id: int
+    nev: str
+    sorrend: int
+    merfoldko: bool
+
+    model_config = _from_attrs
+
+
+class ProjektTipusFazisResponse(BaseModel):
+    id: int
+    nev: str
+    sorrend: int
+    lepesek: list[ProjektTipusLepesResponse]
+
+    model_config = _from_attrs
+
+
+class ProjektTipusResponse(BaseModel):
+    id: int
+    nev: str
+    fazisok: list[ProjektTipusFazisResponse]
+
+    model_config = _from_attrs
+
+
+# --- Projekt fázis / lépés (a sablonból másolt, önállóan szerkeszthető példány) --------
+
+
+class ProjektLepesCreate(BaseModel):
+    nev: str
+    merfoldko: bool = False
+
+
+class ProjektLepesUpdate(BaseModel):
+    nev: Optional[str] = None
+    kesz: Optional[bool] = None
+    datum: Optional[date] = None
+
+
+class ProjektLepesResponse(BaseModel):
+    id: int
+    nev: str
+    sorrend: int
+    merfoldko: bool
+    kesz: bool
+    datum: Optional[date]
+
+    model_config = _from_attrs
+
+
+class ProjektFazisCreate(BaseModel):
+    nev: str
+
+
+class ProjektFazisResponse(BaseModel):
+    id: int
+    nev: str
+    sorrend: int
+    lepesek: list[ProjektLepesResponse]
 
     model_config = _from_attrs
