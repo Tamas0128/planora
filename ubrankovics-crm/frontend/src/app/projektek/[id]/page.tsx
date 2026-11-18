@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ChevronDown, ChevronRight, Plus, X } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import {
+  Ajanlatkeres,
+  AnyagRendeles,
   Alvallalkozo,
   KikuldottEmail,
   Munkanem,
@@ -58,9 +60,33 @@ const ESEMENY_ALLAPOT_LABEL: Record<string, string> = {
 };
 
 const RENDELES_ALLAPOT_LABEL: Record<string, string> = {
-  tervezett: "Tervezett",
+  igeny: "Igény",
+  ajanlatkeres_alatt: "Ajánlatkérés alatt",
   megrendelve: "Megrendelve",
+  visszaigazolva: "Visszaigazolva",
+  szallitas_alatt: "Szállítás alatt",
   megerkezett: "Megérkezett",
+  reklamacio: "Reklamáció",
+};
+
+const AJANLATKERES_ALLAPOT_LABEL: Record<string, string> = {
+  kikuldve: "Kiküldve",
+  valaszra_var: "Válaszra vár",
+  valasz_erkezett: "Válasz érkezett",
+  lejart: "Lejárt",
+};
+
+const VAT_LABEL: Record<string, string> = {
+  afa_27: "27% ÁFA",
+  afa_5: "5% ÁFA",
+  afa_0: "0% ÁFA",
+  forditott: "Fordított áfás",
+};
+
+const SZAMLA_ALLAPOT_LABEL: Record<string, string> = {
+  nincs: "Nincs",
+  megerkezett: "Megérkezett",
+  kifizetve: "Kifizetve",
 };
 
 const SZEREP_LABEL: Record<string, string> = {
@@ -373,9 +399,6 @@ function TetelDetail({
   const [esemenyDatum, setEsemenyDatum] = useState("");
   const [specKulcs, setSpecKulcs] = useState("");
   const [specErtek, setSpecErtek] = useState("");
-  const [rendMegnevezes, setRendMegnevezes] = useState("");
-  const [rendBeszallito, setRendBeszallito] = useState("");
-  const [rendOsszeg, setRendOsszeg] = useState("");
 
   async function saveSzakasz() {
     await api.updateTetel(projektId, tetel.id, { szakasz });
@@ -412,22 +435,9 @@ function TetelDetail({
     onChange();
   }
 
-  async function addRendeles(e: FormEvent) {
-    e.preventDefault();
-    if (!rendMegnevezes) return;
-    await api.addRendeles(projektId, tetel.id, {
-      megnevezes: rendMegnevezes,
-      beszallito: rendBeszallito || null,
-      osszeg: rendOsszeg || null,
-    });
-    setRendMegnevezes("");
-    setRendBeszallito("");
-    setRendOsszeg("");
-    onChange();
-  }
-
   return (
-    <div className="grid gap-4 border-t border-[var(--border)] p-3 text-sm md:grid-cols-4">
+    <div className="border-t border-[var(--border)] p-3 text-sm">
+    <div className="grid gap-4 md:grid-cols-3">
       <div>
         <h3 className="mb-1 font-semibold">Szakasz</h3>
         <div className="flex gap-2">
@@ -583,73 +593,468 @@ function TetelDetail({
         </form>
       </div>
 
-      <div>
-        <h3 className="mb-1 font-semibold">Beszerzés (anyagrendelés)</h3>
-        <ul className="mb-2 space-y-1">
-          {tetel.rendelesek.map((r) => (
-            <li key={r.id} className="space-y-0.5 border-b border-[var(--border)] pb-1 last:border-b-0">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{r.megnevezes}</span>
-                <button
-                  onClick={async () => {
-                    await api.removeRendeles(projektId, tetel.id, r.id);
-                    onChange();
-                  }}
-                >
-                  <X size={12} className="text-[var(--muted)]" />
-                </button>
-              </div>
-              <div className="flex items-center justify-between text-[var(--muted)]">
-                <span>
-                  {r.beszallito || "—"}
-                  {r.osszeg ? ` · ${Number(r.osszeg).toLocaleString("hu-HU")} Ft` : ""}
-                </span>
+    </div>
+      <RendelesSection projektId={projektId} tetel={tetel} onChange={onChange} />
+    </div>
+  );
+}
+
+function RendelesSection({
+  projektId,
+  tetel,
+  onChange,
+}: {
+  projektId: number;
+  tetel: ProjektTetel;
+  onChange: () => void;
+}) {
+  const [megnevezes, setMegnevezes] = useState("");
+  const [mennyiseg, setMennyiseg] = useState("");
+  const [mertekegyseg, setMertekegyseg] = useState("");
+  const [szuksegesDatum, setSzuksegesDatum] = useState("");
+
+  async function addRendeles(e: FormEvent) {
+    e.preventDefault();
+    if (!megnevezes) return;
+    await api.addRendeles(projektId, tetel.id, {
+      megnevezes,
+      mennyiseg: mennyiseg || null,
+      mertekegyseg: mertekegyseg || null,
+      szukseges_datum: szuksegesDatum || null,
+    });
+    setMegnevezes("");
+    setMennyiseg("");
+    setMertekegyseg("");
+    setSzuksegesDatum("");
+    onChange();
+  }
+
+  return (
+    <div className="mt-4 border-t border-[var(--border)] pt-3">
+      <h3 className="mb-2 font-semibold">Beszerzés (anyagrendelés)</h3>
+      <div className="space-y-2">
+        {tetel.rendelesek.map((r) => (
+          <RendelesCard key={r.id} projektId={projektId} tetelId={tetel.id} rendeles={r} onChange={onChange} />
+        ))}
+        {tetel.rendelesek.length === 0 && <p className="text-[var(--muted)]">Nincs még beszerzési igény.</p>}
+      </div>
+      <form onSubmit={addRendeles} className="mt-3 flex flex-wrap items-end gap-2">
+        <input
+          placeholder="Megnevezés (pl. Ablak - nappali)"
+          value={megnevezes}
+          onChange={(e) => setMegnevezes(e.target.value)}
+          className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
+        />
+        <input
+          type="number"
+          min={0}
+          placeholder="Mennyiség"
+          value={mennyiseg}
+          onChange={(e) => setMennyiseg(e.target.value)}
+          className="w-24 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
+        />
+        <input
+          placeholder="Me."
+          value={mertekegyseg}
+          onChange={(e) => setMertekegyseg(e.target.value)}
+          className="w-16 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
+        />
+        <input
+          type="date"
+          value={szuksegesDatum}
+          onChange={(e) => setSzuksegesDatum(e.target.value)}
+          className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
+        />
+        <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+          Beszerzési igény hozzáadása
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function RendelesCard({
+  projektId,
+  tetelId,
+  rendeles,
+  onChange,
+}: {
+  projektId: number;
+  tetelId: number;
+  rendeles: AnyagRendeles;
+  onChange: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [akCimzettNev, setAkCimzettNev] = useState("");
+  const [akCimzettEmail, setAkCimzettEmail] = useState("");
+  const [akHatarido, setAkHatarido] = useState("");
+  const [ugyfelNetto, setUgyfelNetto] = useState(rendeles.ugyfel_netto || "");
+  const [ugyfelAfa, setUgyfelAfa] = useState(rendeles.ugyfel_afa_tipus || "afa_27");
+  const [poSzam, setPoSzam] = useState(rendeles.po_szam || "");
+  const [szamlaSzam, setSzamlaSzam] = useState(rendeles.szamla_szam || "");
+  const [szamlaOsszeg, setSzamlaOsszeg] = useState(rendeles.szamla_osszeg || "");
+
+  async function addAjanlatkeres(e: FormEvent) {
+    e.preventDefault();
+    if (!akCimzettNev) return;
+    await api.addAjanlatkeres(projektId, tetelId, rendeles.id, {
+      cimzett_nev: akCimzettNev,
+      cimzett_email: akCimzettEmail || null,
+      hatarido: akHatarido || null,
+    });
+    setAkCimzettNev("");
+    setAkCimzettEmail("");
+    setAkHatarido("");
+    onChange();
+  }
+
+  async function saveUgyfelAr(e: FormEvent) {
+    e.preventDefault();
+    if (!ugyfelNetto) return;
+    await api.setUgyfelAr(projektId, tetelId, rendeles.id, {
+      ugyfel_netto: ugyfelNetto,
+      ugyfel_afa_tipus: ugyfelAfa,
+    });
+    onChange();
+  }
+
+  async function updateAllapot(allapot: string) {
+    await api.updateRendeles(projektId, tetelId, rendeles.id, { allapot });
+    onChange();
+  }
+
+  async function savePo() {
+    if (!poSzam) return;
+    await api.updateRendeles(projektId, tetelId, rendeles.id, {
+      po_szam: poSzam,
+      jovahagyva: true,
+      jovahagyas_datum: new Date().toISOString().slice(0, 10),
+    });
+    onChange();
+  }
+
+  async function saveSzamla(e: FormEvent) {
+    e.preventDefault();
+    await api.updateRendeles(projektId, tetelId, rendeles.id, {
+      szamla_szam: szamlaSzam || null,
+      szamla_osszeg: szamlaOsszeg || null,
+      szamla_allapot: "megerkezett",
+    });
+    onChange();
+  }
+
+  return (
+    <div className="rounded-[var(--radius)] border border-[var(--border)] p-2">
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={() => setOpen(!open)} className="flex items-center gap-1 font-medium">
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {rendeles.megnevezes}
+          {rendeles.mennyiseg ? ` (${rendeles.mennyiseg} ${rendeles.mertekegyseg || ""})` : ""}
+        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={rendeles.allapot}
+            onChange={(e) => updateAllapot(e.target.value)}
+            className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+          >
+            {Object.entries(RENDELES_ALLAPOT_LABEL).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={async () => {
+              await api.removeRendeles(projektId, tetelId, rendeles.id);
+              onChange();
+            }}
+          >
+            <X size={12} className="text-[var(--muted)]" />
+          </button>
+        </div>
+      </div>
+      <div className="mt-1 flex flex-wrap gap-3 text-xs text-[var(--muted)]">
+        <span>Beszállító: {rendeles.beszallito || "—"}</span>
+        <span>
+          Beszerzési ár: {rendeles.beszerzesi_brutto ? `${Number(rendeles.beszerzesi_brutto).toLocaleString("hu-HU")} Ft` : "—"}
+        </span>
+        <span>Ügyfél ár: {rendeles.ugyfel_brutto ? `${Number(rendeles.ugyfel_brutto).toLocaleString("hu-HU")} Ft` : "—"}</span>
+      </div>
+
+      {open && (
+        <div className="mt-3 grid gap-3 border-t border-[var(--border)] pt-2 md:grid-cols-2">
+          <div>
+            <h4 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">Ajánlatkérések</h4>
+            <ul className="mb-2 space-y-2">
+              {rendeles.ajanlatkeresek.map((ak) => (
+                <AjanlatkeresRow
+                  key={ak.id}
+                  projektId={projektId}
+                  tetelId={tetelId}
+                  rendeles={rendeles}
+                  ajanlatkeres={ak}
+                  onChange={onChange}
+                />
+              ))}
+              {rendeles.ajanlatkeresek.length === 0 && (
+                <li className="text-[var(--muted)]">Nincs még ajánlatkérés.</li>
+              )}
+            </ul>
+            <form onSubmit={addAjanlatkeres} className="flex flex-col gap-1">
+              <input
+                placeholder="Cimzett neve"
+                value={akCimzettNev}
+                onChange={(e) => setAkCimzettNev(e.target.value)}
+                className="rounded border border-[var(--border)] px-2 py-1"
+              />
+              <input
+                placeholder="Email (opcionális)"
+                value={akCimzettEmail}
+                onChange={(e) => setAkCimzettEmail(e.target.value)}
+                className="rounded border border-[var(--border)] px-2 py-1"
+              />
+              <input
+                type="date"
+                value={akHatarido}
+                onChange={(e) => setAkHatarido(e.target.value)}
+                className="rounded border border-[var(--border)] px-2 py-1"
+              />
+              <button type="submit" className="rounded bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+                Ajánlatkérés kiküldése
+              </button>
+            </form>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <h4 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">Ügyfélnek kiajánlott ár</h4>
+              <form onSubmit={saveUgyfelAr} className="flex flex-wrap items-end gap-2">
+                <input
+                  type="number"
+                  placeholder="Nettó"
+                  value={ugyfelNetto}
+                  onChange={(e) => setUgyfelNetto(e.target.value)}
+                  className="w-28 rounded border border-[var(--border)] px-2 py-1"
+                />
                 <select
-                  value={r.allapot}
-                  onChange={async (e) => {
-                    await api.updateRendeles(projektId, tetel.id, r.id, { allapot: e.target.value });
-                    onChange();
-                  }}
-                  className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+                  value={ugyfelAfa}
+                  onChange={(e) => setUgyfelAfa(e.target.value)}
+                  className="rounded border border-[var(--border)] px-2 py-1"
                 >
-                  {Object.entries(RENDELES_ALLAPOT_LABEL).map(([v, l]) => (
+                  {Object.entries(VAT_LABEL).map(([v, l]) => (
                     <option key={v} value={v}>
                       {l}
                     </option>
                   ))}
                 </select>
+                <button type="submit" className="rounded bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+                  Mentés
+                </button>
+              </form>
+              {rendeles.ugyfel_brutto && (
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  ÁFA: {Number(rendeles.ugyfel_afa).toLocaleString("hu-HU")} Ft · Bruttó:{" "}
+                  {Number(rendeles.ugyfel_brutto).toLocaleString("hu-HU")} Ft
+                </p>
+              )}
+            </div>
+
+            <div>
+              <h4 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">Megrendelés (PO)</h4>
+              <div className="flex flex-wrap items-end gap-2">
+                <input
+                  placeholder="PO szám"
+                  value={poSzam}
+                  onChange={(e) => setPoSzam(e.target.value)}
+                  className="rounded border border-[var(--border)] px-2 py-1"
+                />
+                <button type="button" onClick={savePo} className="rounded bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+                  Jóváhagyás
+                </button>
+                {rendeles.jovahagyva && (
+                  <span className="text-xs text-[var(--muted)]">
+                    Jóváhagyva{rendeles.jovahagyas_datum ? ` (${rendeles.jovahagyas_datum})` : ""}
+                  </span>
+                )}
               </div>
-            </li>
-          ))}
-          {tetel.rendelesek.length === 0 && <li className="text-[var(--muted)]">Nincs még rendelés.</li>}
-        </ul>
-        <form onSubmit={addRendeles} className="flex flex-col gap-1">
-          <input
-            placeholder="Megnevezés (pl. Ablak - nappali)"
-            value={rendMegnevezes}
-            onChange={(e) => setRendMegnevezes(e.target.value)}
-            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
-          />
-          <input
-            placeholder="Beszállító"
-            value={rendBeszallito}
-            onChange={(e) => setRendBeszallito(e.target.value)}
-            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
-          />
-          <input
-            type="number"
-            min={0}
-            placeholder="Összeg (Ft)"
-            value={rendOsszeg}
-            onChange={(e) => setRendOsszeg(e.target.value)}
-            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
-          />
-          <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
-            Hozzáadás
-          </button>
-        </form>
-      </div>
+            </div>
+
+            <div>
+              <h4 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">Szállítás / átvétel</h4>
+              <div className="flex flex-wrap items-end gap-2">
+                <input
+                  type="date"
+                  value={rendeles.tenyleges_erkezes || ""}
+                  onChange={async (e) => {
+                    await api.updateRendeles(projektId, tetelId, rendeles.id, {
+                      tenyleges_erkezes: e.target.value || null,
+                    });
+                    onChange();
+                  }}
+                  className="rounded border border-[var(--border)] px-2 py-1"
+                />
+                <input
+                  type="number"
+                  placeholder="Átvett menny."
+                  value={rendeles.atvett_mennyiseg || ""}
+                  onChange={async (e) => {
+                    await api.updateRendeles(projektId, tetelId, rendeles.id, {
+                      atvett_mennyiseg: e.target.value || null,
+                    });
+                    onChange();
+                  }}
+                  className="w-28 rounded border border-[var(--border)] px-2 py-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">Számla</h4>
+              <form onSubmit={saveSzamla} className="flex flex-wrap items-end gap-2">
+                <input
+                  placeholder="Számlaszám"
+                  value={szamlaSzam}
+                  onChange={(e) => setSzamlaSzam(e.target.value)}
+                  className="rounded border border-[var(--border)] px-2 py-1"
+                />
+                <input
+                  type="number"
+                  placeholder="Összeg"
+                  value={szamlaOsszeg}
+                  onChange={(e) => setSzamlaOsszeg(e.target.value)}
+                  className="w-28 rounded border border-[var(--border)] px-2 py-1"
+                />
+                <select
+                  value={rendeles.szamla_allapot}
+                  onChange={async (e) => {
+                    await api.updateRendeles(projektId, tetelId, rendeles.id, { szamla_allapot: e.target.value });
+                    onChange();
+                  }}
+                  className="rounded border border-[var(--border)] px-2 py-1"
+                >
+                  {Object.entries(SZAMLA_ALLAPOT_LABEL).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+                <button type="submit" className="rounded bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+                  Mentés
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function AjanlatkeresRow({
+  projektId,
+  tetelId,
+  rendeles,
+  ajanlatkeres,
+  onChange,
+}: {
+  projektId: number;
+  tetelId: number;
+  rendeles: AnyagRendeles;
+  ajanlatkeres: Ajanlatkeres;
+  onChange: () => void;
+}) {
+  const [netto, setNetto] = useState("");
+  const [afaTipus, setAfaTipus] = useState("afa_27");
+
+  async function addAjanlat(e: FormEvent) {
+    e.preventDefault();
+    if (!netto) return;
+    await api.addBeszallitoiAjanlat(projektId, tetelId, rendeles.id, ajanlatkeres.id, {
+      netto,
+      afa_tipus: afaTipus,
+    });
+    setNetto("");
+    onChange();
+  }
+
+  return (
+    <li className="rounded border border-[var(--border)] p-2">
+      <div className="flex items-center justify-between">
+        <span className="font-medium">{ajanlatkeres.cimzett_nev}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[var(--muted)]">
+            {AJANLATKERES_ALLAPOT_LABEL[ajanlatkeres.allapot] || ajanlatkeres.allapot}
+          </span>
+          <button
+            onClick={async () => {
+              await api.removeAjanlatkeres(projektId, tetelId, rendeles.id, ajanlatkeres.id);
+              onChange();
+            }}
+          >
+            <X size={12} className="text-[var(--muted)]" />
+          </button>
+        </div>
+      </div>
+      <ul className="mt-1 space-y-1">
+        {ajanlatkeres.ajanlatok.map((aj) => (
+          <li key={aj.id} className="flex items-center justify-between text-xs">
+            <span>
+              {Number(aj.netto).toLocaleString("hu-HU")} + ÁFA = {Number(aj.brutto).toLocaleString("hu-HU")} Ft
+              {rendeles.kivalasztott_ajanlat_id === aj.id && " ✓ kiválasztva"}
+            </span>
+            <div className="flex items-center gap-1">
+              {rendeles.kivalasztott_ajanlat_id !== aj.id && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await api.valasztAjanlat(projektId, tetelId, rendeles.id, aj.id);
+                    onChange();
+                  }}
+                  className="rounded border border-[var(--border)] px-1 py-0.5"
+                >
+                  Kiválasztás
+                </button>
+              )}
+              <button
+                onClick={async () => {
+                  await api.removeBeszallitoiAjanlat(projektId, tetelId, rendeles.id, ajanlatkeres.id, aj.id);
+                  onChange();
+                }}
+              >
+                <X size={10} className="text-[var(--muted)]" />
+              </button>
+            </div>
+          </li>
+        ))}
+        {ajanlatkeres.ajanlatok.length < 2 && (
+          <li>
+            <form onSubmit={addAjanlat} className="mt-1 flex items-center gap-1">
+              <input
+                type="number"
+                placeholder="Nettó"
+                value={netto}
+                onChange={(e) => setNetto(e.target.value)}
+                className="w-20 rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+              />
+              <select
+                value={afaTipus}
+                onChange={(e) => setAfaTipus(e.target.value)}
+                className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+              >
+                {Object.entries(VAT_LABEL).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="rounded border border-[var(--border)] px-1 py-0.5 text-xs">
+                + Ajánlat
+              </button>
+            </form>
+          </li>
+        )}
+      </ul>
+    </li>
   );
 }
 

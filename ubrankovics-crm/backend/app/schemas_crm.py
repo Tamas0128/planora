@@ -5,16 +5,19 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 from app.models import (
+    AjanlatkeresAllapot,
     DokumentumSablonTipus,
     MunkanemCsoport,
     ProjektAllapot,
     ProjektSzerepTipus,
     RendelesAllapot,
+    SzamlaAllapot,
     SzemelySzervezet,
     TetelEsemenyAllapot,
     TetelEsemenyTipus,
     TetelSzakasz,
     VallalasTipus,
+    VatTipus,
 )
 
 _from_attrs = {"from_attributes": True}
@@ -343,44 +346,121 @@ class TetelFuggosegResponse(BaseModel):
     model_config = _from_attrs
 
 
+class BeszallitoiAjanlatCreate(BaseModel):
+    netto: Decimal
+    afa_tipus: VatTipus
+    ervenyesseg_datum: Optional[date] = None
+    szallitasi_ido_nap: Optional[int] = None
+    megjegyzes: Optional[str] = None
+
+
+class BeszallitoiAjanlatResponse(BaseModel):
+    id: int
+    netto: Decimal
+    afa_tipus: VatTipus
+    afa: Decimal
+    brutto: Decimal
+    ervenyesseg_datum: Optional[date]
+    szallitasi_ido_nap: Optional[int]
+    megjegyzes: Optional[str]
+
+    model_config = _from_attrs
+
+
+class AjanlatkeresCreate(BaseModel):
+    cimzett_nev: str
+    cimzett_email: Optional[EmailStr] = None
+    alvallalkozo_id: Optional[int] = None
+    kuldes_datum: Optional[date] = None
+    hatarido: Optional[date] = None
+
+
+class AjanlatkeresUpdate(BaseModel):
+    allapot: Optional[AjanlatkeresAllapot] = None
+    hatarido: Optional[date] = None
+
+
+class AjanlatkeresResponse(BaseModel):
+    id: int
+    cimzett_nev: str
+    cimzett_email: Optional[str]
+    alvallalkozo_id: Optional[int]
+    kuldes_datum: Optional[date]
+    hatarido: Optional[date]
+    allapot: AjanlatkeresAllapot
+    ajanlatok: list[BeszallitoiAjanlatResponse]
+
+    model_config = _from_attrs
+
+
 class AnyagRendelesCreate(BaseModel):
     megnevezes: str
-    beszallito: Optional[str] = None
     mennyiseg: Optional[Decimal] = None
     mertekegyseg: Optional[str] = None
-    osszeg: Optional[Decimal] = None
-    allapot: RendelesAllapot = RendelesAllapot.TERVEZETT
-    megrendeles_datum: Optional[date] = None
-    varhato_erkezes: Optional[date] = None
-    tenyleges_erkezes: Optional[date] = None
+    szukseges_datum: Optional[date] = None
+    felelos_id: Optional[int] = None
     megjegyzes: Optional[str] = None
 
 
 class AnyagRendelesUpdate(BaseModel):
     megnevezes: Optional[str] = None
-    beszallito: Optional[str] = None
     mennyiseg: Optional[Decimal] = None
     mertekegyseg: Optional[str] = None
-    osszeg: Optional[Decimal] = None
+    szukseges_datum: Optional[date] = None
+    felelos_id: Optional[int] = None
+    beszallito: Optional[str] = None
     allapot: Optional[RendelesAllapot] = None
     megrendeles_datum: Optional[date] = None
-    varhato_erkezes: Optional[date] = None
+    visszaigazolt_datum: Optional[date] = None
     tenyleges_erkezes: Optional[date] = None
+    atvett_mennyiseg: Optional[Decimal] = None
+    eltere_megjegyzes: Optional[str] = None
+    po_szam: Optional[str] = None
+    jovahagyva: Optional[bool] = None
+    jovahagyas_datum: Optional[date] = None
+    szamla_szam: Optional[str] = None
+    szamla_allapot: Optional[SzamlaAllapot] = None
+    szamla_osszeg: Optional[Decimal] = None
     megjegyzes: Optional[str] = None
+
+
+class UgyfelArUpdate(BaseModel):
+    ugyfel_netto: Decimal
+    ugyfel_afa_tipus: VatTipus
+
+
+class AjanlatValasztas(BaseModel):
+    ajanlat_id: int
 
 
 class AnyagRendelesResponse(BaseModel):
     id: int
     megnevezes: str
-    beszallito: Optional[str]
     mennyiseg: Optional[Decimal]
     mertekegyseg: Optional[str]
-    osszeg: Optional[Decimal]
+    felelos_id: Optional[int]
+    szukseges_datum: Optional[date]
     allapot: RendelesAllapot
+    beszallito: Optional[str]
+    kivalasztott_ajanlat_id: Optional[int]
+    beszerzesi_brutto: Optional[Decimal]
     megrendeles_datum: Optional[date]
-    varhato_erkezes: Optional[date]
+    visszaigazolt_datum: Optional[date]
     tenyleges_erkezes: Optional[date]
+    atvett_mennyiseg: Optional[Decimal]
+    eltere_megjegyzes: Optional[str]
+    po_szam: Optional[str]
+    jovahagyva: bool
+    jovahagyas_datum: Optional[date]
+    szamla_szam: Optional[str]
+    szamla_allapot: SzamlaAllapot
+    szamla_osszeg: Optional[Decimal]
+    ugyfel_netto: Optional[Decimal]
+    ugyfel_afa_tipus: Optional[VatTipus]
+    ugyfel_afa: Optional[Decimal]
+    ugyfel_brutto: Optional[Decimal]
     megjegyzes: Optional[str]
+    ajanlatkeresek: list[AjanlatkeresResponse]
 
     model_config = _from_attrs
 

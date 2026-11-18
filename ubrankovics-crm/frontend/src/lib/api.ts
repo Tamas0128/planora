@@ -172,18 +172,56 @@ export interface TetelFuggoseg {
   prerequisite_nev: string;
 }
 
+export interface BeszallitoiAjanlat {
+  id: number;
+  netto: string;
+  afa_tipus: string;
+  afa: string;
+  brutto: string;
+  ervenyesseg_datum?: string | null;
+  szallitasi_ido_nap?: number | null;
+  megjegyzes?: string | null;
+}
+
+export interface Ajanlatkeres {
+  id: number;
+  cimzett_nev: string;
+  cimzett_email?: string | null;
+  alvallalkozo_id?: number | null;
+  kuldes_datum?: string | null;
+  hatarido?: string | null;
+  allapot: string;
+  ajanlatok: BeszallitoiAjanlat[];
+}
+
 export interface AnyagRendeles {
   id: number;
   megnevezes: string;
   beszallito?: string | null;
   mennyiseg?: string | null;
   mertekegyseg?: string | null;
-  osszeg?: string | null;
+  felelos_id?: number | null;
+  szukseges_datum?: string | null;
   allapot: string;
+  kivalasztott_ajanlat_id?: number | null;
+  beszerzesi_brutto?: string | null;
   megrendeles_datum?: string | null;
-  varhato_erkezes?: string | null;
+  visszaigazolt_datum?: string | null;
   tenyleges_erkezes?: string | null;
+  atvett_mennyiseg?: string | null;
+  eltere_megjegyzes?: string | null;
+  po_szam?: string | null;
+  jovahagyva: boolean;
+  jovahagyas_datum?: string | null;
+  szamla_szam?: string | null;
+  szamla_allapot: string;
+  szamla_osszeg?: string | null;
+  ugyfel_netto?: string | null;
+  ugyfel_afa_tipus?: string | null;
+  ugyfel_afa?: string | null;
+  ugyfel_brutto?: string | null;
   megjegyzes?: string | null;
+  ajanlatkeresek: Ajanlatkeres[];
 }
 
 export interface ProjektTetel {
@@ -417,6 +455,67 @@ export const api = {
     request<void>(`/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}`, {
       method: "DELETE",
     }),
+
+  addAjanlatkeres: (projektId: number, tetelId: number, rendelesId: number, body: Record<string, unknown>) =>
+    request<Ajanlatkeres>(
+      `/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}/ajanlatkeresek`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+  updateAjanlatkeres: (
+    projektId: number,
+    tetelId: number,
+    rendelesId: number,
+    ajanlatkeresId: number,
+    body: Record<string, unknown>
+  ) =>
+    request<Ajanlatkeres>(
+      `/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}/ajanlatkeresek/${ajanlatkeresId}`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    ),
+  removeAjanlatkeres: (projektId: number, tetelId: number, rendelesId: number, ajanlatkeresId: number) =>
+    request<void>(
+      `/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}/ajanlatkeresek/${ajanlatkeresId}`,
+      { method: "DELETE" }
+    ),
+
+  addBeszallitoiAjanlat: (
+    projektId: number,
+    tetelId: number,
+    rendelesId: number,
+    ajanlatkeresId: number,
+    body: Record<string, unknown>
+  ) =>
+    request<BeszallitoiAjanlat>(
+      `/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}/ajanlatkeresek/${ajanlatkeresId}/ajanlatok`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+  removeBeszallitoiAjanlat: (
+    projektId: number,
+    tetelId: number,
+    rendelesId: number,
+    ajanlatkeresId: number,
+    ajanlatId: number
+  ) =>
+    request<void>(
+      `/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}/ajanlatkeresek/${ajanlatkeresId}/ajanlatok/${ajanlatId}`,
+      { method: "DELETE" }
+    ),
+
+  valasztAjanlat: (projektId: number, tetelId: number, rendelesId: number, ajanlatId: number) =>
+    request<AnyagRendeles>(
+      `/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}/valaszt-ajanlat`,
+      { method: "POST", body: JSON.stringify({ ajanlat_id: ajanlatId }) }
+    ),
+  setUgyfelAr: (
+    projektId: number,
+    tetelId: number,
+    rendelesId: number,
+    body: { ugyfel_netto: string; ugyfel_afa_tipus: string }
+  ) =>
+    request<AnyagRendeles>(
+      `/projektek/${projektId}/tetelek/${tetelId}/rendelesek/${rendelesId}/ugyfel-ar`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    ),
 
   listProjektTipusok: () => request<ProjektTipus[]>("/projekt-tipusok"),
 

@@ -108,21 +108,3 @@ def test_terv_datum_nem_irodik_felul_ujrautemezeskor(client, admin_headers):
 
     assert frissitett["terv_kezdes"] == eredeti_terv_kezdes
     assert frissitett["terv_befejezes"] == eredeti_terv_befejezes
-
-
-def test_rendeles_osszeg_mezo(client, admin_headers):
-    munkanem_id = _seeded_munkanem_id(client, admin_headers)
-    resp = client.post("/api/projektek", json={"projekt_nev": "P"}, headers=admin_headers)
-    projekt_id = resp.json()["id"]
-    resp = client.post(
-        f"/api/projektek/{projekt_id}/tetelek", json={"munkanem_id": munkanem_id}, headers=admin_headers
-    )
-    tetel_id = resp.json()["id"]
-
-    resp = client.post(
-        f"/api/projektek/{projekt_id}/tetelek/{tetel_id}/rendelesek",
-        json={"megnevezes": "Ablak", "osszeg": "150000.00"},
-        headers=admin_headers,
-    )
-    assert resp.status_code == 201, resp.text
-    assert resp.json()["osszeg"] == "150000.00"

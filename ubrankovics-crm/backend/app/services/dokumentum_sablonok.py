@@ -85,7 +85,7 @@ def render_megrendeles(projekt: Projekt, tetelek: list[ProjektTetel], uzenet: st
     rendeles_rows = []
     for t in tetelek:
         for r in t.rendelesek:
-            osszeg = f"{r.osszeg} Ft" if r.osszeg else "—"
+            osszeg = f"{r.beszerzesi_brutto} Ft" if r.beszerzesi_brutto else "—"
             mennyiseg = escape(f"{r.mennyiseg} {r.mertekegyseg or ''}".strip()) if r.mennyiseg else "—"
             rendeles_rows.append(
                 f"<tr><td style='padding:6px 10px;border:1px solid #ddd'>{escape(t.munkanem.nev)}</td>"

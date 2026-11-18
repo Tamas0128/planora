@@ -98,9 +98,33 @@ class TetelEsemenyAllapot(str, enum.Enum):
 
 
 class RendelesAllapot(str, enum.Enum):
-    TERVEZETT = "tervezett"
+    IGENY = "igeny"
+    AJANLATKERES_ALATT = "ajanlatkeres_alatt"
     MEGRENDELVE = "megrendelve"
+    VISSZAIGAZOLVA = "visszaigazolva"
+    SZALLITAS_ALATT = "szallitas_alatt"
     MEGERKEZETT = "megerkezett"
+    REKLAMACIO = "reklamacio"
+
+
+class VatTipus(str, enum.Enum):
+    AFA_27 = "afa_27"
+    AFA_5 = "afa_5"
+    AFA_0 = "afa_0"
+    FORDITOTT = "forditott"
+
+
+class AjanlatkeresAllapot(str, enum.Enum):
+    KIKULDVE = "kikuldve"
+    VALASZRA_VAR = "valaszra_var"
+    VALASZ_ERKEZETT = "valasz_erkezett"
+    LEJART = "lejart"
+
+
+class SzamlaAllapot(str, enum.Enum):
+    NINCS = "nincs"
+    MEGERKEZETT = "megerkezett"
+    KIFIZETVE = "kifizetve"
 
 
 class DokumentumSablonTipus(str, enum.Enum):
@@ -403,28 +427,125 @@ class ProjektTetel(Base):
 class AnyagRendeles(Base):
     """Egy tételen (munkanemen) belül több konkrét anyagtétel is rendelhető
     — pl. a "Kültéri nyílászáró" tételen több ablak, az "Eresz" tételen több
-    ereszszakasz külön-külön nyomon követve."""
+    ereszszakasz külön-külön nyomon követve. Ez a besz. folyamat gerince:
+    Ajanlatkeres → BeszallitoiAjanlat (1-2) → kiválasztás → PO/visszaigazolás
+    → szállítás/átvétel → számla, a beszerzési ár és az ügyfélnek kiajánlott
+    ár végig külön mezőként, hogy egyik se írja felül a másikat."""
 
     __tablename__ = "anyag_rendelesek"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tetel_id: Mapped[int] = mapped_column(ForeignKey("projekt_tetelek.id", ondelete="CASCADE"), index=True)
     megnevezes: Mapped[str] = mapped_column(String(255))
-    beszallito: Mapped[str | None] = mapped_column(String(255), nullable=True)
     mennyiseg: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     mertekegyseg: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    # Ft, a projekt költségkerethez köthetőség miatt (piaci térkép elemzés
-    # "javasolt minimális adatmodell" pontja) — a tényleges lekötött/
-    # tényleges költség-összesítés a pénzügyi modul portolásakor kerül rá.
-    osszeg: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
-    allapot: Mapped[RendelesAllapot] = mapped_column(Enum(RendelesAllapot), default=RendelesAllapot.TERVEZETT)
+    felelos_id: Mapped[int | None] = mapped_column(ForeignKey("szemelyek.id"), nullable=True)
+    allapot: Mapped[RendelesAllapot] = mapped_column(Enum(RendelesAllapot), default=RendelesAllapot.IGENY)
+
+    # "Mikorra kell a helyszínre érnie" — külön mező a megrendelés dátumától.
+    szukseges_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    kivalasztott_ajanlat_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "beszallitoi_ajanlatok.id", use_alter=True, name="fk_rendeles_kivalasztott_ajanlat"
+        ),
+        nullable=True,
+    )
+    beszallito: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     megrendeles_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
-    varhato_erkezes: Mapped[date | None] = mapped_column(Date, nullable=True)
+    visszaigazolt_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
     tenyleges_erkezes: Mapped[date | None] = mapped_column(Date, nullable=True)
+    atvett_mennyiseg: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    eltere_megjegyzes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    po_szam: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    jovahagyva: Mapped[bool] = mapped_column(Boolean, default=False)
+    jovahagyas_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    szamla_szam: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    szamla_allapot: Mapped[SzamlaAllapot] = mapped_column(Enum(SzamlaAllapot), default=SzamlaAllapot.NINCS)
+    szamla_osszeg: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
+
+    # Ügyfélnek kiajánlott ár — a beszerzési ártól (kiválasztott ajánlat)
+    # teljesen független, soronkénti nettó/áfa/bruttó.
+    ugyfel_netto: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
+    ugyfel_afa_tipus: Mapped[VatTipus | None] = mapped_column(Enum(VatTipus), nullable=True)
+    ugyfel_afa: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
+    ugyfel_brutto: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
+
     megjegyzes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     tetel: Mapped[ProjektTetel] = relationship(back_populates="rendelesek")
+    felelos: Mapped["Szemely | None"] = relationship()
+    ajanlatkeresek: Mapped[list["Ajanlatkeres"]] = relationship(
+        back_populates="rendeles",
+        foreign_keys="Ajanlatkeres.rendeles_id",
+        cascade="all, delete-orphan",
+        order_by="Ajanlatkeres.id",
+    )
+    kivalasztott_ajanlat: Mapped["BeszallitoiAjanlat | None"] = relationship(
+        foreign_keys=[kivalasztott_ajanlat_id], post_update=True
+    )
+
+    @property
+    def beszerzesi_brutto(self) -> float | None:
+        return self.kivalasztott_ajanlat.brutto if self.kivalasztott_ajanlat else None
+
+
+class Ajanlatkeres(Base):
+    """Kiküldött ajánlatkérés egy beszerzési igényre — kötelező lépés, de
+    tételenként legfeljebb két ajánlatkérés/ajánlat összehasonlítása
+    szükséges, nem kell teljes beszállítói tendereztetés."""
+
+    __tablename__ = "ajanlatkeresek"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rendeles_id: Mapped[int] = mapped_column(ForeignKey("anyag_rendelesek.id", ondelete="CASCADE"), index=True)
+    alvallalkozo_id: Mapped[int | None] = mapped_column(ForeignKey("alvallalkozok.id"), nullable=True)
+    cimzett_nev: Mapped[str] = mapped_column(String(255))
+    cimzett_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    kuldes_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
+    hatarido: Mapped[date | None] = mapped_column(Date, nullable=True)
+    allapot: Mapped[AjanlatkeresAllapot] = mapped_column(
+        Enum(AjanlatkeresAllapot), default=AjanlatkeresAllapot.KIKULDVE
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    rendeles: Mapped[AnyagRendeles] = relationship(back_populates="ajanlatkeresek", foreign_keys=[rendeles_id])
+    alvallalkozo: Mapped["Alvallalkozo | None"] = relationship()
+    ajanlatok: Mapped[list["BeszallitoiAjanlat"]] = relationship(
+        back_populates="ajanlatkeres",
+        foreign_keys="BeszallitoiAjanlat.ajanlatkeres_id",
+        cascade="all, delete-orphan",
+        order_by="BeszallitoiAjanlat.id",
+    )
+
+
+class BeszallitoiAjanlat(Base):
+    """Egy ajánlatkérésre beérkezett beszállítói ajánlat — a beszerzési ár
+    (nettó/áfa/bruttó) innen származik, soha nem az ügyfélnek kiajánlott
+    árból és fordítva."""
+
+    __tablename__ = "beszallitoi_ajanlatok"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ajanlatkeres_id: Mapped[int] = mapped_column(
+        ForeignKey("ajanlatkeresek.id", ondelete="CASCADE"), index=True
+    )
+    netto: Mapped[float] = mapped_column(Numeric(14, 2))
+    afa_tipus: Mapped[VatTipus] = mapped_column(Enum(VatTipus))
+    afa: Mapped[float] = mapped_column(Numeric(14, 2))
+    brutto: Mapped[float] = mapped_column(Numeric(14, 2))
+    ervenyesseg_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
+    szallitasi_ido_nap: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    megjegyzes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    ajanlatkeres: Mapped[Ajanlatkeres] = relationship(
+        back_populates="ajanlatok", foreign_keys=[ajanlatkeres_id]
+    )
 
 
 class ProjektTetelVallalas(Base):
