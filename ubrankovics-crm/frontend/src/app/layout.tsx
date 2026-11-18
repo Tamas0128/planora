@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo, Lora } from "next/font/google";
+import { Archivo, Raleway } from "next/font/google";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -8,10 +8,10 @@ const archivo = Archivo({
   variable: "--font-archivo",
 });
 
-const lora = Lora({
+const raleway = Raleway({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
-  variable: "--font-lora",
+  variable: "--font-raleway",
 });
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="hu" className={`${archivo.variable} ${lora.variable}`}>
+    <html lang="hu" className={`${archivo.variable} ${raleway.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );

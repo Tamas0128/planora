@@ -33,7 +33,9 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-4 rounded-[var(--radius)] bg-[var(--card)] p-6 shadow-xl"
       >
-        <h1 className="text-center text-lg font-semibold">Ubrankovics CRM</h1>
+        <h1 className="sr-only">Ubrankovics CRM</h1>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/ubrankovics-logo.svg" alt="Ubrankovics" className="mx-auto w-48" />
         {error && (
           <div className="rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>
         )}

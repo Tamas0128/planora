@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
-/* "Japandi" design system, shared with the sister PLANora app for brand
-   consistency: warm cream/beige surfaces, olive-green accent, near-black
-   sidebar, rounded cards, Lora serif headings over an Archivo sans body. */
+/* Ubrankovics márka-színek (ubrankovics.hu CSS-éből mérve: a
+   "KÉSZHÁZAK/GERENDAHÁZAK" gombok háttere rgb(34, 88, 43) = #22582b),
+   a Japandi réteg (krém felület, kerekített kártyák, Raleway — a site
+   saját betűtípusa) alatt. */
 :root {
   --color-neutral-100: #faf6ee;
   --color-neutral-200: #efe8d8;
@@ -14,13 +15,13 @@
   --color-neutral-800: #453d2e;
   --color-neutral-900: #25221d;
 
-  --color-accent-100: #eef0e4;
-  --color-accent-200: #dde3cb;
-  --color-accent-300: #c3cea3;
-  --color-accent-400: #9aab73;
-  --color-accent-500: #6f7e56;
-  --color-accent-600: #57633f;
-  --color-accent-700: #485737;
+  --color-accent-100: #e8f0e9;
+  --color-accent-200: #c9ddcc;
+  --color-accent-300: #9cc0a1;
+  --color-accent-400: #5f9268;
+  --color-accent-500: #2f6b3b;
+  --color-accent-600: #22582b;
+  --color-accent-700: #1a4521;
 
   --warning: #b8873a;
   --warning-bg: #f7ecd6;
@@ -34,22 +35,22 @@
   --muted: var(--color-neutral-600);
   --muted-bg: var(--color-neutral-100);
 
-  --primary: var(--color-accent-500);
-  --primary-hover: var(--color-accent-600);
+  --primary: var(--color-accent-600);
+  --primary-hover: var(--color-accent-700);
   --primary-foreground: #faf6ee;
   --danger: var(--critical);
   --danger-bg: var(--critical-bg);
 
   --sidebar: var(--color-neutral-900);
   --sidebar-foreground: #d9d2c0;
-  --sidebar-active: var(--color-accent-500);
+  --sidebar-active: var(--color-accent-600);
   --sidebar-hover: #34302a;
 
   --radius: 0.85rem;
   --radius-sm: 0.55rem;
 
   --font-sans: var(--font-archivo), system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  --font-heading: var(--font-lora), Georgia, serif;
+  --font-heading: var(--font-raleway), "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 * {
@@ -67,6 +68,7 @@ h2,
 h3,
 .font-heading {
   font-family: var(--font-heading);
+  font-weight: 600;
 }
 
 input,

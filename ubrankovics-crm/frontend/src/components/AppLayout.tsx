@@ -34,7 +34,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <aside className="flex w-60 flex-col justify-between bg-[var(--sidebar)] p-4 text-[var(--sidebar-foreground)]">
         <div>
-          <div className="mb-6 px-2 font-heading text-lg font-semibold text-white">Ubrankovics CRM</div>
+          <div className="mb-6 rounded-[var(--radius-sm)] bg-[var(--card)] p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/ubrankovics-logo.svg" alt="Ubrankovics" className="w-full" />
+          </div>
           <nav className="space-y-1">
             {NAV.map(({ href, label, icon: Icon }) => {
               const active = pathname?.startsWith(href);
