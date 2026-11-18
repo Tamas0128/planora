@@ -353,6 +353,7 @@ function TetelDetail({
   const [specErtek, setSpecErtek] = useState("");
   const [rendMegnevezes, setRendMegnevezes] = useState("");
   const [rendBeszallito, setRendBeszallito] = useState("");
+  const [rendOsszeg, setRendOsszeg] = useState("");
 
   async function saveSzakasz() {
     await api.updateTetel(projektId, tetel.id, { szakasz });
@@ -395,9 +396,11 @@ function TetelDetail({
     await api.addRendeles(projektId, tetel.id, {
       megnevezes: rendMegnevezes,
       beszallito: rendBeszallito || null,
+      osszeg: rendOsszeg || null,
     });
     setRendMegnevezes("");
     setRendBeszallito("");
+    setRendOsszeg("");
     onChange();
   }
 
@@ -575,7 +578,10 @@ function TetelDetail({
                 </button>
               </div>
               <div className="flex items-center justify-between text-[var(--muted)]">
-                <span>{r.beszallito || "—"}</span>
+                <span>
+                  {r.beszallito || "—"}
+                  {r.osszeg ? ` · ${Number(r.osszeg).toLocaleString("hu-HU")} Ft` : ""}
+                </span>
                 <select
                   value={r.allapot}
                   onChange={async (e) => {
@@ -606,6 +612,14 @@ function TetelDetail({
             placeholder="Beszállító"
             value={rendBeszallito}
             onChange={(e) => setRendBeszallito(e.target.value)}
+            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
+          />
+          <input
+            type="number"
+            min={0}
+            placeholder="Összeg (Ft)"
+            value={rendOsszeg}
+            onChange={(e) => setRendOsszeg(e.target.value)}
             className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
           />
           <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
@@ -717,8 +731,9 @@ function UtemezesTab({
               <th className="px-3 py-2">Tétel</th>
               <th className="px-3 py-2">Időtartam (nap)</th>
               <th className="px-3 py-2">Előkészítés (nap)</th>
-              <th className="px-3 py-2">Kezdés</th>
-              <th className="px-3 py-2">Befejezés</th>
+              <th className="px-3 py-2">Terv</th>
+              <th className="px-3 py-2">Várható</th>
+              <th className="px-3 py-2">Tényleges</th>
               <th className="px-3 py-2">Függőségek</th>
             </tr>
           </thead>
@@ -746,12 +761,22 @@ function TetelUtemezesRow({
 }) {
   const [duration, setDuration] = useState(tetel.duration_days != null ? String(tetel.duration_days) : "");
   const [prep, setPrep] = useState(String(tetel.prep_days));
+  const [tenylegesKezdes, setTenylegesKezdes] = useState(tetel.tenyleges_kezdes || "");
+  const [tenylegesBefejezes, setTenylegesBefejezes] = useState(tetel.tenyleges_befejezes || "");
   const [addPrereq, setAddPrereq] = useState("");
 
   async function save() {
     await api.updateTetel(projektId, tetel.id, {
       duration_days: duration ? Number(duration) : null,
       prep_days: prep ? Number(prep) : 0,
+    });
+    onChange();
+  }
+
+  async function saveTenyleges() {
+    await api.updateTetel(projektId, tetel.id, {
+      tenyleges_kezdes: tenylegesKezdes || null,
+      tenyleges_befejezes: tenylegesBefejezes || null,
     });
     onChange();
   }
@@ -786,8 +811,30 @@ function TetelUtemezesRow({
           className="w-16 rounded border border-[var(--border)] px-1 py-0.5"
         />
       </td>
-      <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">{tetel.start_date || "—"}</td>
-      <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">{tetel.end_date || "—"}</td>
+      <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">
+        {tetel.terv_kezdes && tetel.terv_befejezes ? `${tetel.terv_kezdes} – ${tetel.terv_befejezes}` : "—"}
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">
+        {tetel.start_date && tetel.end_date ? `${tetel.start_date} – ${tetel.end_date}` : "—"}
+      </td>
+      <td className="px-3 py-2">
+        <div className="flex flex-col gap-1">
+          <input
+            type="date"
+            value={tenylegesKezdes}
+            onChange={(e) => setTenylegesKezdes(e.target.value)}
+            onBlur={saveTenyleges}
+            className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+          />
+          <input
+            type="date"
+            value={tenylegesBefejezes}
+            onChange={(e) => setTenylegesBefejezes(e.target.value)}
+            onBlur={saveTenyleges}
+            className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+          />
+        </div>
+      </td>
       <td className="px-3 py-2">
         <ul className="mb-1 space-y-0.5">
           {tetel.fuggosegek.map((f) => (

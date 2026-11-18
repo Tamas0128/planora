@@ -163,6 +163,7 @@ export interface AnyagRendeles {
   beszallito?: string | null;
   mennyiseg?: string | null;
   mertekegyseg?: string | null;
+  osszeg?: string | null;
   allapot: string;
   megrendeles_datum?: string | null;
   varhato_erkezes?: string | null;
@@ -187,6 +188,10 @@ export interface ProjektTetel {
   start_date?: string | null;
   end_date?: string | null;
   prep_date?: string | null;
+  terv_kezdes?: string | null;
+  terv_befejezes?: string | null;
+  tenyleges_kezdes?: string | null;
+  tenyleges_befejezes?: string | null;
   vallalasok: Vallalas[];
   esemenyek: TetelEsemeny[];
   specifikaciok: Specifikacio[];
