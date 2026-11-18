@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* "Japandi" design system, shared with the sister PLANora app for brand
+   consistency: warm cream/beige surfaces, olive-green accent, near-black
+   sidebar, rounded cards, Lora serif headings over an Archivo sans body. */
+:root {
+  --color-neutral-100: #faf6ee;
+  --color-neutral-200: #efe8d8;
+  --color-neutral-300: #e0d7c2;
+  --color-neutral-400: #c7bc9f;
+  --color-neutral-500: #a89b7c;
+  --color-neutral-600: #8a7d61;
+  --color-neutral-700: #6b6049;
+  --color-neutral-800: #453d2e;
+  --color-neutral-900: #25221d;
+
+  --color-accent-100: #eef0e4;
+  --color-accent-200: #dde3cb;
+  --color-accent-300: #c3cea3;
+  --color-accent-400: #9aab73;
+  --color-accent-500: #6f7e56;
+  --color-accent-600: #57633f;
+  --color-accent-700: #485737;
+
+  --warning: #b8873a;
+  --warning-bg: #f7ecd6;
+  --critical: #ae523a;
+  --critical-bg: #f6e4dc;
+
+  --background: var(--color-neutral-200);
+  --foreground: #2b271f;
+  --card: #fdf6ee;
+  --border: var(--color-neutral-300);
+  --muted: var(--color-neutral-600);
+  --muted-bg: var(--color-neutral-100);
+
+  --primary: var(--color-accent-500);
+  --primary-hover: var(--color-accent-600);
+  --primary-foreground: #faf6ee;
+  --danger: var(--critical);
+  --danger-bg: var(--critical-bg);
+
+  --sidebar: var(--color-neutral-900);
+  --sidebar-foreground: #d9d2c0;
+  --sidebar-active: var(--color-accent-500);
+  --sidebar-hover: #34302a;
+
+  --radius: 0.85rem;
+  --radius-sm: 0.55rem;
+
+  --font-sans: var(--font-archivo), system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-heading: var(--font-lora), Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
