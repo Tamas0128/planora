@@ -10,6 +10,7 @@ from app.models import (
     ProjektTetelVallalas,
     Specifikacio,
     TetelEsemeny,
+    TetelFuggoseg,
     User,
 )
 from app.schemas_crm import (
@@ -23,9 +24,12 @@ from app.schemas_crm import (
     TetelEsemenyCreate,
     TetelEsemenyResponse,
     TetelEsemenyUpdate,
+    TetelFuggosegCreate,
+    TetelFuggosegResponse,
     VallalasCreate,
     VallalasResponse,
 )
+from app.services.schedule_engine import recalculate_schedule
 
 router = APIRouter(prefix="/projektek/{projekt_id}", tags=["tetelek"])
 
@@ -36,7 +40,22 @@ def _tetel_query(db: Session):
         joinedload(ProjektTetel.vallalasok).joinedload(ProjektTetelVallalas.alvallalkozo),
         joinedload(ProjektTetel.esemenyek),
         joinedload(ProjektTetel.specifikaciok),
+        joinedload(ProjektTetel.fuggosegek).joinedload(TetelFuggoseg.prerequisite).joinedload(ProjektTetel.munkanem),
     )
+
+
+def _get_projekt_or_404(db: Session, projekt_id: int) -> Projekt:
+    projekt = db.query(Projekt).get(projekt_id)
+    if not projekt:
+        raise HTTPException(status_code=404, detail="Projekt not found")
+    return projekt
+
+
+def _maybe_recalculate(db: Session, projekt_id: int) -> None:
+    projekt = db.query(Projekt).get(projekt_id)
+    if projekt and projekt.utemezes_aktiv:
+        recalculate_schedule(db, projekt)
+        db.commit()
 
 
 def _get_tetel(db: Session, projekt_id: int, tetel_id: int) -> ProjektTetel:
@@ -77,6 +96,7 @@ def create_tetel(
     for vallalas in body.vallalasok:
         db.add(ProjektTetelVallalas(tetel_id=tetel.id, **vallalas.model_dump()))
     db.commit()
+    _maybe_recalculate(db, projekt_id)
     return _get_tetel(db, projekt_id, tetel.id)
 
 
@@ -92,6 +112,7 @@ def update_tetel(
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(tetel, field, value)
     db.commit()
+    _maybe_recalculate(db, projekt_id)
     return _get_tetel(db, projekt_id, tetel_id)
 
 
@@ -105,6 +126,62 @@ def delete_tetel(
     tetel = _get_tetel(db, projekt_id, tetel_id)
     db.delete(tetel)
     db.commit()
+    _maybe_recalculate(db, projekt_id)
+
+
+@router.post("/tetelek/{tetel_id}/fuggosegek", response_model=TetelFuggosegResponse, status_code=201)
+def add_fuggoseg(
+    projekt_id: int,
+    tetel_id: int,
+    body: TetelFuggosegCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    _get_tetel(db, projekt_id, tetel_id)
+    _get_tetel(db, projekt_id, body.prerequisite_id)
+    if body.prerequisite_id == tetel_id:
+        raise HTTPException(status_code=400, detail="Egy tétel nem függhet saját magától")
+    fuggoseg = TetelFuggoseg(tetel_id=tetel_id, prerequisite_id=body.prerequisite_id)
+    db.add(fuggoseg)
+    db.commit()
+    db.refresh(fuggoseg)
+    _maybe_recalculate(db, projekt_id)
+    return fuggoseg
+
+
+@router.delete("/tetelek/{tetel_id}/fuggosegek/{fuggoseg_id}", status_code=204)
+def remove_fuggoseg(
+    projekt_id: int,
+    tetel_id: int,
+    fuggoseg_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    _get_tetel(db, projekt_id, tetel_id)
+    fuggoseg = (
+        db.query(TetelFuggoseg)
+        .filter(TetelFuggoseg.id == fuggoseg_id, TetelFuggoseg.tetel_id == tetel_id)
+        .first()
+    )
+    if not fuggoseg:
+        raise HTTPException(status_code=404, detail="Függőség not found")
+    db.delete(fuggoseg)
+    db.commit()
+    _maybe_recalculate(db, projekt_id)
+
+
+@router.post("/utemezes/recalculate", response_model=list[ProjektTetelResponse])
+def recalculate_utemezes(
+    projekt_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    projekt = _get_projekt_or_404(db, projekt_id)
+    if not projekt.utemezes_aktiv:
+        raise HTTPException(status_code=400, detail="Az ütemező nincs bekapcsolva ennél a projektnél")
+    recalculate_schedule(db, projekt)
+    db.commit()
+    return _tetel_query(db).filter(ProjektTetel.projekt_id == projekt_id).order_by(ProjektTetel.id).all()
 
 
 @router.post("/tetelek/{tetel_id}/vallalasok", response_model=VallalasResponse, status_code=201)

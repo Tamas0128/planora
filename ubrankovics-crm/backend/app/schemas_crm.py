@@ -218,6 +218,7 @@ class ProjektDetail(BaseModel):
     allapot: ProjektAllapot
     utemezes_aktiv: bool
     delivery_date: Optional[date]
+    completion_percent: Decimal
     created_at: datetime
     ugyfel_linkek: list[ProjektUgyfelResponse]
     szerepek: list[ProjektSzerepResponse]
@@ -308,6 +309,8 @@ class ProjektTetelCreate(BaseModel):
     szakasz: TetelSzakasz = TetelSzakasz.AJANLAT
     beszallito: Optional[str] = None
     rendeles_hatarido: Optional[date] = None
+    duration_days: Optional[int] = None
+    prep_days: int = 0
     vallalasok: list[VallalasCreate] = []
 
 
@@ -322,6 +325,20 @@ class ProjektTetelUpdate(BaseModel):
     szakasz: Optional[TetelSzakasz] = None
     beszallito: Optional[str] = None
     rendeles_hatarido: Optional[date] = None
+    duration_days: Optional[int] = None
+    prep_days: Optional[int] = None
+
+
+class TetelFuggosegCreate(BaseModel):
+    prerequisite_id: int
+
+
+class TetelFuggosegResponse(BaseModel):
+    id: int
+    prerequisite_id: int
+    prerequisite_nev: str
+
+    model_config = _from_attrs
 
 
 class ProjektTetelResponse(BaseModel):
@@ -338,9 +355,15 @@ class ProjektTetelResponse(BaseModel):
     szakasz: TetelSzakasz
     beszallito: Optional[str]
     rendeles_hatarido: Optional[date]
+    duration_days: Optional[int]
+    prep_days: int
+    start_date: Optional[date]
+    end_date: Optional[date]
+    prep_date: Optional[date]
     vallalasok: list[VallalasResponse]
     esemenyek: list[TetelEsemenyResponse]
     specifikaciok: list[SpecifikacioResponse]
+    fuggosegek: list[TetelFuggosegResponse]
 
     model_config = _from_attrs
 

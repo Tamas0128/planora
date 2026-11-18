@@ -147,6 +147,7 @@ class Projekt(Base):
     allapot: Mapped[ProjektAllapot] = mapped_column(Enum(ProjektAllapot), default=ProjektAllapot.UJ)
     utemezes_aktiv: Mapped[bool] = mapped_column(Boolean, default=False)
     delivery_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    completion_percent: Mapped[float] = mapped_column(Numeric(5, 1), default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     ugyfel_linkek: Mapped[list["ProjektUgyfel"]] = relationship(
@@ -263,6 +264,15 @@ class ProjektTetel(Base):
     # (megrendelve/megjött) a TetelEsemeny-ben, dátummal.
     beszallito: Mapped[str | None] = mapped_column(String(255), nullable=True)
     rendeles_hatarido: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Ütemezés (opcionális, csak ha a projekt utemezes_aktiv=true): a tétel
+    # csak akkor vesz részt a visszafelé ütemezésben, ha duration_days ki van
+    # töltve — nincs külön "Activity" entitás, a tétel maga az ütemezhető
+    # egység, hogy ne kelljen két párhuzamos munkalistát karbantartani.
+    duration_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    prep_days: Mapped[int] = mapped_column(Integer, default=0)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    prep_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     projekt: Mapped[Projekt] = relationship(back_populates="tetelek")
@@ -275,6 +285,11 @@ class ProjektTetel(Base):
     )
     specifikaciok: Mapped[list["Specifikacio"]] = relationship(
         back_populates="tetel", cascade="all, delete-orphan"
+    )
+    fuggosegek: Mapped[list["TetelFuggoseg"]] = relationship(
+        back_populates="tetel",
+        foreign_keys="TetelFuggoseg.tetel_id",
+        cascade="all, delete-orphan",
     )
 
 
@@ -335,3 +350,23 @@ class Dokumentum(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     projekt: Mapped[Projekt] = relationship(back_populates="dokumentumok")
+
+
+class TetelFuggoseg(Base):
+    """Ütemezési függőség két tétel között (a tetel_id csak a prerequisite_id
+    utáni szabad napon kezdődhet) — az opcionális ütemező "Gantt" nézetének
+    szerkesztő funkciója ezt hozza létre/törli."""
+
+    __tablename__ = "tetel_fuggosegek"
+    __table_args__ = (UniqueConstraint("tetel_id", "prerequisite_id", name="uq_tetel_prereq"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tetel_id: Mapped[int] = mapped_column(ForeignKey("projekt_tetelek.id", ondelete="CASCADE"), index=True)
+    prerequisite_id: Mapped[int] = mapped_column(ForeignKey("projekt_tetelek.id", ondelete="CASCADE"), index=True)
+
+    tetel: Mapped[ProjektTetel] = relationship(back_populates="fuggosegek", foreign_keys=[tetel_id])
+    prerequisite: Mapped[ProjektTetel] = relationship(foreign_keys=[prerequisite_id])
+
+    @property
+    def prerequisite_nev(self) -> str:
+        return self.prerequisite.munkanem.nev

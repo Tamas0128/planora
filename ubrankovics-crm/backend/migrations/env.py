@@ -17,6 +17,7 @@ from app.models import (  # noqa: F401 — register all models on Base.metadata
     Specifikacio,
     Szemely,
     TetelEsemeny,
+    TetelFuggoseg,
     Torzsadat,
     Ugyfel,
     User,

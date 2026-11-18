@@ -65,7 +65,7 @@ const SZEREP_LABEL: Record<string, string> = {
 export default function ProjektDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projektId = Number(id);
-  const [tab, setTab] = useState<"attekintes" | "tetelek">("attekintes");
+  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes">("attekintes");
   const [projekt, setProjekt] = useState<ProjektDetail | null>(null);
   const [tetelek, setTetelek] = useState<ProjektTetel[]>([]);
   const [munkanemek, setMunkanemek] = useState<Munkanem[]>([]);
@@ -78,6 +78,10 @@ export default function ProjektDetailPage() {
   }
   function loadTetelek() {
     api.listTetelek(projektId).then(setTetelek).catch((e) => setError(e.message));
+  }
+  function loadAll() {
+    loadProjekt();
+    loadTetelek();
   }
 
   useEffect(() => {
@@ -106,7 +110,11 @@ export default function ProjektDetailPage() {
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
 
       <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
-        {(["attekintes", "tetelek"] as const).map((t) => (
+        {(
+          projekt.utemezes_aktiv
+            ? (["attekintes", "tetelek", "utemezes"] as const)
+            : (["attekintes", "tetelek"] as const)
+        ).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -114,7 +122,7 @@ export default function ProjektDetailPage() {
               tab === t ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
             }`}
           >
-            {t === "attekintes" ? "Áttekintés" : "Tételek"}
+            {t === "attekintes" ? "Áttekintés" : t === "tetelek" ? "Tételek" : "Ütemezés"}
           </button>
         ))}
       </div>
@@ -130,6 +138,9 @@ export default function ProjektDetailPage() {
           alvallalkozok={alvallalkozok}
           onChange={loadTetelek}
         />
+      )}
+      {tab === "utemezes" && projekt.utemezes_aktiv && (
+        <UtemezesTab projekt={projekt} projektId={projektId} tetelek={tetelek} onChange={loadAll} />
       )}
     </AppLayout>
   );
@@ -518,5 +529,216 @@ function TetelDetail({
         </form>
       </div>
     </div>
+  );
+}
+
+function dayDiff(a: string, b: string) {
+  return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
+}
+
+function UtemezesTab({
+  projekt,
+  projektId,
+  tetelek,
+  onChange,
+}: {
+  projekt: ProjektDetail;
+  projektId: number;
+  tetelek: ProjektTetel[];
+  onChange: () => void;
+}) {
+  const [deliveryDate, setDeliveryDate] = useState(projekt.delivery_date || "");
+  const [error, setError] = useState("");
+
+  async function saveDeliveryDate() {
+    setError("");
+    try {
+      await api.updateProjekt(projektId, { delivery_date: deliveryDate || null });
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hiba");
+    }
+  }
+
+  async function recalc() {
+    setError("");
+    try {
+      await api.recalculateUtemezes(projektId);
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hiba");
+    }
+  }
+
+  const scheduled = tetelek.filter((t) => t.start_date && t.end_date);
+  const allDates = scheduled.flatMap((t) => [t.start_date as string, t.end_date as string]);
+  const minDate = allDates.length ? allDates.reduce((a, b) => (a < b ? a : b)) : null;
+  const maxDate = projekt.delivery_date || (allDates.length ? allDates.reduce((a, b) => (a > b ? a : b)) : null);
+  const totalDays = minDate && maxDate ? dayDiff(minDate, maxDate) + 1 : 0;
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3">
+        <div>
+          <label className="block text-xs text-[var(--muted)]">Átadási határidő</label>
+          <input
+            type="date"
+            value={deliveryDate}
+            onChange={(e) => setDeliveryDate(e.target.value)}
+            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-sm"
+          />
+        </div>
+        <button onClick={saveDeliveryDate} className="rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm text-[var(--primary-foreground)]">
+          Mentés
+        </button>
+        <button onClick={recalc} className="rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm">
+          Újraütemezés
+        </button>
+        <div className="ml-auto text-sm text-[var(--muted)]">Készültség: {projekt.completion_percent}%</div>
+      </div>
+      {error && <div className="mb-3 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
+
+      {minDate && maxDate && totalDays > 0 && (
+        <div className="mb-4 space-y-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3">
+          {scheduled.map((t) => {
+            const offset = dayDiff(minDate, t.start_date as string);
+            const span = dayDiff(t.start_date as string, t.end_date as string) + 1;
+            return (
+              <div key={t.id} className="flex items-center gap-2 text-xs">
+                <div className="w-40 shrink-0 truncate">{t.munkanem.nev}</div>
+                <div className="relative h-5 flex-1 rounded bg-black/5">
+                  <div
+                    className="absolute top-0 h-5 rounded bg-[var(--primary)]"
+                    style={{
+                      left: `${(offset / totalDays) * 100}%`,
+                      width: `${Math.max((span / totalDays) * 100, 1.5)}%`,
+                    }}
+                    title={`${t.start_date} – ${t.end_date}`}
+                  />
+                </div>
+                <div className="w-32 shrink-0 text-right text-[var(--muted)]">
+                  {t.start_date} – {t.end_date}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+        <table className="w-full text-sm">
+          <thead className="bg-black/5 text-left">
+            <tr>
+              <th className="px-3 py-2">Tétel</th>
+              <th className="px-3 py-2">Időtartam (nap)</th>
+              <th className="px-3 py-2">Előkészítés (nap)</th>
+              <th className="px-3 py-2">Kezdés</th>
+              <th className="px-3 py-2">Befejezés</th>
+              <th className="px-3 py-2">Függőségek</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tetelek.map((t) => (
+              <TetelUtemezesRow key={t.id} projektId={projektId} tetel={t} osszes={tetelek} onChange={onChange} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TetelUtemezesRow({
+  projektId,
+  tetel,
+  osszes,
+  onChange,
+}: {
+  projektId: number;
+  tetel: ProjektTetel;
+  osszes: ProjektTetel[];
+  onChange: () => void;
+}) {
+  const [duration, setDuration] = useState(tetel.duration_days != null ? String(tetel.duration_days) : "");
+  const [prep, setPrep] = useState(String(tetel.prep_days));
+  const [addPrereq, setAddPrereq] = useState("");
+
+  async function save() {
+    await api.updateTetel(projektId, tetel.id, {
+      duration_days: duration ? Number(duration) : null,
+      prep_days: prep ? Number(prep) : 0,
+    });
+    onChange();
+  }
+
+  async function addDep() {
+    if (!addPrereq) return;
+    await api.addFuggoseg(projektId, tetel.id, Number(addPrereq));
+    setAddPrereq("");
+    onChange();
+  }
+
+  return (
+    <tr className="border-t border-[var(--border)] align-top">
+      <td className="px-3 py-2 whitespace-nowrap">{tetel.munkanem.nev}</td>
+      <td className="px-3 py-2">
+        <input
+          type="number"
+          min={0}
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+          onBlur={save}
+          className="w-16 rounded border border-[var(--border)] px-1 py-0.5"
+        />
+      </td>
+      <td className="px-3 py-2">
+        <input
+          type="number"
+          min={0}
+          value={prep}
+          onChange={(e) => setPrep(e.target.value)}
+          onBlur={save}
+          className="w-16 rounded border border-[var(--border)] px-1 py-0.5"
+        />
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">{tetel.start_date || "—"}</td>
+      <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">{tetel.end_date || "—"}</td>
+      <td className="px-3 py-2">
+        <ul className="mb-1 space-y-0.5">
+          {tetel.fuggosegek.map((f) => (
+            <li key={f.id} className="flex items-center justify-between gap-2 text-xs">
+              <span>{f.prerequisite_nev}</span>
+              <button
+                onClick={async () => {
+                  await api.removeFuggoseg(projektId, tetel.id, f.id);
+                  onChange();
+                }}
+              >
+                <X size={10} className="text-[var(--muted)]" />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex gap-1">
+          <select
+            value={addPrereq}
+            onChange={(e) => setAddPrereq(e.target.value)}
+            className="flex-1 rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+          >
+            <option value="">+ függőség</option>
+            {osszes
+              .filter((o) => o.id !== tetel.id)
+              .map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.munkanem.nev}
+                </option>
+              ))}
+          </select>
+          <button onClick={addDep} className="text-[var(--primary)]">
+            <Plus size={14} />
+          </button>
+        </div>
+      </td>
+    </tr>
   );
 }

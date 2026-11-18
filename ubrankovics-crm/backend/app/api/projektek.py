@@ -14,6 +14,7 @@ from app.schemas_crm import (
     ProjektUgyfelResponse,
     ProjektUpdate,
 )
+from app.services.schedule_engine import recalculate_schedule
 
 router = APIRouter(prefix="/projektek", tags=["projektek"])
 
@@ -68,9 +69,14 @@ def update_projekt(
     projekt = db.query(Projekt).get(projekt_id)
     if not projekt:
         raise HTTPException(status_code=404, detail="Projekt not found")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    updates = body.model_dump(exclude_unset=True)
+    reschedule_relevant = "delivery_date" in updates or "utemezes_aktiv" in updates
+    for field, value in updates.items():
         setattr(projekt, field, value)
     db.commit()
+    if reschedule_relevant and projekt.utemezes_aktiv:
+        recalculate_schedule(db, projekt)
+        db.commit()
     return _detail_query(db).get(projekt_id)
 
 

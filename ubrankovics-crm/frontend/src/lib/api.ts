@@ -83,6 +83,7 @@ export interface ProjektDetail extends ProjektListItem {
   enaplo_iktatoszam?: string | null;
   mappa_utvonal?: string | null;
   delivery_date?: string | null;
+  completion_percent: string;
   ugyfel_linkek: ProjektUgyfelLink[];
   szerepek: ProjektSzerep[];
 }
@@ -113,6 +114,12 @@ export interface Specifikacio {
   torzs_kod_id?: number | null;
 }
 
+export interface TetelFuggoseg {
+  id: number;
+  prerequisite_id: number;
+  prerequisite_nev: string;
+}
+
 export interface ProjektTetel {
   id: number;
   munkanem_id: number;
@@ -127,9 +134,15 @@ export interface ProjektTetel {
   szakasz: string;
   beszallito?: string | null;
   rendeles_hatarido?: string | null;
+  duration_days?: number | null;
+  prep_days: number;
+  start_date?: string | null;
+  end_date?: string | null;
+  prep_date?: string | null;
   vallalasok: Vallalas[];
   esemenyek: TetelEsemeny[];
   specifikaciok: Specifikacio[];
+  fuggosegek: TetelFuggoseg[];
 }
 
 let accessToken: string | null = null;
@@ -283,6 +296,18 @@ export const api = {
     request<void>(`/projektek/${projektId}/tetelek/${tetelId}/vallalasok/${vallalasId}`, {
       method: "DELETE",
     }),
+
+  addFuggoseg: (projektId: number, tetelId: number, prerequisiteId: number) =>
+    request<TetelFuggoseg>(`/projektek/${projektId}/tetelek/${tetelId}/fuggosegek`, {
+      method: "POST",
+      body: JSON.stringify({ prerequisite_id: prerequisiteId }),
+    }),
+  removeFuggoseg: (projektId: number, tetelId: number, fuggosegId: number) =>
+    request<void>(`/projektek/${projektId}/tetelek/${tetelId}/fuggosegek/${fuggosegId}`, {
+      method: "DELETE",
+    }),
+  recalculateUtemezes: (projektId: number) =>
+    request<ProjektTetel[]>(`/projektek/${projektId}/utemezes/recalculate`, { method: "POST" }),
 
   addEsemeny: (projektId: number, tetelId: number, body: Record<string, unknown>) =>
     request<TetelEsemeny>(`/projektek/${projektId}/tetelek/${tetelId}/esemenyek`, {
