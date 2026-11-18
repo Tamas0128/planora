@@ -54,6 +54,7 @@ class ProjektSzerepTipus(str, enum.Enum):
 
 
 class MunkanemCsoport(str, enum.Enum):
+    SZERKEZET = "szerkezet"
     ALAPOZAS = "alapozas"
     TETO = "teto"
     NYILASZARO = "nyilaszaro"

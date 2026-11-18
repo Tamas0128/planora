@@ -1,12 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
-import { Alvallalkozo, Munkanem, Szemely, api } from "@/lib/api";
+import { Alvallalkozo, Munkanem, Szemely, Torzsadat, api } from "@/lib/api";
 
 export default function TorzsadatokPage() {
-  const [tab, setTab] = useState<"munkanem" | "alvallalkozo" | "szemely">("munkanem");
+  const [tab, setTab] = useState<"munkanem" | "torzsadat" | "alvallalkozo" | "szemely">("munkanem");
 
   return (
     <AppLayout>
@@ -15,6 +15,7 @@ export default function TorzsadatokPage() {
         {(
           [
             ["munkanem", "Munkanemek"],
+            ["torzsadat", "Legördülő listák"],
             ["alvallalkozo", "Alvállalkozók"],
             ["szemely", "Személyek"],
           ] as const
@@ -31,6 +32,7 @@ export default function TorzsadatokPage() {
         ))}
       </div>
       {tab === "munkanem" && <MunkanemekTab />}
+      {tab === "torzsadat" && <TorzsadatTab />}
       {tab === "alvallalkozo" && <AlvallalkozokTab />}
       {tab === "szemely" && <SzemelyekTab />}
     </AppLayout>
@@ -38,6 +40,7 @@ export default function TorzsadatokPage() {
 }
 
 const CSOPORT_LABEL: Record<string, string> = {
+  szerkezet: "Szerkezet",
   alapozas: "Alapozás",
   teto: "Tető",
   nyilaszaro: "Nyílászáró",
@@ -54,19 +57,105 @@ function MunkanemekTab() {
     api.listMunkanemek().then(setItems).catch(() => {});
   }, []);
 
+  const groups = useMemo(() => {
+    const map = new Map<string, Munkanem[]>();
+    for (const m of items) {
+      if (!map.has(m.csoport)) map.set(m.csoport, []);
+      map.get(m.csoport)!.push(m);
+    }
+    return map;
+  }, [items]);
+
   return (
     <div className="max-w-xl">
       <p className="mb-2 text-sm text-[var(--muted)]">
-        Kiinduló munkanem-törzs — a teljes katalógus bővítése külön lépésben történik.
+        A teljes, ~45 elemes munkanem-törzs a projekt excel-elemzéséből (ütem+info lap).
       </p>
-      <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
-        {items.map((m) => (
-          <li key={m.id} className="flex justify-between px-3 py-2 text-sm">
-            <span>{m.nev}</span>
-            <span className="text-[var(--muted)]">{CSOPORT_LABEL[m.csoport] || m.csoport}</span>
-          </li>
+      {[...groups.entries()].map(([csoport, list]) => (
+        <div key={csoport} className="mb-3">
+          <div className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">
+            {CSOPORT_LABEL[csoport] || csoport}
+          </div>
+          <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+            {list.map((m) => (
+              <li key={m.id} className="px-3 py-2 text-sm">
+                {m.nev}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TorzsadatTab() {
+  const [items, setItems] = useState<Torzsadat[]>([]);
+  const [selected, setSelected] = useState<string>("");
+  const [ertek, setErtek] = useState("");
+
+  function load() {
+    api.listTorzsadatok().then(setItems).catch(() => {});
+  }
+  useEffect(load, []);
+
+  const tipusok = useMemo(() => [...new Set(items.map((i) => i.tipus))].sort(), [items]);
+  const effectiveSelected = selected || tipusok[0] || "";
+  const values = useMemo(
+    () => items.filter((i) => i.tipus === effectiveSelected),
+    [items, effectiveSelected]
+  );
+
+  async function handleCreate(e: FormEvent) {
+    e.preventDefault();
+    if (!effectiveSelected || !ertek) return;
+    await api.createTorzsadat({ tipus: effectiveSelected, ertek });
+    setErtek("");
+    load();
+  }
+
+  return (
+    <div className="grid max-w-3xl grid-cols-[18rem_1fr] gap-4">
+      <div className="max-h-[32rem] overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+        {tipusok.map((t) => (
+          <button
+            key={t}
+            onClick={() => setSelected(t)}
+            className={`block w-full border-b border-[var(--border)] px-3 py-2 text-left text-sm last:border-b-0 ${
+              t === effectiveSelected ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "hover:bg-black/5"
+            }`}
+          >
+            {t}
+          </button>
         ))}
-      </ul>
+      </div>
+      <div>
+        <form onSubmit={handleCreate} className="mb-3 flex gap-2">
+          <input
+            placeholder="Új érték hozzáadása"
+            value={ertek}
+            onChange={(e) => setErtek(e.target.value)}
+            className="flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={!effectiveSelected}
+            className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm text-[var(--primary-foreground)] disabled:opacity-60"
+          >
+            <Plus size={14} /> Hozzáad
+          </button>
+        </form>
+        <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+          {values.map((v) => (
+            <li key={v.id} className="px-3 py-2 text-sm">
+              {v.ertek}
+            </li>
+          ))}
+          {effectiveSelected && values.length === 0 && (
+            <li className="px-3 py-4 text-center text-sm text-[var(--muted)]">Nincs még érték.</li>
+          )}
+        </ul>
+      </div>
     </div>
   );
 }

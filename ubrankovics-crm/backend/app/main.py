@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, projektek, tetelek, torzsadatok, ugyfelek
 from app.config import settings
 from app.database import SessionLocal
-from app.services.seed import seed_admin, seed_munkanemek
+from app.services.seed import seed_admin, seed_munkanemek, seed_szemelyek, seed_torzsadatok
 
 
 @asynccontextmanager
@@ -17,6 +17,8 @@ async def lifespan(app: FastAPI):
     try:
         seed_admin(db)
         seed_munkanemek(db)
+        seed_torzsadatok(db)
+        seed_szemelyek(db)
     finally:
         db.close()
     yield
