@@ -32,11 +32,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-60 flex-col justify-between bg-[var(--sidebar)] p-4 text-[var(--sidebar-foreground)]">
+      <aside className="flex min-h-screen w-60 flex-col justify-between bg-[var(--sidebar)] py-4 text-[var(--sidebar-foreground)]">
         <div>
-          <div className="mb-6 rounded-[var(--radius-sm)] bg-[var(--card)] p-3">
+          <div className="mb-6 px-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/ubrankovics-logo.svg" alt="Ubrankovics" className="w-full" />
+            <img
+              src="/ubrankovics-logo.svg"
+              alt="Ubrankovics"
+              className="w-full"
+              style={{ filter: "brightness(0) invert(1)" }}
+            />
           </div>
           <nav className="space-y-1">
             {NAV.map(({ href, label, icon: Icon }) => {
@@ -45,7 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-sm transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
                     active
                       ? "bg-[var(--sidebar-active)] font-medium text-white"
                       : "hover:bg-[var(--sidebar-hover)]"
@@ -59,10 +64,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
         <div className="space-y-2 border-t border-white/10 pt-3 text-sm">
-          {user && <div className="px-2">{user.full_name}</div>}
+          {user && <div className="px-4">{user.full_name}</div>}
           <button
             onClick={logout}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left hover:bg-[var(--sidebar-hover)]"
+            className="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-[var(--sidebar-hover)]"
           >
             <LogOut size={16} />
             Kijelentkezés
