@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, dokumentumok_email, gantt, projektek, tetelek, tipusok, torzsadatok, ugyfelek
 from app.config import settings
 from app.database import SessionLocal
+from app import models_finance  # noqa: F401 — register finance models on Base.metadata
 from app.services.seed import (
     seed_admin,
     seed_munkanemek,

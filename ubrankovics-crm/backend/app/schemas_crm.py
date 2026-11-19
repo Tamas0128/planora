@@ -426,6 +426,8 @@ class AnyagRendelesUpdate(BaseModel):
     szamla_szam: Optional[str] = None
     szamla_allapot: Optional[SzamlaAllapot] = None
     szamla_osszeg: Optional[Decimal] = None
+    szamla_fizetesi_hatarido: Optional[date] = None
+    szamla_fizetes_datum: Optional[date] = None
     megjegyzes: Optional[str] = None
 
 
@@ -460,6 +462,8 @@ class AnyagRendelesResponse(BaseModel):
     szamla_szam: Optional[str]
     szamla_allapot: SzamlaAllapot
     szamla_osszeg: Optional[Decimal]
+    szamla_fizetesi_hatarido: Optional[date]
+    szamla_fizetes_datum: Optional[date]
     ugyfel_netto: Optional[Decimal]
     ugyfel_afa_tipus: Optional[VatTipus]
     ugyfel_afa: Optional[Decimal]

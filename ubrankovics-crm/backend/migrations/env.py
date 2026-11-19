@@ -33,6 +33,15 @@ from app.models import (  # noqa: F401 — register all models on Base.metadata
     Ugyfel,
     User,
 )
+from app.models_finance import (  # noqa: F401 — register finance models on Base.metadata
+    AlvallalkozoiSzamla,
+    BankEgyenleg,
+    Szerzodes,
+    SzerzodesReszlet,
+    TervezettBerkoltseg,
+    Tig,
+    UgyfelSzamla,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

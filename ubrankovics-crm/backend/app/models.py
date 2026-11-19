@@ -516,6 +516,13 @@ class AnyagRendeles(Base):
     szamla_szam: Mapped[str | None] = mapped_column(String(100), nullable=True)
     szamla_allapot: Mapped[SzamlaAllapot] = mapped_column(Enum(SzamlaAllapot), default=SzamlaAllapot.NINCS)
     szamla_osszeg: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
+    # A beszerzési számla fizetési határideje és a tényleges fizetés dátuma —
+    # a gördülő cash-flow "kiadás" rétegének bucket-be sorolásához kell
+    # (lásd app/models_finance.py docstringje). szamla_allapot önmagában csak
+    # azt mondja meg, érkezett-e/fizetve van-e, a "mikorra" ehhez a két
+    # dátummezőhöz tartozik.
+    szamla_fizetesi_hatarido: Mapped[date | None] = mapped_column(Date, nullable=True)
+    szamla_fizetes_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Ügyfélnek kiajánlott ár — a beszerzési ártól (kiválasztott ajánlat)
     # teljesen független, soronkénti nettó/áfa/bruttó.
