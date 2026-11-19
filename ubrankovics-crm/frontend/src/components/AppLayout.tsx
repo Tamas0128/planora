@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, LogOut, Users, Wrench } from "lucide-react";
+import { Building2, LogOut, UserCog, Users, Wrench } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 
 const NAV = [
@@ -11,6 +11,8 @@ const NAV = [
   { href: "/projektek", label: "Projektek", icon: Building2 },
   { href: "/torzsadatok", label: "Törzsadatok", icon: Wrench },
 ];
+
+const ADMIN_NAV = [{ href: "/felhasznalok", label: "Felhasználók", icon: UserCog }];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -41,7 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <nav className="space-y-1">
-            {NAV.map(({ href, label, icon: Icon }) => {
+            {[...NAV, ...(user?.role === "admin" ? ADMIN_NAV : [])].map(({ href, label, icon: Icon }) => {
               const active = pathname?.startsWith(href);
               return (
                 <Link

@@ -349,6 +349,11 @@ export const api = {
   },
   me: () => request<UserResponse>("/auth/me"),
   usersDirectory: () => request<UserBrief[]>("/auth/users/directory"),
+  listUsers: () => request<UserResponse[]>("/auth/users"),
+  createUser: (body: { username: string; email: string; full_name: string; password: string; role: string }) =>
+    request<UserResponse>("/auth/users", { method: "POST", body: JSON.stringify(body) }),
+  updateUser: (id: number, body: Record<string, unknown>) =>
+    request<UserResponse>(`/auth/users/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 
   listUgyfelek: (q?: string) => request<Ugyfel[]>(`/ugyfelek${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   getUgyfel: (id: number) => request<Ugyfel>(`/ugyfelek/${id}`),
