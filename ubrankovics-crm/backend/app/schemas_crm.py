@@ -306,6 +306,8 @@ class SpecifikacioResponse(BaseModel):
 
 class ProjektTetelCreate(BaseModel):
     munkanem_id: int
+    felelos_szerep: Optional[ProjektSzerepTipus] = None
+    kijelolt_id: Optional[int] = None
     info: Optional[str] = None
     extra_megjegyzes: Optional[str] = None
     potmunka: bool = False
@@ -320,6 +322,9 @@ class ProjektTetelCreate(BaseModel):
 
 
 class ProjektTetelUpdate(BaseModel):
+    sorrend: Optional[int] = None
+    felelos_szerep: Optional[ProjektSzerepTipus] = None
+    kijelolt_id: Optional[int] = None
     info: Optional[str] = None
     extra_megjegyzes: Optional[str] = None
     potmunka: Optional[bool] = None
@@ -469,6 +474,10 @@ class ProjektTetelResponse(BaseModel):
     id: int
     munkanem_id: int
     munkanem: MunkanemResponse
+    sorrend: int
+    felelos_szerep: Optional[ProjektSzerepTipus]
+    kijelolt_id: Optional[int]
+    kijelolt: Optional[SzemelyResponse]
     info: Optional[str]
     extra_megjegyzes: Optional[str]
     potmunka: bool

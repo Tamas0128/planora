@@ -22,6 +22,8 @@ from app.models import (  # noqa: F401 — register all models on Base.metadata
     ProjektTipus,
     ProjektTipusFazis,
     ProjektTipusLepes,
+    ProjektTipusTetel,
+    ProjektTipusTetelFuggoseg,
     ProjektUgyfel,
     Specifikacio,
     Szemely,

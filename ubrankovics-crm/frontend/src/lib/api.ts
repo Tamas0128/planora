@@ -228,6 +228,10 @@ export interface ProjektTetel {
   id: number;
   munkanem_id: number;
   munkanem: Munkanem;
+  sorrend: number;
+  felelos_szerep?: string | null;
+  kijelolt_id?: number | null;
+  kijelolt?: Szemely | null;
   info?: string | null;
   extra_megjegyzes?: string | null;
   potmunka: boolean;
@@ -338,6 +342,31 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
+  if (!res.ok) {
+    let detail = "Letöltés sikertelen";
+    try {
+      const body = await res.json();
+      if (body?.detail) detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+    } catch {
+      // ignore
+    }
+    throw new Error(detail);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export const api = {

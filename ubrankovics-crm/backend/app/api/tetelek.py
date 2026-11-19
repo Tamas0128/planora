@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -53,6 +54,7 @@ router = APIRouter(prefix="/projektek/{projekt_id}", tags=["tetelek"])
 def _tetel_query(db: Session):
     return db.query(ProjektTetel).options(
         joinedload(ProjektTetel.munkanem),
+        joinedload(ProjektTetel.kijelolt),
         joinedload(ProjektTetel.vallalasok).joinedload(ProjektTetelVallalas.alvallalkozo),
         joinedload(ProjektTetel.esemenyek),
         joinedload(ProjektTetel.specifikaciok),
@@ -97,7 +99,7 @@ def list_tetelek(
 ):
     if not db.query(Projekt).get(projekt_id):
         raise HTTPException(status_code=404, detail="Projekt not found")
-    return _tetel_query(db).filter(ProjektTetel.projekt_id == projekt_id).order_by(ProjektTetel.id).all()
+    return _tetel_query(db).filter(ProjektTetel.projekt_id == projekt_id).order_by(ProjektTetel.sorrend, ProjektTetel.id).all()
 
 
 @router.post("/tetelek", response_model=ProjektTetelResponse, status_code=201)
@@ -109,8 +111,11 @@ def create_tetel(
 ):
     if not db.query(Projekt).get(projekt_id):
         raise HTTPException(status_code=404, detail="Projekt not found")
+    max_sorrend = (
+        db.query(func.max(ProjektTetel.sorrend)).filter(ProjektTetel.projekt_id == projekt_id).scalar()
+    )
     data = body.model_dump(exclude={"vallalasok"})
-    tetel = ProjektTetel(projekt_id=projekt_id, **data)
+    tetel = ProjektTetel(projekt_id=projekt_id, sorrend=(max_sorrend or 0) + 1, **data)
     db.add(tetel)
     db.flush()
     for vallalas in body.vallalasok:
@@ -201,7 +206,7 @@ def recalculate_utemezes(
         raise HTTPException(status_code=400, detail="Az ütemező nincs bekapcsolva ennél a projektnél")
     recalculate_schedule(db, projekt)
     db.commit()
-    return _tetel_query(db).filter(ProjektTetel.projekt_id == projekt_id).order_by(ProjektTetel.id).all()
+    return _tetel_query(db).filter(ProjektTetel.projekt_id == projekt_id).order_by(ProjektTetel.sorrend, ProjektTetel.id).all()
 
 
 @router.post("/tetelek/{tetel_id}/vallalasok", response_model=VallalasResponse, status_code=201)

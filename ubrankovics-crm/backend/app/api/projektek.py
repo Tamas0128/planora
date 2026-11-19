@@ -8,9 +8,13 @@ from app.models import (
     ProjektFazis,
     ProjektLepes,
     ProjektSzerep,
+    ProjektTetel,
     ProjektTipus,
     ProjektTipusFazis,
+    ProjektTipusTetel,
+    ProjektTipusTetelFuggoseg,
     ProjektUgyfel,
+    TetelFuggoseg,
     User,
 )
 from app.schemas_crm import (
@@ -43,7 +47,10 @@ def _detail_query(db: Session):
 def _copy_tipus_into_projekt(db: Session, projekt: Projekt, projekt_tipus_id: int) -> None:
     tipus = (
         db.query(ProjektTipus)
-        .options(joinedload(ProjektTipus.fazisok).joinedload(ProjektTipusFazis.lepesek))
+        .options(
+            joinedload(ProjektTipus.fazisok).joinedload(ProjektTipusFazis.lepesek),
+            joinedload(ProjektTipus.tetel_sablonok),
+        )
         .get(projekt_tipus_id)
     )
     if not tipus:
@@ -61,6 +68,35 @@ def _copy_tipus_into_projekt(db: Session, projekt: Projekt, projekt_tipus_id: in
                     merfoldko=lepes_sablon.merfoldko,
                 )
             )
+
+    # Munkatétel-lista automatikusan a kiválasztott épülettípus sablonjából
+    # (a planora ActivityTemplate -> Activity mintájára) — utána a sablontól
+    # teljesen függetlenül szerkeszthető, akárcsak a fázis/lépés checklist.
+    tetel_sablonok = [t for t in tipus.tetel_sablonok if t.include_by_default]
+    sablon_id_to_tetel: dict[int, ProjektTetel] = {}
+    for tetel_sablon in tetel_sablonok:
+        tetel = ProjektTetel(
+            projekt_id=projekt.id,
+            munkanem_id=tetel_sablon.munkanem_id,
+            sorrend=tetel_sablon.sorrend,
+            duration_days=tetel_sablon.duration_days,
+            prep_days=tetel_sablon.prep_days,
+            felelos_szerep=tetel_sablon.felelos_szerep,
+        )
+        db.add(tetel)
+        sablon_id_to_tetel[tetel_sablon.id] = tetel
+    db.flush()
+
+    sablon_deps = (
+        db.query(ProjektTipusTetelFuggoseg)
+        .filter(ProjektTipusTetelFuggoseg.tetel_id.in_(sablon_id_to_tetel.keys()))
+        .all()
+    )
+    for dep in sablon_deps:
+        tetel = sablon_id_to_tetel.get(dep.tetel_id)
+        prereq = sablon_id_to_tetel.get(dep.prerequisite_tetel_id)
+        if tetel and prereq:
+            db.add(TetelFuggoseg(tetel_id=tetel.id, prerequisite_id=prereq.id))
 
 
 @router.get("", response_model=list[ProjektListItem])
@@ -82,6 +118,9 @@ def create_projekt(
         db.add(ProjektUgyfel(projekt_id=projekt.id, **link.model_dump()))
     if body.projekt_tipus_id:
         _copy_tipus_into_projekt(db, projekt, body.projekt_tipus_id)
+        db.flush()
+        if projekt.utemezes_aktiv:
+            recalculate_schedule(db, projekt)
     db.commit()
     return _detail_query(db).get(projekt.id)
 

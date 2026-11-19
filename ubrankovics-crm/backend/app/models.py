@@ -199,7 +199,7 @@ class Projekt(Base):
         back_populates="projekt", cascade="all, delete-orphan"
     )
     tetelek: Mapped[list["ProjektTetel"]] = relationship(
-        back_populates="projekt", cascade="all, delete-orphan", order_by="ProjektTetel.id"
+        back_populates="projekt", cascade="all, delete-orphan", order_by="ProjektTetel.sorrend, ProjektTetel.id"
     )
     dokumentumok: Mapped[list["Dokumentum"]] = relationship(
         back_populates="projekt", cascade="all, delete-orphan"
@@ -299,6 +299,9 @@ class ProjektTipus(Base):
     fazisok: Mapped[list["ProjektTipusFazis"]] = relationship(
         back_populates="projekt_tipus", cascade="all, delete-orphan", order_by="ProjektTipusFazis.sorrend"
     )
+    tetel_sablonok: Mapped[list["ProjektTipusTetel"]] = relationship(
+        back_populates="projekt_tipus", cascade="all, delete-orphan", order_by="ProjektTipusTetel.sorrend"
+    )
 
 
 class ProjektTipusFazis(Base):
@@ -329,6 +332,47 @@ class ProjektTipusLepes(Base):
     merfoldko: Mapped[bool] = mapped_column(Boolean, default=False)
 
     fazis: Mapped[ProjektTipusFazis] = relationship(back_populates="lepesek")
+
+
+class ProjektTipusTetel(Base):
+    """Épülettípus tétel-sablon (munkanem + alapértelmezett átfutási idő) —
+    projekt létrehozásakor, ha van kiválasztott projekt_tipus_id, ebből
+    másolódnak át a ProjektTetel sorok (lásd _copy_tipus_into_projekt),
+    utána a sablontól teljesen függetlenül szerkeszthetők, pont úgy mint a
+    fázis/lépés checklist."""
+
+    __tablename__ = "projekt_tipus_tetelek"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    projekt_tipus_id: Mapped[int] = mapped_column(
+        ForeignKey("projekt_tipusok.id", ondelete="CASCADE"), index=True
+    )
+    munkanem_id: Mapped[int] = mapped_column(ForeignKey("munkanemek.id"), index=True)
+    sorrend: Mapped[int] = mapped_column(Integer, default=0)
+    duration_days: Mapped[int] = mapped_column(Integer, default=3)
+    prep_days: Mapped[int] = mapped_column(Integer, default=0)
+    felelos_szerep: Mapped["ProjektSzerepTipus | None"] = mapped_column(
+        Enum(ProjektSzerepTipus), nullable=True
+    )
+    include_by_default: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    projekt_tipus: Mapped[ProjektTipus] = relationship(back_populates="tetel_sablonok")
+    munkanem: Mapped["Munkanem"] = relationship()
+
+
+class ProjektTipusTetelFuggoseg(Base):
+    __tablename__ = "projekt_tipus_tetel_fuggosegek"
+    __table_args__ = (
+        UniqueConstraint("tetel_id", "prerequisite_tetel_id", name="uq_tipus_tetel_prereq"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tetel_id: Mapped[int] = mapped_column(
+        ForeignKey("projekt_tipus_tetelek.id", ondelete="CASCADE"), index=True
+    )
+    prerequisite_tetel_id: Mapped[int] = mapped_column(
+        ForeignKey("projekt_tipus_tetelek.id", ondelete="CASCADE"), index=True
+    )
 
 
 class ProjektFazis(Base):
@@ -370,6 +414,11 @@ class ProjektTetel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     projekt_id: Mapped[int] = mapped_column(ForeignKey("projektek.id"), index=True)
     munkanem_id: Mapped[int] = mapped_column(ForeignKey("munkanemek.id"), index=True)
+    sorrend: Mapped[int] = mapped_column(Integer, default=0)
+    felelos_szerep: Mapped["ProjektSzerepTipus | None"] = mapped_column(
+        Enum(ProjektSzerepTipus), nullable=True
+    )
+    kijelolt_id: Mapped[int | None] = mapped_column(ForeignKey("szemelyek.id"), nullable=True)
     info: Mapped[str | None] = mapped_column(Text, nullable=True)
     extra_megjegyzes: Mapped[str | None] = mapped_column(Text, nullable=True)
     potmunka: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -405,6 +454,7 @@ class ProjektTetel(Base):
 
     projekt: Mapped[Projekt] = relationship(back_populates="tetelek")
     munkanem: Mapped[Munkanem] = relationship()
+    kijelolt: Mapped["Szemely | None"] = relationship()
     vallalasok: Mapped[list["ProjektTetelVallalas"]] = relationship(
         back_populates="tetel", cascade="all, delete-orphan"
     )

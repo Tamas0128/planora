@@ -23,6 +23,8 @@ from app.models import (
     ProjektTipus,
     ProjektTipusFazis,
     ProjektTipusLepes,
+    ProjektTipusTetel,
+    ProjektTipusTetelFuggoseg,
     Szemely,
     Torzsadat,
     User,
@@ -144,6 +146,90 @@ def seed_projekt_tipusok(db: Session) -> None:
                         merfoldko=lepes_data["merfoldko"],
                     )
                 )
+    db.commit()
+
+
+# Munkatétel-sablon: melyik munkanemek kerüljenek automatikusan a projektbe
+# egy adott épülettípus kiválasztásakor, milyen alapértelmezett átfutási
+# (duration_days) és előkészítési (prep_days — hosszú gyártási/rendelési
+# átfutású tételeknél, pl. nyílászáró) idővel. Csak a mindkét technológián
+# univerzálisan szükséges "mag" munkanemek és az adott technológiára jellemző
+# tetőfedés/homlokzat kerül bele alapból — minden más (terasz, kandalló,
+# napelem stb.) a projektben utólag, kézzel adható hozzá a már meglévő
+# "Munkanem kiválasztása" listából, ahogy eddig is.
+_TETEL_SABLON_CORE = [
+    {"kod": "SZERKEPITES", "duration_days": 5, "prep_days": 0},
+    {"kod": "ALAP-VIZSZIG", "duration_days": 4, "prep_days": 0},
+    {"kod": "CSAT-ALAPSZER", "duration_days": 2, "prep_days": 0},
+    {"kod": "RACSOS-TETO", "duration_days": 3, "prep_days": 0},
+    {"kod": "FOLIA-LEC", "duration_days": 2, "prep_days": 0},
+    {"kod": "HOSZIGETELES", "duration_days": 3, "prep_days": 0},
+    {"kod": "BADOGOZAS", "duration_days": 2, "prep_days": 0},
+    {"kod": "KULTERI-NYZ", "duration_days": 3, "prep_days": 21},
+    {"kod": "KULSO-KERET", "duration_days": 2, "prep_days": 0},
+    {"kod": "VIZSZERELES", "duration_days": 3, "prep_days": 0},
+    {"kod": "FUTES-HUTES", "duration_days": 3, "prep_days": 0},
+    {"kod": "VILLANYSZERELES", "duration_days": 4, "prep_days": 0},
+    {"kod": "ALJZATSZIGETELES", "duration_days": 2, "prep_days": 0},
+    {"kod": "ALJZAT", "duration_days": 3, "prep_days": 0},
+    {"kod": "GIPSZKARTON", "duration_days": 4, "prep_days": 0},
+    {"kod": "BELSO-FESTES", "duration_days": 4, "prep_days": 0},
+    {"kod": "MELEGBURKOLAS", "duration_days": 3, "prep_days": 0},
+    {"kod": "HIDEGBURKOLAS", "duration_days": 3, "prep_days": 0},
+    {"kod": "SZANITEREK", "duration_days": 1, "prep_days": 0},
+    {"kod": "BELTERI-AJTO", "duration_days": 2, "prep_days": 0},
+]
+
+# Épülettípus-specifikus tetőfedés/homlokzat — a "fő tanulság: megosztott
+# alapfolyamat + technológia-specifikus allépések" elve szerint (lásd a
+# beszerzési specifikáció piaci-térkép elemzését).
+_TETEL_SABLON_EXTRA: dict[str, list[dict]] = {
+    "Könnyűszerkezetes, üzemben szerelt készház": [
+        {"kod": "CSEREPEZES", "duration_days": 3, "prep_days": 0},
+        {"kod": "KULSO-VAKOLAS", "duration_days": 4, "prep_days": 0},
+        {"kod": "KULSO-LABAZAT", "duration_days": 2, "prep_days": 0},
+    ],
+    "Boronafalas gerendaház": [
+        {"kod": "KORCOLT-LEMEZ", "duration_days": 3, "prep_days": 0},
+        {"kod": "KULSO-FA-FESTES", "duration_days": 3, "prep_days": 0},
+        {"kod": "BELSO-FABURKOLAT", "duration_days": 2, "prep_days": 0},
+    ],
+}
+
+
+def seed_projekt_tipus_tetelek(db: Session) -> None:
+    """A munkatétel-sablont minden épülettípushoz feltölti, ha még nincs
+    neki — projekt létrehozásakor ebből másolódnak át a ProjektTetel sorok
+    (lásd api/projektek.py::_copy_tipus_into_projekt), utána a sablontól
+    teljesen függetlenül szerkeszthetők/törölhetők projektenként."""
+    munkanem_by_kod = {m.kod: m for m in db.query(Munkanem).all()}
+    for tipus in db.query(ProjektTipus).all():
+        if db.query(ProjektTipusTetel).filter(ProjektTipusTetel.projekt_tipus_id == tipus.id).first():
+            continue
+        items = _TETEL_SABLON_CORE + _TETEL_SABLON_EXTRA.get(tipus.nev, [])
+        kod_to_sablon: dict[str, ProjektTipusTetel] = {}
+        for sorrend, item in enumerate(items):
+            munkanem = munkanem_by_kod.get(item["kod"])
+            if not munkanem:
+                continue
+            sablon = ProjektTipusTetel(
+                projekt_tipus_id=tipus.id,
+                munkanem_id=munkanem.id,
+                sorrend=sorrend,
+                duration_days=item["duration_days"],
+                prep_days=item["prep_days"],
+            )
+            db.add(sablon)
+            kod_to_sablon[item["kod"]] = sablon
+        db.flush()
+        kods_in_order = [item["kod"] for item in items if item["kod"] in kod_to_sablon]
+        for prev_kod, kod in zip(kods_in_order, kods_in_order[1:]):
+            db.add(
+                ProjektTipusTetelFuggoseg(
+                    tetel_id=kod_to_sablon[kod].id,
+                    prerequisite_tetel_id=kod_to_sablon[prev_kod].id,
+                )
+            )
     db.commit()
 
 

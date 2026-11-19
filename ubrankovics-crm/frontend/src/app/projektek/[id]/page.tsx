@@ -2,7 +2,21 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ChevronDown, ChevronRight, Plus, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, GripVertical, Plus, X } from "lucide-react";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import {
   Ajanlatkeres,
@@ -16,6 +30,7 @@ import {
   SablonElonezet,
   Szemely,
   api,
+  downloadFile,
 } from "@/lib/api";
 
 const ALLAPOT_LABEL: Record<string, string> = {
@@ -180,7 +195,7 @@ export default function ProjektDetailPage() {
         />
       )}
       {tab === "utemezes" && projekt.utemezes_aktiv && (
-        <UtemezesTab projekt={projekt} projektId={projektId} tetelek={tetelek} onChange={loadAll} />
+        <UtemezesTab projekt={projekt} projektId={projektId} tetelek={tetelek} szemelyek={szemelyek} onChange={loadAll} />
       )}
       {tab === "fazisok" && (
         <FazisokTab projektId={projektId} fazisok={fazisok} onChange={loadFazisok} />
@@ -1065,15 +1080,18 @@ function UtemezesTab({
   projekt,
   projektId,
   tetelek,
+  szemelyek,
   onChange,
 }: {
   projekt: ProjektDetail;
   projektId: number;
   tetelek: ProjektTetel[];
+  szemelyek: Szemely[];
   onChange: () => void;
 }) {
   const [deliveryDate, setDeliveryDate] = useState(projekt.delivery_date || "");
   const [error, setError] = useState("");
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   async function saveDeliveryDate() {
     setError("");
@@ -1093,6 +1111,28 @@ function UtemezesTab({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Hiba");
     }
+  }
+
+  async function ganttPdf() {
+    setError("");
+    try {
+      await downloadFile(`/projektek/${projektId}/gantt.pdf`, `${projekt.projekt_nev}_utemterv.pdf`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hiba a Gantt-diagram létrehozása során");
+    }
+  }
+
+  async function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = tetelek.findIndex((t) => t.id === active.id);
+    const newIndex = tetelek.findIndex((t) => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = [...tetelek];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    await Promise.all(reordered.map((t, i) => api.updateTetel(projektId, t.id, { sorrend: i })));
+    onChange();
   }
 
   const scheduled = tetelek.filter((t) => t.start_date && t.end_date);
@@ -1118,6 +1158,12 @@ function UtemezesTab({
         </button>
         <button onClick={recalc} className="rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm">
           Újraütemezés
+        </button>
+        <button
+          onClick={ganttPdf}
+          className="flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm"
+        >
+          <Download size={14} /> Gantt PDF
         </button>
         <div className="ml-auto text-sm text-[var(--muted)]">Készültség: {projekt.completion_percent}%</div>
       </div>
@@ -1154,7 +1200,10 @@ function UtemezesTab({
         <table className="w-full text-sm">
           <thead className="bg-black/5 text-left">
             <tr>
+              <th className="px-3 py-2"></th>
               <th className="px-3 py-2">Tétel</th>
+              <th className="px-3 py-2">Felelős</th>
+              <th className="px-3 py-2">Kijelölve</th>
               <th className="px-3 py-2">Időtartam (nap)</th>
               <th className="px-3 py-2">Előkészítés (nap)</th>
               <th className="px-3 py-2">Terv</th>
@@ -1164,9 +1213,20 @@ function UtemezesTab({
             </tr>
           </thead>
           <tbody>
-            {tetelek.map((t) => (
-              <TetelUtemezesRow key={t.id} projektId={projektId} tetel={t} osszes={tetelek} onChange={onChange} />
-            ))}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={tetelek.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                {tetelek.map((t) => (
+                  <TetelUtemezesRow
+                    key={t.id}
+                    projektId={projektId}
+                    tetel={t}
+                    osszes={tetelek}
+                    szemelyek={szemelyek}
+                    onChange={onChange}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </tbody>
         </table>
       </div>
@@ -1178,11 +1238,13 @@ function TetelUtemezesRow({
   projektId,
   tetel,
   osszes,
+  szemelyek,
   onChange,
 }: {
   projektId: number;
   tetel: ProjektTetel;
   osszes: ProjektTetel[];
+  szemelyek: Szemely[];
   onChange: () => void;
 }) {
   const [duration, setDuration] = useState(tetel.duration_days != null ? String(tetel.duration_days) : "");
@@ -1190,6 +1252,7 @@ function TetelUtemezesRow({
   const [tenylegesKezdes, setTenylegesKezdes] = useState(tetel.tenyleges_kezdes || "");
   const [tenylegesBefejezes, setTenylegesBefejezes] = useState(tetel.tenyleges_befejezes || "");
   const [addPrereq, setAddPrereq] = useState("");
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tetel.id });
 
   async function save() {
     await api.updateTetel(projektId, tetel.id, {
@@ -1215,8 +1278,53 @@ function TetelUtemezesRow({
   }
 
   return (
-    <tr className="border-t border-[var(--border)] align-top">
+    <tr
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      className="border-t border-[var(--border)] align-top"
+    >
+      <td className="px-2 py-2">
+        <button type="button" {...attributes} {...listeners} className="cursor-grab text-[var(--muted)]">
+          <GripVertical size={14} />
+        </button>
+      </td>
       <td className="px-3 py-2 whitespace-nowrap">{tetel.munkanem.nev}</td>
+      <td className="px-3 py-2">
+        <select
+          value={tetel.felelos_szerep || ""}
+          onChange={async (e) => {
+            await api.updateTetel(projektId, tetel.id, { felelos_szerep: e.target.value || null });
+            onChange();
+          }}
+          className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+        >
+          <option value="">—</option>
+          {Object.entries(SZEREP_LABEL).map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="px-3 py-2">
+        <select
+          value={tetel.kijelolt_id || ""}
+          onChange={async (e) => {
+            await api.updateTetel(projektId, tetel.id, {
+              kijelolt_id: e.target.value ? Number(e.target.value) : null,
+            });
+            onChange();
+          }}
+          className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
+        >
+          <option value="">Nincs kijelölve</option>
+          {szemelyek.map((sz) => (
+            <option key={sz.id} value={sz.id}>
+              {sz.nev}
+            </option>
+          ))}
+        </select>
+      </td>
       <td className="px-3 py-2">
         <input
           type="number"
