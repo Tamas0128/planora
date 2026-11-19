@@ -35,13 +35,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <aside className="flex min-h-screen w-60 flex-col justify-between bg-[var(--sidebar)] py-4 text-[var(--sidebar-foreground)]">
         <div>
           <div className="mb-6 px-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/ubrankovics-logo.svg"
-              alt="Ubrankovics"
-              className="w-full"
-              style={{ filter: "brightness(0) invert(1)" }}
-            />
+            <div className="rounded-[var(--radius)] bg-[var(--card)] p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/ubrankovics-logo.svg" alt="Ubrankovics" className="w-full" />
+            </div>
           </div>
           <nav className="space-y-1">
             {NAV.map(({ href, label, icon: Icon }) => {

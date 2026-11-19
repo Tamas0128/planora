@@ -689,7 +689,7 @@ function RendelesCard({
   const [akCimzettEmail, setAkCimzettEmail] = useState("");
   const [akHatarido, setAkHatarido] = useState("");
   const [ugyfelNetto, setUgyfelNetto] = useState(rendeles.ugyfel_netto || "");
-  const [ugyfelAfa, setUgyfelAfa] = useState(rendeles.ugyfel_afa_tipus || "afa_27");
+  const [ugyfelAfa, setUgyfelAfa] = useState(rendeles.ugyfel_afa_tipus || "afa_0");
   const [poSzam, setPoSzam] = useState(rendeles.po_szam || "");
   const [szamlaSzam, setSzamlaSzam] = useState(rendeles.szamla_szam || "");
   const [szamlaOsszeg, setSzamlaOsszeg] = useState(rendeles.szamla_osszeg || "");
@@ -738,7 +738,6 @@ function RendelesCard({
     await api.updateRendeles(projektId, tetelId, rendeles.id, {
       szamla_szam: szamlaSzam || null,
       szamla_osszeg: szamlaOsszeg || null,
-      szamla_allapot: "megerkezett",
     });
     onChange();
   }
@@ -964,7 +963,7 @@ function AjanlatkeresRow({
   onChange: () => void;
 }) {
   const [netto, setNetto] = useState("");
-  const [afaTipus, setAfaTipus] = useState("afa_27");
+  const [afaTipus, setAfaTipus] = useState("forditott");
 
   async function addAjanlat(e: FormEvent) {
     e.preventDefault();
