@@ -163,6 +163,21 @@ class ProjektUgyfelResponse(BaseModel):
     model_config = _from_attrs
 
 
+class UgyfelProjektLinkResponse(BaseModel):
+    """Egy ügyfél kártyáján megjelenő, kapcsolódó projekt — a fordított
+    irány a ProjektUgyfelResponse-hoz képest (ott a projekt oldaláról,
+    itt az ügyfél oldaláról nézzük ugyanazt a projekt_ugyfelek sort)."""
+
+    id: int
+    projekt_id: int
+    projekt_nev: str
+    allapot: ProjektAllapot
+    epitesi_cim: Optional[str]
+    szerep: Optional[str]
+
+    model_config = _from_attrs
+
+
 # --- Projekt szerep ------------------------------------------------------------
 
 

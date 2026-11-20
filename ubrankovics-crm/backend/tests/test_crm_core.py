@@ -53,6 +53,23 @@ def test_projekt_with_multiple_ugyfelek_and_addresses(client, admin_headers):
     assert len(projekt["ugyfel_linkek"]) == 2
     assert projekt["utemezes_aktiv"] is False
 
+    # Az ügyfél kártyáján a fordított irányból is látszódnia kell a projektnek.
+    resp = client.get(f"/api/ugyfelek/{ugyfel1['id']}/projektek", headers=admin_headers)
+    assert resp.status_code == 200, resp.text
+    linkek = resp.json()
+    assert len(linkek) == 1
+    assert linkek[0]["projekt_id"] == projekt["id"]
+    assert linkek[0]["projekt_nev"] == "Teszt Projekt"
+    assert linkek[0]["epitesi_cim"] == "Cím 1"
+    assert linkek[0]["szerep"] == "fő megrendelő"
+    assert linkek[0]["allapot"] == "uj"
+
+    resp = client.get(f"/api/ugyfelek/{ugyfel2['id']}/projektek", headers=admin_headers)
+    assert len(resp.json()) == 1
+
+    resp = client.get(f"/api/ugyfelek/{9999}/projektek", headers=admin_headers)
+    assert resp.status_code == 404
+
 
 def test_tetel_vallalasok_esemenyek_specifikacio(client, admin_headers):
     resp = client.post("/api/projektek", json={"projekt_nev": "P2"}, headers=admin_headers)

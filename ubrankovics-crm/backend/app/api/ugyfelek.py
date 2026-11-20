@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import Ugyfel, User
-from app.schemas_crm import UgyfelCreate, UgyfelResponse, UgyfelUpdate
+from app.models import ProjektUgyfel, Ugyfel, User
+from app.schemas_crm import UgyfelCreate, UgyfelProjektLinkResponse, UgyfelResponse, UgyfelUpdate
 
 router = APIRouter(prefix="/ugyfelek", tags=["ugyfelek"])
 
@@ -44,6 +44,33 @@ def get_ugyfel(
     if not ugyfel:
         raise HTTPException(status_code=404, detail="Ügyfél not found")
     return ugyfel
+
+
+@router.get("/{ugyfel_id}/projektek", response_model=list[UgyfelProjektLinkResponse])
+def list_ugyfel_projektek(
+    ugyfel_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    if not db.query(Ugyfel).get(ugyfel_id):
+        raise HTTPException(status_code=404, detail="Ügyfél not found")
+    linkek = (
+        db.query(ProjektUgyfel)
+        .options(joinedload(ProjektUgyfel.projekt))
+        .filter(ProjektUgyfel.ugyfel_id == ugyfel_id)
+        .all()
+    )
+    return [
+        UgyfelProjektLinkResponse(
+            id=link.id,
+            projekt_id=link.projekt_id,
+            projekt_nev=link.projekt.projekt_nev,
+            allapot=link.projekt.allapot,
+            epitesi_cim=link.epitesi_cim,
+            szerep=link.szerep,
+        )
+        for link in linkek
+    ]
 
 
 @router.patch("/{ugyfel_id}", response_model=UgyfelResponse)

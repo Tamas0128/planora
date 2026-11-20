@@ -26,6 +26,15 @@ export interface Ugyfel {
   created_at: string;
 }
 
+export interface UgyfelProjektLink {
+  id: number;
+  projekt_id: number;
+  projekt_nev: string;
+  allapot: string;
+  epitesi_cim?: string | null;
+  szerep?: string | null;
+}
+
 export interface Munkanem {
   id: number;
   kod: string;
@@ -523,6 +532,7 @@ export const api = {
   updateUgyfel: (id: number, body: Partial<Ugyfel>) =>
     request<Ugyfel>(`/ugyfelek/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteUgyfel: (id: number) => request<void>(`/ugyfelek/${id}`, { method: "DELETE" }),
+  listUgyfelProjektek: (id: number) => request<UgyfelProjektLink[]>(`/ugyfelek/${id}/projektek`),
 
   listProjektek: () => request<ProjektListItem[]>("/projektek"),
   getProjekt: (id: number) => request<ProjektDetail>(`/projektek/${id}`),
