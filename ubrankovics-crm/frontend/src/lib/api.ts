@@ -110,6 +110,20 @@ export interface ProjektListItem {
   created_at: string;
 }
 
+export interface Feladat {
+  id: number;
+  cim: string;
+  leiras?: string | null;
+  hatarido?: string | null;
+  felelos_id?: number | null;
+  felelos?: UserBrief | null;
+  projekt_id?: number | null;
+  projekt_nev?: string | null;
+  letrehozo_id: number;
+  kesz: boolean;
+  created_at: string;
+}
+
 export interface ProjektDetail extends ProjektListItem {
   hrsz?: string | null;
   enaplo_iktatoszam?: string | null;
@@ -779,6 +793,20 @@ export const api = {
     downloadFile(`/projektek/${projektId}/dokumentumok/${dokumentumId}/letoltes`, filename),
   deleteDokumentum: (projektId: number, dokumentumId: number) =>
     request<void>(`/projektek/${projektId}/dokumentumok/${dokumentumId}`, { method: "DELETE" }),
+
+  listFeladatok: (params?: { felelos_id?: number; projekt_id?: number; kesz?: boolean }) => {
+    const q = new URLSearchParams();
+    if (params?.felelos_id !== undefined) q.set("felelos_id", String(params.felelos_id));
+    if (params?.projekt_id !== undefined) q.set("projekt_id", String(params.projekt_id));
+    if (params?.kesz !== undefined) q.set("kesz", String(params.kesz));
+    const qs = q.toString();
+    return request<Feladat[]>(`/feladatok${qs ? `?${qs}` : ""}`);
+  },
+  createFeladat: (body: Record<string, unknown>) =>
+    request<Feladat>("/feladatok", { method: "POST", body: JSON.stringify(body) }),
+  updateFeladat: (id: number, body: Record<string, unknown>) =>
+    request<Feladat>(`/feladatok/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteFeladat: (id: number) => request<void>(`/feladatok/${id}`, { method: "DELETE" }),
 
   listMunkanemek: () => request<Munkanem[]>("/munkanemek"),
   listAlvallalkozok: () => request<Alvallalkozo[]>("/alvallalkozok"),

@@ -710,3 +710,24 @@ class KikuldottEmail(Base):
     elkuldve_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     projekt: Mapped[Projekt] = relationship()
+
+
+class Feladat(Base):
+    """Saját/csapat feladatlista — nem projekt-kötelező (lehet önálló
+    emlékeztető is), de opcionálisan egy projekthez köthető."""
+
+    __tablename__ = "feladatok"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    cim: Mapped[str] = mapped_column(String(255))
+    leiras: Mapped[str | None] = mapped_column(Text, nullable=True)
+    hatarido: Mapped[date | None] = mapped_column(Date, nullable=True)
+    felelos_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    projekt_id: Mapped[int | None] = mapped_column(ForeignKey("projektek.id", ondelete="CASCADE"), nullable=True)
+    letrehozo_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    kesz: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    felelos: Mapped["User | None"] = relationship(foreign_keys=[felelos_id])
+    letrehozo: Mapped["User"] = relationship(foreign_keys=[letrehozo_id])
+    projekt: Mapped["Projekt | None"] = relationship()

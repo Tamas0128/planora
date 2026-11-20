@@ -19,6 +19,7 @@ from app.models import (
     VallalasTipus,
     VatTipus,
 )
+from app.schemas import UserBrief
 
 _from_attrs = {"from_attributes": True}
 
@@ -667,5 +668,41 @@ class KikuldottEmailResponse(BaseModel):
     tetel_ids: Optional[str]
     uzenet: Optional[str]
     elkuldve_at: datetime
+
+    model_config = _from_attrs
+
+
+# --- Feladat -------------------------------------------------------------------
+
+
+class FeladatCreate(BaseModel):
+    cim: str
+    leiras: Optional[str] = None
+    hatarido: Optional[date] = None
+    felelos_id: Optional[int] = None
+    projekt_id: Optional[int] = None
+
+
+class FeladatUpdate(BaseModel):
+    cim: Optional[str] = None
+    leiras: Optional[str] = None
+    hatarido: Optional[date] = None
+    felelos_id: Optional[int] = None
+    projekt_id: Optional[int] = None
+    kesz: Optional[bool] = None
+
+
+class FeladatResponse(BaseModel):
+    id: int
+    cim: str
+    leiras: Optional[str]
+    hatarido: Optional[date]
+    felelos_id: Optional[int]
+    felelos: Optional[UserBrief]
+    projekt_id: Optional[int]
+    projekt_nev: Optional[str] = None
+    letrehozo_id: int
+    kesz: bool
+    created_at: datetime
 
     model_config = _from_attrs

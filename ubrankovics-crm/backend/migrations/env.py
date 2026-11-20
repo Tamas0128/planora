@@ -11,6 +11,7 @@ from app.models import (  # noqa: F401 — register all models on Base.metadata
     AnyagRendeles,
     BeszallitoiAjanlat,
     Dokumentum,
+    Feladat,
     KikuldottEmail,
     Munkanem,
     Projekt,

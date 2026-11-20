@@ -7,6 +7,7 @@ from app.api import (
     auth,
     dokumentumok,
     dokumentumok_email,
+    feladatok,
     finance,
     gantt,
     projektek,
@@ -67,6 +68,7 @@ app.include_router(dokumentumok_email.router, prefix="/api")
 app.include_router(gantt.router, prefix="/api")
 app.include_router(finance.projekt_router, prefix="/api")
 app.include_router(finance.router, prefix="/api")
+app.include_router(feladatok.router, prefix="/api")
 
 
 @app.get("/api/health")
