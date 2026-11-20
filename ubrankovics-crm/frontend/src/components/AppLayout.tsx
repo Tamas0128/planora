@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, LogOut, UserCog, Users, Wrench } from "lucide-react";
+import { Building2, LogOut, UserCog, Users, Wallet, Wrench } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 
 const NAV = [
   { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
   { href: "/projektek", label: "Projektek", icon: Building2 },
+  { href: "/penzugy", label: "Pénzügy", icon: Wallet },
   { href: "/torzsadatok", label: "Törzsadatok", icon: Wrench },
 ];
 

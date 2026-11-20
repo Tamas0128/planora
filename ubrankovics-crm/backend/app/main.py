@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, dokumentumok_email, gantt, projektek, tetelek, tipusok, torzsadatok, ugyfelek
+from app.api import auth, dokumentumok_email, finance, gantt, projektek, tetelek, tipusok, torzsadatok, ugyfelek
 from app.config import settings
 from app.database import SessionLocal
 from app import models_finance  # noqa: F401 — register finance models on Base.metadata
@@ -53,6 +53,8 @@ app.include_router(torzsadatok.router, prefix="/api")
 app.include_router(tipusok.router, prefix="/api")
 app.include_router(dokumentumok_email.router, prefix="/api")
 app.include_router(gantt.router, prefix="/api")
+app.include_router(finance.projekt_router, prefix="/api")
+app.include_router(finance.router, prefix="/api")
 
 
 @app.get("/api/health")

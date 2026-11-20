@@ -256,6 +256,138 @@ export interface ProjektTetel {
   rendelesek: AnyagRendeles[];
 }
 
+export interface Tig {
+  id: number;
+  projekt_id: number;
+  alvallalkozo_id: number;
+  alvallalkozo: Alvallalkozo;
+  datum: string;
+  idoszak_kezdet: string;
+  idoszak_veg: string;
+  netto: string;
+  afa_tipus: string;
+  afa: string;
+  brutto: string;
+  allapot: string;
+  megjegyzes?: string | null;
+  created_at: string;
+}
+
+export interface AlvallalkozoiSzamla {
+  id: number;
+  projekt_id: number;
+  alvallalkozo_id: number;
+  alvallalkozo: Alvallalkozo;
+  tig_id?: number | null;
+  szamlaszam: string;
+  teljesites_datum: string;
+  kiallitas_datum: string;
+  esedekesseg: string;
+  fizetes_datum?: string | null;
+  netto: string;
+  afa_tipus: string;
+  afa: string;
+  brutto: string;
+  fizetett_osszeg?: string | null;
+  hatralek: string;
+  allapot: string;
+  megjegyzes?: string | null;
+  created_at: string;
+}
+
+export interface SzerzodesReszlet {
+  id: number;
+  megnevezes: string;
+  osszeg: string;
+  esedekesseg: string;
+  kiallitott_szamla_id?: number | null;
+}
+
+export interface Szerzodes {
+  id: number;
+  projekt_id: number;
+  ugyfel_id: number;
+  ugyfel: Ugyfel;
+  szerzodesszam: string;
+  osszeg: string;
+  afa_tipus: string;
+  kezdes: string;
+  befejezes: string;
+  allapot: string;
+  megjegyzes?: string | null;
+  created_at: string;
+  reszletek: SzerzodesReszlet[];
+}
+
+export interface UgyfelSzamla {
+  id: number;
+  projekt_id: number;
+  ugyfel_id: number;
+  ugyfel: Ugyfel;
+  szerzodes_id?: number | null;
+  szamlaszam: string;
+  kiallitas_datum: string;
+  teljesites_datum: string;
+  esedekesseg: string;
+  fizetes_datum?: string | null;
+  netto: string;
+  afa_tipus: string;
+  afa: string;
+  brutto: string;
+  fizetett_osszeg?: string | null;
+  hatralek: string;
+  allapot: string;
+  megjegyzes?: string | null;
+  created_at: string;
+}
+
+export interface TervezettBerkoltseg {
+  id: number;
+  honap: string;
+  osszeg: string;
+  megjegyzes?: string | null;
+}
+
+export interface BankEgyenleg {
+  id: number;
+  datum: string;
+  egyenleg: string;
+  rogzitette_id?: number | null;
+  created_at: string;
+}
+
+export interface CashflowItem {
+  irany: string;
+  reteg: string;
+  leiras: string;
+  osszeg: string;
+  esedekesseg: string;
+  lejart: boolean;
+  forras_tipus: string;
+  forras_id: number;
+  projekt_id?: number | null;
+}
+
+export interface CashflowBucket {
+  kezdo_datum: string;
+  vege_datum: string;
+  nyito: string;
+  bevetel_teny: string;
+  bevetel_terv: string;
+  kiadas_teny: string;
+  kiadas_terv: string;
+  netto: string;
+  zaro: string;
+  negativ: boolean;
+}
+
+export interface CashflowRolling {
+  bucket_meret: string;
+  horizont: number;
+  nyito_egyenleg_datuma?: string | null;
+  bucketek: CashflowBucket[];
+}
+
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
 
@@ -602,4 +734,88 @@ export const api = {
     request<Torzsadat[]>(`/torzsadatok${tipus ? `?tipus=${encodeURIComponent(tipus)}` : ""}`),
   createTorzsadat: (body: Partial<Torzsadat>) =>
     request<Torzsadat>("/torzsadatok", { method: "POST", body: JSON.stringify(body) }),
+
+  listTig: (projektId: number) => request<Tig[]>(`/projektek/${projektId}/tig`),
+  createTig: (projektId: number, body: Record<string, unknown>) =>
+    request<Tig>(`/projektek/${projektId}/tig`, { method: "POST", body: JSON.stringify(body) }),
+  updateTig: (projektId: number, tigId: number, body: Record<string, unknown>) =>
+    request<Tig>(`/projektek/${projektId}/tig/${tigId}`, { method: "PATCH", body: JSON.stringify(body) }),
+
+  listAlvallalkozoiSzamla: (projektId: number) =>
+    request<AlvallalkozoiSzamla[]>(`/projektek/${projektId}/alvallalkozoi-szamlak`),
+  createAlvallalkozoiSzamla: (projektId: number, body: Record<string, unknown>) =>
+    request<AlvallalkozoiSzamla>(`/projektek/${projektId}/alvallalkozoi-szamlak`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateAlvallalkozoiSzamla: (projektId: number, szamlaId: number, body: Record<string, unknown>) =>
+    request<AlvallalkozoiSzamla>(`/projektek/${projektId}/alvallalkozoi-szamlak/${szamlaId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  listSzerzodesek: (projektId: number) => request<Szerzodes[]>(`/projektek/${projektId}/szerzodesek`),
+  createSzerzodes: (projektId: number, body: Record<string, unknown>) =>
+    request<Szerzodes>(`/projektek/${projektId}/szerzodesek`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateSzerzodes: (projektId: number, szerzodesId: number, body: Record<string, unknown>) =>
+    request<Szerzodes>(`/projektek/${projektId}/szerzodesek/${szerzodesId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  kiallitSzamlaReszletbol: (
+    projektId: number,
+    szerzodesId: number,
+    reszletId: number,
+    body: Record<string, unknown>
+  ) =>
+    request<UgyfelSzamla>(
+      `/projektek/${projektId}/szerzodesek/${szerzodesId}/reszletek/${reszletId}/szamla-kiallitas`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  listUgyfelSzamla: (projektId: number) => request<UgyfelSzamla[]>(`/projektek/${projektId}/ugyfel-szamlak`),
+  createUgyfelSzamla: (projektId: number, body: Record<string, unknown>) =>
+    request<UgyfelSzamla>(`/projektek/${projektId}/ugyfel-szamlak`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateUgyfelSzamla: (projektId: number, szamlaId: number, body: Record<string, unknown>) =>
+    request<UgyfelSzamla>(`/projektek/${projektId}/ugyfel-szamlak/${szamlaId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  listBerkoltsegek: () => request<TervezettBerkoltseg[]>("/berkoltsegek"),
+  createBerkoltseg: (body: Record<string, unknown>) =>
+    request<TervezettBerkoltseg>("/berkoltsegek", { method: "POST", body: JSON.stringify(body) }),
+  updateBerkoltseg: (id: number, body: Record<string, unknown>) =>
+    request<TervezettBerkoltseg>(`/berkoltsegek/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+
+  listBankegyenleg: () => request<BankEgyenleg[]>("/cashflow/bankegyenleg"),
+  createBankegyenleg: (body: Record<string, unknown>) =>
+    request<BankEgyenleg>("/cashflow/bankegyenleg", { method: "POST", body: JSON.stringify(body) }),
+
+  getRollingCashflow: (params: { bucket?: string; horizon?: number; projekt_id?: number }) => {
+    const q = new URLSearchParams();
+    if (params.bucket) q.set("bucket", params.bucket);
+    if (params.horizon) q.set("horizon", String(params.horizon));
+    if (params.projekt_id) q.set("projekt_id", String(params.projekt_id));
+    return request<CashflowRolling>(`/cashflow/rolling?${q.toString()}`);
+  },
+  getRollingCashflowItems: (params: {
+    bucket?: string;
+    horizon?: number;
+    projekt_id?: number;
+    kezdo_datum: string;
+  }) => {
+    const q = new URLSearchParams();
+    if (params.bucket) q.set("bucket", params.bucket);
+    if (params.horizon) q.set("horizon", String(params.horizon));
+    if (params.projekt_id) q.set("projekt_id", String(params.projekt_id));
+    q.set("kezdo_datum", params.kezdo_datum);
+    return request<CashflowItem[]>(`/cashflow/rolling/items?${q.toString()}`);
+  },
 };
