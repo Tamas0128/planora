@@ -10,6 +10,7 @@ from app.api import (
     feladatok,
     finance,
     gantt,
+    kereses,
     projektek,
     riportok,
     tetelek,
@@ -71,6 +72,7 @@ app.include_router(finance.projekt_router, prefix="/api")
 app.include_router(finance.router, prefix="/api")
 app.include_router(feladatok.router, prefix="/api")
 app.include_router(riportok.router, prefix="/api")
+app.include_router(kereses.router, prefix="/api")
 
 
 @app.get("/api/health")

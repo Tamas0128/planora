@@ -11,6 +11,13 @@ export interface UserBrief {
   role: string;
 }
 
+export interface KeresesResult {
+  tipus: string; // "ugyfel" | "projekt" | "alvallalkozo" | "szemely"
+  id: number;
+  cim: string;
+  alcim?: string | null;
+}
+
 export interface UserResponse extends UserBrief {
   username: string;
   email: string;
@@ -835,6 +842,8 @@ export const api = {
 
   getErtekesitesiAllapot: () => request<SzakaszMegoszlasItem[]>("/riportok/ertekesitesi-allapot"),
   getPenzugyiOsszesito: () => request<PenzugyiOsszesito>("/riportok/penzugyi-osszesito"),
+
+  kereses: (q: string) => request<KeresesResult[]>(`/kereses?q=${encodeURIComponent(q)}`),
 
   listMunkanemek: () => request<Munkanem[]>("/munkanemek"),
   listAlvallalkozok: () => request<Alvallalkozo[]>("/alvallalkozok"),

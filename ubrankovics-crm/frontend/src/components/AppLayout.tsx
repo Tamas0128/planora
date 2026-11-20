@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, Building2, CheckSquare, Home, LogOut, UserCog, Users, Wallet, Wrench } from "lucide-react";
+import { BarChart3, Building2, CheckSquare, Home, LogOut, Search, UserCog, Users, Wallet, Wrench } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
+import GlobalSearch from "@/components/GlobalSearch";
 
 const NAV = [
   { href: "/", label: "Kezdőlap", icon: Home },
@@ -22,6 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<UserResponse | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -30,6 +32,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
     api.me().catch(() => router.push("/login")).then((u) => u && setUser(u));
   }, [router]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((s) => !s);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   function logout() {
     clearTokens();
@@ -46,6 +59,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <img src="/ubrankovics-logo.svg" alt="Ubrankovics" className="w-full" />
             </div>
           </div>
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="mx-4 mb-4 flex items-center justify-between gap-2 rounded-[var(--radius)] border border-white/10 px-3 py-1.5 text-sm text-[var(--sidebar-foreground)]/70 hover:bg-[var(--sidebar-hover)]"
+          >
+            <span className="flex items-center gap-2">
+              <Search size={14} /> Keresés
+            </span>
+            <span className="text-xs opacity-60">Ctrl+K</span>
+          </button>
           <nav className="space-y-1">
             {[...NAV, ...(user?.role === "admin" ? ADMIN_NAV : [])].map(({ href, label, icon: Icon }) => {
               const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
@@ -78,6 +100,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <main className="flex-1 p-8">{children}</main>
+      {searchOpen && <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />}
     </div>
   );
 }
