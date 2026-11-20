@@ -78,6 +78,25 @@ class SzemelyResponse(BaseModel):
     model_config = _from_attrs
 
 
+class SzemelyProjektSzerepResponse(BaseModel):
+    """Egy projekt, amin a személy szerepet tölt be — a személy kártya
+    szekciójához."""
+
+    projekt_id: int
+    projekt_nev: str
+    szerep: ProjektSzerepTipus
+
+
+class SzemelyTetelResponse(BaseModel):
+    """Egy tétel, amire a személy ki van jelölve."""
+
+    tetel_id: int
+    munkanem_nev: str
+    projekt_id: int
+    projekt_nev: str
+    szakasz: TetelSzakasz
+
+
 # --- Alvállalkozó -----------------------------------------------------------
 
 
@@ -97,6 +116,18 @@ class AlvallalkozoResponse(BaseModel):
     kapcsolat: Optional[str]
 
     model_config = _from_attrs
+
+
+class AlvallalkozoTetelResponse(BaseModel):
+    """Egy tétel, amin az alvállalkozó vállalásban szerepel — az
+    alvállalkozó kártya "hol dolgozik" szekciójához."""
+
+    vallalas_id: int
+    tetel_id: int
+    munkanem_nev: str
+    projekt_id: int
+    projekt_nev: str
+    szakasz: TetelSzakasz
 
 
 # --- Munkanem ----------------------------------------------------------------

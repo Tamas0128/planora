@@ -58,6 +58,29 @@ export interface Szemely {
   szervezet: string;
 }
 
+export interface AlvallalkozoTetel {
+  vallalas_id: number;
+  tetel_id: number;
+  munkanem_nev: string;
+  projekt_id: number;
+  projekt_nev: string;
+  szakasz: string;
+}
+
+export interface SzemelyProjektSzerep {
+  projekt_id: number;
+  projekt_nev: string;
+  szerep: string;
+}
+
+export interface SzemelyTetel {
+  tetel_id: number;
+  munkanem_nev: string;
+  projekt_id: number;
+  projekt_nev: string;
+  szakasz: string;
+}
+
 export interface Torzsadat {
   id: number;
   tipus: string;
@@ -737,9 +760,23 @@ export const api = {
   listAlvallalkozok: () => request<Alvallalkozo[]>("/alvallalkozok"),
   createAlvallalkozo: (body: Partial<Alvallalkozo>) =>
     request<Alvallalkozo>("/alvallalkozok", { method: "POST", body: JSON.stringify(body) }),
+  getAlvallalkozo: (id: number) => request<Alvallalkozo>(`/alvallalkozok/${id}`),
+  updateAlvallalkozo: (id: number, body: Partial<Alvallalkozo>) =>
+    request<Alvallalkozo>(`/alvallalkozok/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteAlvallalkozo: (id: number) => request<void>(`/alvallalkozok/${id}`, { method: "DELETE" }),
+  listAlvallalkozoTetelek: (id: number) => request<AlvallalkozoTetel[]>(`/alvallalkozok/${id}/tetelek`),
+  listAlvallalkozoTig: (id: number) => request<Tig[]>(`/alvallalkozok/${id}/tig`),
+  listAlvallalkozoSzamlak: (id: number) => request<AlvallalkozoiSzamla[]>(`/alvallalkozok/${id}/szamlak`),
+
   listSzemelyek: () => request<Szemely[]>("/szemelyek"),
   createSzemely: (body: Partial<Szemely>) =>
     request<Szemely>("/szemelyek", { method: "POST", body: JSON.stringify(body) }),
+  getSzemely: (id: number) => request<Szemely>(`/szemelyek/${id}`),
+  updateSzemely: (id: number, body: Partial<Szemely>) =>
+    request<Szemely>(`/szemelyek/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteSzemely: (id: number) => request<void>(`/szemelyek/${id}`, { method: "DELETE" }),
+  listSzemelySzerepek: (id: number) => request<SzemelyProjektSzerep[]>(`/szemelyek/${id}/szerepek`),
+  listSzemelyTetelek: (id: number) => request<SzemelyTetel[]>(`/szemelyek/${id}/tetelek`),
   listTorzsadatok: (tipus?: string) =>
     request<Torzsadat[]>(`/torzsadatok${tipus ? `?tipus=${encodeURIComponent(tipus)}` : ""}`),
   createTorzsadat: (body: Partial<Torzsadat>) =>

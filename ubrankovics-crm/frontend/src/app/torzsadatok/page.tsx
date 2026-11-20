@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Alvallalkozo, Munkanem, Szemely, Torzsadat, api } from "@/lib/api";
@@ -201,7 +202,9 @@ function AlvallalkozokTab() {
       <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
         {items.map((a) => (
           <li key={a.id} className="flex justify-between px-3 py-2 text-sm">
-            <span>{a.nev}</span>
+            <Link href={`/alvallalkozok/${a.id}`} className="text-[var(--primary)] hover:underline">
+              {a.nev}
+            </Link>
             <span className="text-[var(--muted)]">{a.kapcsolat || "—"}</span>
           </li>
         ))}
@@ -253,7 +256,9 @@ function SzemelyekTab() {
       <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
         {items.map((s) => (
           <li key={s.id} className="flex justify-between px-3 py-2 text-sm">
-            <span>{s.nev}</span>
+            <Link href={`/szemelyek/${s.id}`} className="text-[var(--primary)] hover:underline">
+              {s.nev}
+            </Link>
             <span className="text-[var(--muted)]">{s.szervezet === "belso" ? "Belső" : "Külső"}</span>
           </li>
         ))}
