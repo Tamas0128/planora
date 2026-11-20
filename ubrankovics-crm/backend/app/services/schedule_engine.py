@@ -47,7 +47,7 @@ def recalculate_schedule(db: Session, projekt: Projekt) -> None:
     tetelek = (
         db.query(ProjektTetel)
         .filter(ProjektTetel.projekt_id == projekt.id, ProjektTetel.duration_days.isnot(None))
-        .order_by(ProjektTetel.id)
+        .order_by(ProjektTetel.sorrend, ProjektTetel.id)
         .all()
     )
     if not tetelek:
