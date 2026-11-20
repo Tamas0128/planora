@@ -652,16 +652,26 @@ class Specifikacio(Base):
 
 
 class Dokumentum(Base):
+    """Projekthez feltöltött fájl. utvonal a helyi lemezes tárban (UPLOAD_DIR)
+    lévő, ütközés-mentesítésre uuid-del ellátott fájlnév — soha nem a
+    felhasználó által adott eredeti_nev, hogy a feltöltés ne írjon felül
+    véletlenül egy másik dokumentumot."""
+
     __tablename__ = "dokumentumok"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     projekt_id: Mapped[int] = mapped_column(ForeignKey("projektek.id"), index=True)
     tipus: Mapped[str] = mapped_column(String(100))
     utvonal: Mapped[str] = mapped_column(String(500))
+    eredeti_nev: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tartalom_tipus: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    meret: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    feltoltotte_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     megjegyzes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     projekt: Mapped[Projekt] = relationship(back_populates="dokumentumok")
+    feltoltotte: Mapped["User | None"] = relationship()
 
 
 class TetelFuggoseg(Base):

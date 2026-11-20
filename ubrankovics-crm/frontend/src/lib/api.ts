@@ -226,6 +226,17 @@ export interface Ajanlatkeres {
   ajanlatok: BeszallitoiAjanlat[];
 }
 
+export interface Dokumentum {
+  id: number;
+  tipus: string;
+  eredeti_nev?: string | null;
+  tartalom_tipus?: string | null;
+  meret?: number | null;
+  feltoltotte_id?: number | null;
+  megjegyzes?: string | null;
+  created_at: string;
+}
+
 export interface AnyagRendeles {
   id: number;
   megnevezes: string;
@@ -755,6 +766,19 @@ export const api = {
     request<void>(`/projektek/${projektId}/fazisok/${fazisId}/lepesek/${lepesId}`, {
       method: "DELETE",
     }),
+
+  listDokumentumok: (projektId: number) => request<Dokumentum[]>(`/projektek/${projektId}/dokumentumok`),
+  uploadDokumentum: (projektId: number, body: { tipus: string; megjegyzes?: string; file: File }) => {
+    const form = new FormData();
+    form.set("tipus", body.tipus);
+    if (body.megjegyzes) form.set("megjegyzes", body.megjegyzes);
+    form.set("file", body.file);
+    return request<Dokumentum>(`/projektek/${projektId}/dokumentumok`, { method: "POST", body: form });
+  },
+  downloadDokumentum: (projektId: number, dokumentumId: number, filename: string) =>
+    downloadFile(`/projektek/${projektId}/dokumentumok/${dokumentumId}/letoltes`, filename),
+  deleteDokumentum: (projektId: number, dokumentumId: number) =>
+    request<void>(`/projektek/${projektId}/dokumentumok/${dokumentumId}`, { method: "DELETE" }),
 
   listMunkanemek: () => request<Munkanem[]>("/munkanemek"),
   listAlvallalkozok: () => request<Alvallalkozo[]>("/alvallalkozok"),

@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     cegnev: str = "Ubrankovics Kft."
 
+    upload_dir: str = "/app/uploads"
+
     @model_validator(mode="after")
     def _warn_insecure_defaults(self) -> "Settings":
         if self.secret_key in _INSECURE_DEFAULTS:

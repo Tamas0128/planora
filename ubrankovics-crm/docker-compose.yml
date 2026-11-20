@@ -33,6 +33,9 @@ services:
       SMTP_PORT: "1025"
       SMTP_USE_TLS: "false"
       SMTP_FROM: noreply@ubrankovics.local
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,3 +64,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

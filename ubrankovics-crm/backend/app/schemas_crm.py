@@ -557,16 +557,13 @@ class ProjektTetelResponse(BaseModel):
 # --- Dokumentum -----------------------------------------------------------------------
 
 
-class DokumentumCreate(BaseModel):
-    tipus: str
-    utvonal: str
-    megjegyzes: Optional[str] = None
-
-
 class DokumentumResponse(BaseModel):
     id: int
     tipus: str
-    utvonal: str
+    eredeti_nev: Optional[str]
+    tartalom_tipus: Optional[str]
+    meret: Optional[int]
+    feltoltotte_id: Optional[int]
     megjegyzes: Optional[str]
     created_at: datetime
 

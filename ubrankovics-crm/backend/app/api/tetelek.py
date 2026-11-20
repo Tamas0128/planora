@@ -10,7 +10,6 @@ from app.models import (
     Ajanlatkeres,
     AnyagRendeles,
     BeszallitoiAjanlat,
-    Dokumentum,
     Projekt,
     ProjektTetel,
     ProjektTetelVallalas,
@@ -29,8 +28,6 @@ from app.schemas_crm import (
     AnyagRendelesUpdate,
     BeszallitoiAjanlatCreate,
     BeszallitoiAjanlatResponse,
-    DokumentumCreate,
-    DokumentumResponse,
     ProjektTetelCreate,
     ProjektTetelResponse,
     ProjektTetelUpdate,
@@ -339,33 +336,6 @@ def remove_specifikacio(
         raise HTTPException(status_code=404, detail="Specifikáció not found")
     db.delete(spec)
     db.commit()
-
-
-@router.get("/dokumentumok", response_model=list[DokumentumResponse])
-def list_dokumentumok(
-    projekt_id: int,
-    db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
-):
-    if not db.query(Projekt).get(projekt_id):
-        raise HTTPException(status_code=404, detail="Projekt not found")
-    return db.query(Dokumentum).filter(Dokumentum.projekt_id == projekt_id).order_by(Dokumentum.id).all()
-
-
-@router.post("/dokumentumok", response_model=DokumentumResponse, status_code=201)
-def add_dokumentum(
-    projekt_id: int,
-    body: DokumentumCreate,
-    db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
-):
-    if not db.query(Projekt).get(projekt_id):
-        raise HTTPException(status_code=404, detail="Projekt not found")
-    dok = Dokumentum(projekt_id=projekt_id, **body.model_dump())
-    db.add(dok)
-    db.commit()
-    db.refresh(dok)
-    return dok
 
 
 @router.post("/tetelek/{tetel_id}/rendelesek", response_model=AnyagRendelesResponse, status_code=201)

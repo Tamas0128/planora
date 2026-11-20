@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ChevronDown, ChevronRight, Download, GripVertical, Plus, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, GripVertical, Plus, Trash2, X } from "lucide-react";
 import {
   DndContext,
   DragEndEvent,
@@ -22,6 +22,7 @@ import {
   Ajanlatkeres,
   AnyagRendeles,
   Alvallalkozo,
+  Dokumentum,
   KikuldottEmail,
   Munkanem,
   ProjektDetail,
@@ -115,13 +116,14 @@ const SZEREP_LABEL: Record<string, string> = {
 export default function ProjektDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projektId = Number(id);
-  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok">("attekintes");
+  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok" | "dokumentumok">("attekintes");
   const [projekt, setProjekt] = useState<ProjektDetail | null>(null);
   const [tetelek, setTetelek] = useState<ProjektTetel[]>([]);
   const [munkanemek, setMunkanemek] = useState<Munkanem[]>([]);
   const [alvallalkozok, setAlvallalkozok] = useState<Alvallalkozo[]>([]);
   const [szemelyek, setSzemelyek] = useState<Szemely[]>([]);
   const [fazisok, setFazisok] = useState<ProjektFazis[]>([]);
+  const [dokumentumok, setDokumentumok] = useState<Dokumentum[]>([]);
   const [error, setError] = useState("");
 
   function loadProjekt() {
@@ -133,6 +135,9 @@ export default function ProjektDetailPage() {
   function loadFazisok() {
     api.listFazisok(projektId).then(setFazisok).catch((e) => setError(e.message));
   }
+  function loadDokumentumok() {
+    api.listDokumentumok(projektId).then(setDokumentumok).catch((e) => setError(e.message));
+  }
   function loadAll() {
     loadProjekt();
     loadTetelek();
@@ -142,6 +147,7 @@ export default function ProjektDetailPage() {
     loadProjekt();
     loadTetelek();
     loadFazisok();
+    loadDokumentumok();
     api.listMunkanemek().then(setMunkanemek).catch(() => {});
     api.listAlvallalkozok().then(setAlvallalkozok).catch(() => {});
     api.listSzemelyek().then(setSzemelyek).catch(() => {});
@@ -167,8 +173,8 @@ export default function ProjektDetailPage() {
       <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
         {(
           projekt.utemezes_aktiv
-            ? (["attekintes", "tetelek", "utemezes", "fazisok"] as const)
-            : (["attekintes", "tetelek", "fazisok"] as const)
+            ? (["attekintes", "tetelek", "utemezes", "fazisok", "dokumentumok"] as const)
+            : (["attekintes", "tetelek", "fazisok", "dokumentumok"] as const)
         ).map((t) => (
           <button
             key={t}
@@ -177,7 +183,15 @@ export default function ProjektDetailPage() {
               tab === t ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
             }`}
           >
-            {t === "attekintes" ? "Áttekintés" : t === "tetelek" ? "Tételek" : t === "utemezes" ? "Ütemezés" : "Fázisok"}
+            {t === "attekintes"
+              ? "Áttekintés"
+              : t === "tetelek"
+              ? "Tételek"
+              : t === "utemezes"
+              ? "Ütemezés"
+              : t === "fazisok"
+              ? "Fázisok"
+              : "Dokumentumok"}
           </button>
         ))}
       </div>
@@ -199,6 +213,9 @@ export default function ProjektDetailPage() {
       )}
       {tab === "fazisok" && (
         <FazisokTab projektId={projektId} fazisok={fazisok} onChange={loadFazisok} />
+      )}
+      {tab === "dokumentumok" && (
+        <DokumentumokTab projektId={projektId} dokumentumok={dokumentumok} onChange={loadDokumentumok} />
       )}
     </AppLayout>
   );
@@ -1671,6 +1688,134 @@ function EmailKuldesPanel({ projektId, tetelIds }: { projektId: number; tetelIds
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+const DOKUMENTUM_TIPUS_LABEL: Record<string, string> = {
+  szerzodes: "Szerződés",
+  tervrajz: "Tervrajz",
+  engedely: "Engedély",
+  fenykep: "Fénykép",
+  egyeb: "Egyéb",
+};
+
+function formatMeret(bytes: number | null | undefined): string {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function DokumentumokTab({
+  projektId,
+  dokumentumok,
+  onChange,
+}: {
+  projektId: number;
+  dokumentumok: Dokumentum[];
+  onChange: () => void;
+}) {
+  const [tipus, setTipus] = useState("egyeb");
+  const [megjegyzes, setMegjegyzes] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [feltoltes, setFeltoltes] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleUpload(e: FormEvent) {
+    e.preventDefault();
+    if (!file) return;
+    setError("");
+    setFeltoltes(true);
+    try {
+      await api.uploadDokumentum(projektId, { tipus, megjegyzes: megjegyzes || undefined, file });
+      setMegjegyzes("");
+      setFile(null);
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hiba a feltöltés során");
+    } finally {
+      setFeltoltes(false);
+    }
+  }
+
+  async function handleDelete(dok: Dokumentum) {
+    if (!confirm(`Biztosan törlöd: ${dok.eredeti_nev || "dokumentum"}?`)) return;
+    await api.deleteDokumentum(projektId, dok.id);
+    onChange();
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <form onSubmit={handleUpload} className="mb-4 space-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={tipus}
+            onChange={(e) => setTipus(e.target.value)}
+            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+          >
+            {Object.entries(DOKUMENTUM_TIPUS_LABEL).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+          <input
+            placeholder="Megjegyzés (opcionális)"
+            value={megjegyzes}
+            onChange={(e) => setMegjegyzes(e.target.value)}
+            className="flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="flex-1 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={!file || feltoltes}
+            className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm text-[var(--primary-foreground)] disabled:opacity-60"
+          >
+            <Plus size={14} /> {feltoltes ? "Feltöltés..." : "Feltöltés"}
+          </button>
+        </div>
+        <p className="text-xs text-[var(--muted)]">
+          Engedélyezett típusok: pdf, doc(x), xls(x), jpg, png, dwg, zip, txt — max. 25 MB.
+        </p>
+      </form>
+
+      {error && <div className="mb-3 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
+
+      <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+        {dokumentumok.map((dok) => (
+          <li key={dok.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+            <div>
+              <div className="font-medium">{dok.eredeti_nev || "(névtelen fájl)"}</div>
+              <div className="text-xs text-[var(--muted)]">
+                {DOKUMENTUM_TIPUS_LABEL[dok.tipus] || dok.tipus} · {formatMeret(dok.meret)} ·{" "}
+                {new Date(dok.created_at).toLocaleDateString("hu-HU")}
+                {dok.megjegyzes ? ` · ${dok.megjegyzes}` : ""}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => api.downloadDokumentum(projektId, dok.id, dok.eredeti_nev || `dokumentum-${dok.id}`)}
+                className="flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-xs"
+              >
+                <Download size={12} /> Letöltés
+              </button>
+              <button onClick={() => handleDelete(dok)} className="text-[var(--danger)]">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </li>
+        ))}
+        {dokumentumok.length === 0 && (
+          <li className="px-3 py-4 text-center text-sm text-[var(--muted)]">Nincs még feltöltött dokumentum.</li>
+        )}
+      </ul>
     </div>
   );
 }
