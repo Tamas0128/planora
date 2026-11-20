@@ -738,3 +738,45 @@ class PenzugyiOsszesito(BaseModel):
     lejart_kiadas_osszesen: Decimal
     legutobbi_bankegyenleg_datuma: Optional[date]
     legutobbi_bankegyenleg: Optional[Decimal]
+
+
+# --- Bankkivonat import ----------------------------------------------------------
+
+
+class BankkivonatJavaslat(BaseModel):
+    forras_tipus: str  # "ugyfel_szamla" | "alvallalkozoi_szamla"
+    forras_id: int
+    projekt_id: int
+    projekt_nev: str
+    partner_nev: str
+    szamlaszam: str
+    hatralek: Decimal
+    biztos: bool
+
+
+class BankkivonatSor(BaseModel):
+    sor: int
+    datum: date
+    osszeg: Decimal
+    irany: str  # "bevetel" | "kiadas"
+    kozlemeny: str
+    javaslat: Optional[BankkivonatJavaslat] = None
+    alternativak: list[BankkivonatJavaslat] = []
+
+
+class BankkivonatElemzesValasz(BaseModel):
+    sorok: list[BankkivonatSor]
+    sorok_szama: int
+    egyeztetett_szama: int
+
+
+class BankkivonatJovahagyottTetel(BaseModel):
+    forras_tipus: str
+    forras_id: int
+    datum: date
+    osszeg: Decimal
+
+
+class BankkivonatJovahagyasValasz(BaseModel):
+    feldolgozott_szama: int
+    erintett_projektek: list[int]

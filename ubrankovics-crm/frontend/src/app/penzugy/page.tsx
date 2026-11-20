@@ -3,6 +3,8 @@
 import { Fragment, FormEvent, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import CashflowChart from "@/components/CashflowChart";
+import BankkivonatImport from "@/components/BankkivonatImport";
 import {
   AlvallalkozoiSzamla,
   CashflowBucket,
@@ -180,6 +182,7 @@ function CashflowTab() {
             Legutóbbi rögzített egyenleg: {huf(snapshots[0].egyenleg)} ({snapshots[0].datum})
           </span>
         )}
+        <BankkivonatImport onApplied={load} />
       </form>
 
       {anyNegative && (
@@ -191,6 +194,10 @@ function CashflowTab() {
       {!data ? (
         <p className="text-sm text-[var(--muted)]">Betöltés…</p>
       ) : (
+        <>
+        <div className="mb-4">
+          <CashflowChart bucketek={data.bucketek} />
+        </div>
         <div className={`${cardCls} overflow-x-auto`}>
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--border)] text-left text-[var(--muted)]">
@@ -261,6 +268,7 @@ function CashflowTab() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

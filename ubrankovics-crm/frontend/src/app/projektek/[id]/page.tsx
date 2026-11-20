@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
+import Modal from "@/components/Modal";
 import {
   Ajanlatkeres,
   AnyagRendeles,
@@ -1716,6 +1717,7 @@ function DokumentumokTab({
   dokumentumok: Dokumentum[];
   onChange: () => void;
 }) {
+  const [showModal, setShowModal] = useState(false);
   const [tipus, setTipus] = useState("egyeb");
   const [megjegyzes, setMegjegyzes] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -1729,8 +1731,10 @@ function DokumentumokTab({
     setFeltoltes(true);
     try {
       await api.uploadDokumentum(projektId, { tipus, megjegyzes: megjegyzes || undefined, file });
+      setTipus("egyeb");
       setMegjegyzes("");
       setFile(null);
+      setShowModal(false);
       onChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Hiba a feltöltés során");
@@ -1747,46 +1751,66 @@ function DokumentumokTab({
 
   return (
     <div className="max-w-2xl">
-      <form onSubmit={handleUpload} className="mb-4 space-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={tipus}
-            onChange={(e) => setTipus(e.target.value)}
-            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
-          >
-            {Object.entries(DOKUMENTUM_TIPUS_LABEL).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder="Megjegyzés (opcionális)"
-            value={megjegyzes}
-            onChange={(e) => setMegjegyzes(e.target.value)}
-            className="flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="flex-1 text-sm"
-          />
-          <button
-            type="submit"
-            disabled={!file || feltoltes}
-            className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm text-[var(--primary-foreground)] disabled:opacity-60"
-          >
-            <Plus size={14} /> {feltoltes ? "Feltöltés..." : "Feltöltés"}
-          </button>
-        </div>
-        <p className="text-xs text-[var(--muted)]">
-          Engedélyezett típusok: pdf, doc(x), xls(x), jpg, png, dwg, zip, txt — max. 25 MB.
-        </p>
-      </form>
+      <button
+        type="button"
+        onClick={() => {
+          setError("");
+          setShowModal(true);
+        }}
+        className="mb-4 flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm text-[var(--primary-foreground)]"
+      >
+        <Plus size={14} /> Dokumentum feltöltése
+      </button>
 
-      {error && <div className="mb-3 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
+      {showModal && (
+        <Modal title="Dokumentum feltöltése" onClose={() => setShowModal(false)}>
+          <form onSubmit={handleUpload} className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Típus</label>
+              <select
+                value={tipus}
+                onChange={(e) => setTipus(e.target.value)}
+                className="w-full rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+              >
+                {Object.entries(DOKUMENTUM_TIPUS_LABEL).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Megjegyzés (opcionális)</label>
+              <input
+                value={megjegyzes}
+                onChange={(e) => setMegjegyzes(e.target.value)}
+                placeholder="Megjegyzés (opcionális)"
+                className="w-full rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Fájl</label>
+              <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-sm" required />
+              <p className="text-xs text-[var(--muted)]">
+                Engedélyezett típusok: pdf, doc(x), xls(x), jpg, png, dwg, zip, txt — max. 25 MB.
+              </p>
+            </div>
+            {error && <div className="rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => setShowModal(false)} className="rounded-[var(--radius)] px-3 py-1.5 text-sm text-[var(--muted)]">
+                Mégse
+              </button>
+              <button
+                type="submit"
+                disabled={!file || feltoltes}
+                className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm text-[var(--primary-foreground)] disabled:opacity-60"
+              >
+                <Plus size={14} /> {feltoltes ? "Feltöltés..." : "Feltöltés"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
         {dokumentumok.map((dok) => (

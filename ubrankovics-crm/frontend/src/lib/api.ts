@@ -156,6 +156,38 @@ export interface PenzugyiOsszesito {
   legutobbi_bankegyenleg?: string | null;
 }
 
+export interface BankkivonatJavaslat {
+  forras_tipus: string; // "ugyfel_szamla" | "alvallalkozoi_szamla"
+  forras_id: number;
+  projekt_id: number;
+  projekt_nev: string;
+  partner_nev: string;
+  szamlaszam: string;
+  hatralek: string;
+  biztos: boolean;
+}
+
+export interface BankkivonatSor {
+  sor: number;
+  datum: string;
+  osszeg: string;
+  irany: string; // "bevetel" | "kiadas"
+  kozlemeny: string;
+  javaslat?: BankkivonatJavaslat | null;
+  alternativak: BankkivonatJavaslat[];
+}
+
+export interface BankkivonatElemzesValasz {
+  sorok: BankkivonatSor[];
+  sorok_szama: number;
+  egyeztetett_szama: number;
+}
+
+export interface BankkivonatJovahagyasValasz {
+  feldolgozott_szama: number;
+  erintett_projektek: number[];
+}
+
 export interface ProjektDetail extends ProjektListItem {
   hrsz?: string | null;
   enaplo_iktatoszam?: string | null;
@@ -844,6 +876,18 @@ export const api = {
   getPenzugyiOsszesito: () => request<PenzugyiOsszesito>("/riportok/penzugyi-osszesito"),
 
   kereses: (q: string) => request<KeresesResult[]>(`/kereses?q=${encodeURIComponent(q)}`),
+
+  elemezBankkivonat: (file: File) => {
+    const form = new FormData();
+    form.set("file", file);
+    return request<BankkivonatElemzesValasz>("/bankkivonat/elemzes", { method: "POST", body: form });
+  },
+  jovahagyBankkivonat: (file: File, tetelek: { forras_tipus: string; forras_id: number; datum: string; osszeg: string }[]) => {
+    const form = new FormData();
+    form.set("file", file);
+    form.set("jovahagyott_tetelek", JSON.stringify(tetelek));
+    return request<BankkivonatJovahagyasValasz>("/bankkivonat/jovahagyas", { method: "POST", body: form });
+  },
 
   listMunkanemek: () => request<Munkanem[]>("/munkanemek"),
   listAlvallalkozok: () => request<Alvallalkozo[]>("/alvallalkozok"),

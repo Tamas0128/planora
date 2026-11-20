@@ -8,11 +8,12 @@ test.describe("Dokumentumok (fájlfeltöltés)", () => {
   test("feltöltés, lista, letöltés, törlés", async ({ page }) => {
     const { id } = await createProjekt(page);
     await page.getByRole("button", { name: "Dokumentumok" }).click();
+    await page.getByRole("button", { name: "Dokumentum feltöltése" }).click();
 
     await page.locator("select").selectOption("szerzodes");
     await page.getByPlaceholder("Megjegyzés (opcionális)").fill("E2E teszt feltöltés");
     await page.locator('input[type="file"]').setInputFiles(FIXTURE);
-    await page.getByRole("button", { name: "Feltöltés" }).click();
+    await page.getByRole("button", { name: "Feltöltés", exact: true }).click();
 
     await expect(page.locator("text=teszt-dokumentum.txt")).toBeVisible();
     await expect(page.locator("text=E2E teszt feltöltés")).toBeVisible();

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     auth,
+    bankkivonat,
     dokumentumok,
     dokumentumok_email,
     feladatok,
@@ -73,6 +74,7 @@ app.include_router(finance.router, prefix="/api")
 app.include_router(feladatok.router, prefix="/api")
 app.include_router(riportok.router, prefix="/api")
 app.include_router(kereses.router, prefix="/api")
+app.include_router(bankkivonat.router, prefix="/api")
 
 
 @app.get("/api/health")
