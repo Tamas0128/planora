@@ -124,6 +124,31 @@ export interface Feladat {
   created_at: string;
 }
 
+export interface SzakaszMegoszlasItem {
+  szakasz: string;
+  tetel_szam: number;
+  ertek_osszesen: string;
+}
+
+export interface LejartSzamlaItem {
+  forras_tipus: string;
+  forras_id: number;
+  projekt_id: number;
+  projekt_nev: string;
+  partner_nev: string;
+  szamlaszam: string;
+  esedekesseg: string;
+  hatralek: string;
+}
+
+export interface PenzugyiOsszesito {
+  lejart_szamlak: LejartSzamlaItem[];
+  lejart_bevetel_osszesen: string;
+  lejart_kiadas_osszesen: string;
+  legutobbi_bankegyenleg_datuma?: string | null;
+  legutobbi_bankegyenleg?: string | null;
+}
+
 export interface ProjektDetail extends ProjektListItem {
   hrsz?: string | null;
   enaplo_iktatoszam?: string | null;
@@ -807,6 +832,9 @@ export const api = {
   updateFeladat: (id: number, body: Record<string, unknown>) =>
     request<Feladat>(`/feladatok/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteFeladat: (id: number) => request<void>(`/feladatok/${id}`, { method: "DELETE" }),
+
+  getErtekesitesiAllapot: () => request<SzakaszMegoszlasItem[]>("/riportok/ertekesitesi-allapot"),
+  getPenzugyiOsszesito: () => request<PenzugyiOsszesito>("/riportok/penzugyi-osszesito"),
 
   listMunkanemek: () => request<Munkanem[]>("/munkanemek"),
   listAlvallalkozok: () => request<Alvallalkozo[]>("/alvallalkozok"),

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, CheckSquare, LogOut, UserCog, Users, Wallet, Wrench } from "lucide-react";
+import { BarChart3, Building2, CheckSquare, LogOut, UserCog, Users, Wallet, Wrench } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/projektek", label: "Projektek", icon: Building2 },
   { href: "/feladatok", label: "Feladatok", icon: CheckSquare },
   { href: "/penzugy", label: "Pénzügy", icon: Wallet },
+  { href: "/riportok", label: "Riportok", icon: BarChart3 },
   { href: "/torzsadatok", label: "Törzsadatok", icon: Wrench },
 ];
 

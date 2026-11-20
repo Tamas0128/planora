@@ -706,3 +706,35 @@ class FeladatResponse(BaseModel):
     created_at: datetime
 
     model_config = _from_attrs
+
+
+# --- Riportok ------------------------------------------------------------------
+
+
+class SzakaszMegoszlasItem(BaseModel):
+    """Egy szakasz (ajánlat→szerződés→beszerzés→kivitelezés→kész) tétel-
+    száma és az ügyfélnek kiajánlott érték összesen — az "értékesítési
+    állapot" riport soronkénti bontása."""
+
+    szakasz: TetelSzakasz
+    tetel_szam: int
+    ertek_osszesen: Decimal
+
+
+class LejartSzamlaItem(BaseModel):
+    forras_tipus: str  # "ugyfel_szamla" | "alvallalkozoi_szamla"
+    forras_id: int
+    projekt_id: int
+    projekt_nev: str
+    partner_nev: str
+    szamlaszam: str
+    esedekesseg: date
+    hatralek: Decimal
+
+
+class PenzugyiOsszesito(BaseModel):
+    lejart_szamlak: list[LejartSzamlaItem]
+    lejart_bevetel_osszesen: Decimal
+    lejart_kiadas_osszesen: Decimal
+    legutobbi_bankegyenleg_datuma: Optional[date]
+    legutobbi_bankegyenleg: Optional[Decimal]

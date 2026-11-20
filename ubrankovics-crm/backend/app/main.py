@@ -11,6 +11,7 @@ from app.api import (
     finance,
     gantt,
     projektek,
+    riportok,
     tetelek,
     tipusok,
     torzsadatok,
@@ -69,6 +70,7 @@ app.include_router(gantt.router, prefix="/api")
 app.include_router(finance.projekt_router, prefix="/api")
 app.include_router(finance.router, prefix="/api")
 app.include_router(feladatok.router, prefix="/api")
+app.include_router(riportok.router, prefix="/api")
 
 
 @app.get("/api/health")
