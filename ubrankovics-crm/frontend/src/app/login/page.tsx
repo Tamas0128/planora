@@ -19,7 +19,7 @@ export default function LoginPage() {
     try {
       const res = await api.login(username, password);
       setTokens(res.access_token, res.refresh_token);
-      router.push("/ugyfelek");
+      router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bejelentkezés sikertelen");
     } finally {

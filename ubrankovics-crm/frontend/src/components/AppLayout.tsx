@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, Building2, CheckSquare, LogOut, UserCog, Users, Wallet, Wrench } from "lucide-react";
+import { BarChart3, Building2, CheckSquare, Home, LogOut, UserCog, Users, Wallet, Wrench } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 
 const NAV = [
+  { href: "/", label: "Kezdőlap", icon: Home },
   { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
   { href: "/projektek", label: "Projektek", icon: Building2 },
   { href: "/feladatok", label: "Feladatok", icon: CheckSquare },
@@ -47,7 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <nav className="space-y-1">
             {[...NAV, ...(user?.role === "admin" ? ADMIN_NAV : [])].map(({ href, label, icon: Icon }) => {
-              const active = pathname?.startsWith(href);
+              const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
               return (
                 <Link
                   key={href}
