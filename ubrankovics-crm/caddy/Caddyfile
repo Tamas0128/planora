@@ -1,0 +1,11 @@
+# HTTPS a saját (self-signed) tanúsítvánnyal. Később csak a certs/ alatti két fájlt kell cserélni.
+{
+	# a cert fájlokat mi adjuk, Caddy ne próbáljon ACME-zni vagy átirányítani
+	auto_https off
+}
+
+https://crm.local:8500 {
+	tls /certs/crm.local.crt /certs/crm.local.key
+	encode gzip
+	reverse_proxy frontend:3000
+}

@@ -28,8 +28,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-ubrankovics}:${POSTGRES_PASSWORD:-ubrankovics}@postgres:5432/${POSTGRES_DB:-ubrankovics}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3101}
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3101}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3101,https://crm.local:8500}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://crm.local:8500}
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_USE_TLS: "false"
@@ -61,6 +61,18 @@ services:
         condition: service_healthy
     ports:
       - "3101:3000"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+    depends_on:
+      frontend:
+        condition: service_started
+    ports:
+      - "8500:8500"
     restart: unless-stopped
 
 volumes:
