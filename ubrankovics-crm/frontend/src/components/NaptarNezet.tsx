@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
-import { api, NaptarEsemeny } from "@/lib/api";
+import Modal from "@/components/Modal";
+import { Feladat, api, NaptarEsemeny } from "@/lib/api";
 
 const HONAPOK = ["Január", "Február", "Március", "Április", "Május", "Június", "Július", "Augusztus", "Szeptember", "Október", "November", "December"];
 const NAPOK = ["Hé", "Ke", "Sze", "Cs", "Pé", "Szo", "Va"];
@@ -38,6 +39,8 @@ export default function NaptarNezet({ projektId }: { projektId?: number }) {
   const [esemenyek, setEsemenyek] = useState<NaptarEsemeny[]>([]);
   const [error, setError] = useState("");
   const [kivalasztott, setKivalasztott] = useState<string | null>(null);
+  const [reszlet, setReszlet] = useState<NaptarEsemeny | null>(null);
+  const [frissit, setFrissit] = useState(0);
 
   // A hónap rácsa hétfővel kezdődik, ezért a tartomány a teljes látható rácsot lefedi.
   const napok = useMemo(() => {
@@ -60,7 +63,7 @@ export default function NaptarNezet({ projektId }: { projektId?: number }) {
         setError("");
       })
       .catch((e) => setError(e.message));
-  }, [tol, ig, projektId]);
+  }, [tol, ig, projektId, frissit]);
 
   const napiEsemenyek = (nap: string) => esemenyek.filter((e) => e.kezdes <= nap && e.vege >= nap);
   const ma = iso(new Date());
@@ -162,26 +165,42 @@ export default function NaptarNezet({ projektId }: { projektId?: number }) {
               const ebben = d.getMonth() === ev.getMonth();
               const napi = napiEsemenyek(k);
               return (
-                <div key={k} role="gridcell" aria-selected={kivalasztott === k} className="contents">
+                <div
+                  key={k}
+                  role="gridcell"
+                  aria-selected={kivalasztott === k}
+                  onClick={() => setKivalasztott(kivalasztott === k ? null : k)}
+                  className={`min-h-14 cursor-pointer p-1 text-left align-top md:min-h-24 ${ebben ? "bg-[var(--card)]" : "bg-[var(--background)] text-[var(--muted)]"} ${kivalasztott === k ? "outline outline-2 -outline-offset-2 outline-[var(--primary)]" : ""}`}
+                >
                   <button
                     aria-label={`${k}, ${napi.length} esemény`}
                     aria-pressed={kivalasztott === k}
-                    onClick={() => setKivalasztott(kivalasztott === k ? null : k)}
-                    className={`min-h-14 p-1 text-left align-top md:min-h-24 ${ebben ? "bg-[var(--card)]" : "bg-[var(--background)] text-[var(--muted)]"} ${kivalasztott === k ? "outline outline-2 -outline-offset-2 outline-[var(--primary)]" : ""}`}
+                    onClick={(ev2) => {
+                      ev2.stopPropagation();
+                      setKivalasztott(kivalasztott === k ? null : k);
+                    }}
+                    className="flex w-full justify-end"
                   >
-                    <span className="flex justify-end">
-                      <span className={`flex h-5 min-w-5 items-center justify-center rounded-full text-xs font-semibold ${k === ma ? "bg-[var(--primary)] px-1 text-[var(--primary-foreground)]" : ""}`}>{d.getDate()}</span>
-                    </span>
-                    <span className="mt-0.5 block space-y-0.5 max-md:hidden">
-                      {napi.slice(0, 3).map((e) => (
-                        <span key={e.kulcs} className={`block truncate rounded border px-1 text-xs ${TIPUS_STIL[e.tipus]} ${e.kesz ? "line-through opacity-70" : ""}`}>
-                          {e.kezdes === e.vege || k === e.kezdes || d.getDay() === 1 ? rovidCim(e) : " "}
-                        </span>
-                      ))}
-                      {napi.length > 3 && <span className="block text-xs text-[var(--muted)]">+{napi.length - 3} további</span>}
-                    </span>
-                    {napi.length > 0 && <span className="mt-1 block text-xs font-medium md:hidden">{napi.length}</span>}
+                    <span className={`flex h-5 min-w-5 items-center justify-center rounded-full text-xs font-semibold ${k === ma ? "bg-[var(--primary)] px-1 text-[var(--primary-foreground)]" : ""}`}>{d.getDate()}</span>
                   </button>
+                  <div className="mt-0.5 space-y-0.5 max-md:hidden">
+                    {napi.slice(0, 3).map((e) => (
+                      <button
+                        key={e.kulcs}
+                        type="button"
+                        title={e.cim}
+                        onClick={(ev2) => {
+                          ev2.stopPropagation();
+                          setReszlet(e);
+                        }}
+                        className={`block w-full truncate rounded border px-1 text-left text-xs hover:brightness-95 ${TIPUS_STIL[e.tipus]} ${e.kesz ? "line-through opacity-70" : ""}`}
+                      >
+                        {e.kezdes === e.vege || k === e.kezdes || d.getDay() === 1 ? rovidCim(e) : " "}
+                      </button>
+                    ))}
+                    {napi.length > 3 && <span className="block text-xs text-[var(--muted)]">+{napi.length - 3} további</span>}
+                  </div>
+                  {napi.length > 0 && <span className="mt-1 block text-center text-xs font-medium md:hidden">{napi.length}</span>}
                 </div>
               );
             })}
@@ -197,13 +216,9 @@ export default function NaptarNezet({ projektId }: { projektId?: number }) {
           <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]" data-testid="naptar-lista">
             {lista.map((e) => (
               <li key={e.kulcs} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                <span className={e.kesz ? "line-through opacity-70" : ""}>
-                  {e.projekt_id && !projektId ? (
-                    <Link href={`/projektek/${e.projekt_id}`} className="text-[var(--primary)] hover:underline">{e.cim}</Link>
-                  ) : (
-                    e.cim
-                  )}
-                </span>
+                <button type="button" onClick={() => setReszlet(e)} className={`text-left text-[var(--primary)] hover:underline ${e.kesz ? "line-through opacity-70" : ""}`}>
+                  {e.cim}
+                </button>
                 <span className="text-[var(--muted)]">
                   {TIPUS_LABEL[e.tipus]} · {e.kezdes === e.vege ? e.kezdes : `${e.kezdes} – ${e.vege}`}
                 </span>
@@ -212,6 +227,66 @@ export default function NaptarNezet({ projektId }: { projektId?: number }) {
           </ul>
         )}
       </section>
+      {reszlet && (
+        <EsemenyModal
+          esemeny={reszlet}
+          onClose={() => setReszlet(null)}
+          onChanged={() => setFrissit((n) => n + 1)}
+        />
+      )}
     </div>
+  );
+}
+
+function EsemenyModal({ esemeny, onClose, onChanged }: { esemeny: NaptarEsemeny; onClose: () => void; onChanged: () => void }) {
+  const [feladat, setFeladat] = useState<Feladat | null>(null);
+  const [hiba, setHiba] = useState("");
+  const feladatId = esemeny.tipus === "feladat" ? Number(esemeny.kulcs.split("-")[1]) : null;
+
+  useEffect(() => {
+    if (feladatId == null) return;
+    api
+      .listFeladatok(esemeny.projekt_id ? { projekt_id: esemeny.projekt_id } : undefined)
+      .then((l) => setFeladat(l.find((f) => f.id === feladatId) ?? null))
+      .catch((e) => setHiba(e.message));
+  }, [feladatId, esemeny.projekt_id]);
+
+  async function kesz(on: boolean) {
+    if (!feladat) return;
+    try {
+      const f = await api.updateFeladat(feladat.id, { kesz: on });
+      setFeladat({ ...feladat, kesz: f.kesz });
+      onChanged();
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : "Hiba");
+    }
+  }
+
+  return (
+    <Modal title={TIPUS_LABEL[esemeny.tipus]} onClose={onClose}>
+      <div className="space-y-2 text-sm">
+        <p className="text-base font-semibold">{esemeny.cim}</p>
+        <p className="text-[var(--muted)]">{esemeny.kezdes === esemeny.vege ? esemeny.kezdes : `${esemeny.kezdes} – ${esemeny.vege}`}</p>
+        {hiba && <p role="alert" className="text-[var(--danger)]">{hiba}</p>}
+        {feladat && (
+          <>
+            {feladat.leiras && <p className="whitespace-pre-line">{feladat.leiras}</p>}
+            <p className="text-[var(--muted)]">
+              {feladat.felelos ? `Felelős: ${feladat.felelos.full_name}` : "Nincs felelős kijelölve"}
+              {feladat.projekt_nev ? ` · ${feladat.projekt_nev}` : ""}
+            </p>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={feladat.kesz} onChange={(e) => kesz(e.target.checked)} />
+              Kész
+            </label>
+          </>
+        )}
+        {esemeny.projekt_id && (
+          <Link href={`/projektek/${esemeny.projekt_id}`} className="inline-block rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-[var(--primary-foreground)]">
+            Projekt megnyitása
+          </Link>
+        )}
+      </div>
+    </Modal>
   );
 }

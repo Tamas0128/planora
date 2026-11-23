@@ -24,6 +24,14 @@ test.describe("Projekten belüli munka: feladatok, naptár, ütemező-admin", ()
     await page.getByRole("button", { name: "Naptár", exact: true }).click();
     await expect(page.getByTestId("naptar-lista").getByText(cim)).toBeVisible();
 
+    // a naptári feladat aktív: kattintásra modalban nyílik a részlet, ott késznek jelölhető
+    await page.getByTestId("naptar-lista").getByRole("button", { name: cim }).click();
+    const modal = page.getByRole("button", { name: "Bezárás" }).locator("xpath=ancestor::div[contains(@class,'max-w-md')]");
+    await expect(modal.getByText(cim)).toBeVisible();
+    await expect(modal.getByLabel("Kész")).not.toBeChecked();
+    await modal.getByRole("button", { name: "Bezárás" }).click();
+    await expect(modal).toHaveCount(0);
+
     await page.getByRole("button", { name: "Feladatok", exact: true }).click();
     await page.getByLabel(`${cim} kész`).click();
     await expect(page.getByLabel(`${cim} kész`)).toBeChecked();
