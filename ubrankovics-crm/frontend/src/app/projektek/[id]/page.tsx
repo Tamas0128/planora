@@ -1612,6 +1612,17 @@ function EmailKuldesPanel({ projektId, tetelIds }: { projektId: number; tetelIds
     }
   }
 
+  async function docxLetoltes() {
+    setError("");
+    setSiker("");
+    try {
+      await api.generalDocx(projektId, { tipus, tetel_ids: tetelIds, uzenet: uzenet || null });
+      setSiker("A dokumentum letöltődött (kijelölt tételek nélkül az összes tétel szerepel benne).");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hiba");
+    }
+  }
+
   async function kuldes(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -1673,6 +1684,13 @@ function EmailKuldesPanel({ projektId, tetelIds }: { projektId: number; tetelIds
             className="rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm"
           >
             Előnézet
+          </button>
+          <button
+            type="button"
+            onClick={docxLetoltes}
+            className="rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm"
+          >
+            DOCX generálása
           </button>
           <button
             type="submit"

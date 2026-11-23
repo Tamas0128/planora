@@ -30,6 +30,7 @@ from app.api import (
     vevoi_ajanlat,
     projektek,
     riportok,
+    sablonfajlok,
     tetelek,
     tipusok,
     torzsadatok,
@@ -112,6 +113,7 @@ app.include_router(leiratkozas.router, prefix="/api")
 app.include_router(elorejelzes.router, prefix="/api")
 app.include_router(atvetel.router, prefix="/api")
 app.include_router(naplo.router, prefix="/api")
+app.include_router(sablonfajlok.router, prefix="/api")
 app.include_router(naptar.router, prefix="/api")
 app.include_router(vevoi_ajanlat.router, prefix="/api")
 

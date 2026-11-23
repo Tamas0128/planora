@@ -864,6 +864,48 @@ export interface NaptarEsemeny {
   kesz: boolean;
 }
 
+
+export interface SablonInfo {
+  tipus: string;
+  feltoltve: boolean;
+  eredeti_nev?: string | null;
+  meret?: number | null;
+  feltoltve_at?: string | null;
+}
+export interface SablonLista {
+  sablonok: SablonInfo[];
+  valtozok: { nev: string; leiras: string }[];
+}
+
+/** POST-tal kért fájl letöltése (pl. generált dokumentum). */
+export async function downloadPost(path: string, body: unknown, fallbackName: string): Promise<void> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = "Letöltés sikertelen";
+    try {
+      const j = await res.json();
+      if (j?.detail) detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+    } catch {
+      // ignore
+    }
+    throw new Error(detail);
+  }
+  const m = /filename\*=UTF-8''([^;]+)/.exec(res.headers.get("Content-Disposition") || "");
+  const name = m ? decodeURIComponent(m[1]) : fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   async login(username: string, password: string, otp?: string): Promise<TokenResponse> {
     return request("/auth/login/json", {
@@ -1369,4 +1411,15 @@ export const api = {
 
   getNaptar: (tol: string, ig: string) => request<NaptarEsemeny[]>(`/naptar?tol=${tol}&ig=${ig}`),
   downloadNaptarIcs: () => downloadFile("/naptar/export.ics", "ubrankovics-naptar.ics"),
+
+  listSablonfajlok: () => request<SablonLista>("/sablonfajlok"),
+  uploadSablonfajl: (tipus: string, file: File) => {
+    const form = new FormData();
+    form.set("file", file);
+    return request<SablonInfo>(`/sablonfajlok/${tipus}`, { method: "POST", body: form });
+  },
+  deleteSablonfajl: (tipus: string) => request<void>(`/sablonfajlok/${tipus}`, { method: "DELETE" }),
+  downloadSablonfajl: (tipus: string, nev: string) => downloadFile(`/sablonfajlok/${tipus}/letoltes`, nev),
+  generalDocx: (projektId: number, body: { tipus: string; tetel_ids: number[]; uzenet?: string | null }) =>
+    downloadPost(`/projektek/${projektId}/dokumentum-docx`, body, "dokumentum.docx"),
 };

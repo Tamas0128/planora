@@ -144,5 +144,6 @@ Még nincs: Playwright e2e a CRM-bővítésekre.
 - **Elfelejtett jelszó**: e-mailes, 1 órás, egyszer használható token (csak hash tárolva); általános válasz (nem árul el fiókot).
 - **Kétlépcsős belépés (TOTP)**: `/fiok`, RFC 6238, újrajátszás-védelem, admin visszaállítás.
 - **Design**: címke-biztonsági háló, egységes fókusz/hiba/letiltott állapot, saját 404, reduced-motion, billentyűs húzás az ütemezésben.
-- **Nincs megvalósítva** (külső infrastruktúra kell): push/SMS értesítés, offline mód, QR-kód a 2FA beállításhoz.
+- **Nincs megvalósítva** (külső infrastruktúra kell): push/SMS értesítés, offline mód.
 - Tesztek: 107 backend, e2e `14-crm-modulok`, `15-projekt-eletciklus`.
+- **Feltölthető .docx sablonok** (Törzsadatok → Dokumentumsablonok): típusonként egy Word-sablon (admin/vezetés tölti fel), `{{ projekt_nev }}`-szerű helyőrzők és `{% for t in tetelek %}` ciklus (docxtpl); feltöltéskor próbakitöltés jelzi a hibás szintaxist; a projekt oldalán „DOCX generálása" tölti ki a projekt és a tételek adataival. Tesztek: `test_docx_sablon.py`, e2e `16-docx-sablon`. PDF-konverzió nincs.

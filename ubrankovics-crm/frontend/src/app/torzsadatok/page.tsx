@@ -4,10 +4,11 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import SablonFajlok from "@/components/SablonFajlok";
 import { Alvallalkozo, Munkanem, Szemely, Torzsadat, api } from "@/lib/api";
 
 export default function TorzsadatokPage() {
-  const [tab, setTab] = useState<"munkanem" | "torzsadat" | "alvallalkozo" | "szemely">("munkanem");
+  const [tab, setTab] = useState<"munkanem" | "torzsadat" | "alvallalkozo" | "szemely" | "sablon">("munkanem");
 
   return (
     <AppLayout>
@@ -19,6 +20,7 @@ export default function TorzsadatokPage() {
             ["torzsadat", "Legördülő listák"],
             ["alvallalkozo", "Alvállalkozók"],
             ["szemely", "Személyek"],
+            ["sablon", "Dokumentumsablonok"],
           ] as const
         ).map(([v, l]) => (
           <button
@@ -36,6 +38,7 @@ export default function TorzsadatokPage() {
       {tab === "torzsadat" && <TorzsadatTab />}
       {tab === "alvallalkozo" && <AlvallalkozokTab />}
       {tab === "szemely" && <SzemelyekTab />}
+      {tab === "sablon" && <SablonFajlok />}
     </AppLayout>
   );
 }

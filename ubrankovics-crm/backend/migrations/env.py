@@ -50,6 +50,7 @@ from app.models_projekt import (  # noqa: F401 — register project lifecycle mo
     Atvetel,
     NaploBejegyzes,
     NaploFoto,
+    SablonFajl,
     VevoiAjanlat,
 )
 from app.models_finance import (  # noqa: F401 — register finance models on Base.metadata

@@ -132,3 +132,17 @@ class AjanlatSor(Base):
     mennyiseg: Mapped[Decimal] = mapped_column(Numeric(12, 3), default=1)
     egyseg: Mapped[str | None] = mapped_column(String(30), nullable=True)
     egysegar: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0)
+
+
+class SablonFajl(Base):
+    """Feltöltött .docx dokumentumsablon (típusonként egy); a generálás {{ változó }} helyőrzőket tölt ki."""
+
+    __tablename__ = "sablon_fajlok"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tipus: Mapped[str] = mapped_column(String(30), unique=True)  # DokumentumSablonTipus értéke
+    utvonal: Mapped[str] = mapped_column(String(255))
+    eredeti_nev: Mapped[str] = mapped_column(String(255))
+    meret: Mapped[int] = mapped_column(Integer)
+    feltolto_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
