@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, Building2, CheckSquare, History, Home, LifeBuoy, LogOut, Mail, Menu, Search, Target, TrendingUp, UserCog, Users, Wallet, Wrench, X } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, CheckSquare, History, Home, LifeBuoy, LogOut, Mail, Menu, Search, Target, TrendingUp, UserCog, Users, Wallet, Wrench, X } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 import GlobalSearch from "@/components/GlobalSearch";
 import NotificationBell from "@/components/NotificationBell";
@@ -30,6 +30,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/projektek", label: "Projektek", icon: Building2 },
       { href: "/feladatok", label: "Feladatok", icon: CheckSquare },
+      { href: "/naptar", label: "Naptár", icon: CalendarDays },
       { href: "/jegyek", label: "Jegyek", icon: LifeBuoy },
     ],
   },

@@ -852,6 +852,17 @@ export async function openHtml(path: string): Promise<void> {
   const url = await blobUrl(path);
   window.open(url, "_blank", "noopener");
 }
+
+export interface NaptarEsemeny {
+  kulcs: string;
+  tipus: "feladat" | "atadas" | "tetel" | "garancia";
+  cim: string;
+  kezdes: string;
+  vege: string;
+  projekt_id?: number | null;
+  kesz: boolean;
+}
+
 export const api = {
   async login(username: string, password: string): Promise<TokenResponse> {
     return request("/auth/login/json", {
@@ -1342,4 +1353,7 @@ export const api = {
   setAjanlatAllapot: (verzioId: number, allapot: AjanlatAllapot) =>
     request<VevoiAjanlat>(`/ajanlat-verziok/${verzioId}/allapot`, { method: "PATCH", body: JSON.stringify({ allapot }) }),
   deleteAjanlat: (id: number) => request<void>(`/ajanlatok/${id}`, { method: "DELETE" }),
+
+  getNaptar: (tol: string, ig: string) => request<NaptarEsemeny[]>(`/naptar?tol=${tol}&ig=${ig}`),
+  downloadNaptarIcs: () => downloadFile("/naptar/export.ics", "ubrankovics-naptar.ics"),
 };

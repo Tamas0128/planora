@@ -25,6 +25,7 @@ from app.api import (
     gantt,
     kereses,
     naplo,
+    naptar,
     vevoi_ajanlat,
     projektek,
     riportok,
@@ -108,6 +109,7 @@ app.include_router(leiratkozas.router, prefix="/api")
 app.include_router(elorejelzes.router, prefix="/api")
 app.include_router(atvetel.router, prefix="/api")
 app.include_router(naplo.router, prefix="/api")
+app.include_router(naptar.router, prefix="/api")
 app.include_router(vevoi_ajanlat.router, prefix="/api")
 
 
