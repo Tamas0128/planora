@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
+    atvetel,
     audit,
     auth,
     cimkek,
@@ -23,6 +24,8 @@ from app.api import (
     finance,
     gantt,
     kereses,
+    naplo,
+    vevoi_ajanlat,
     projektek,
     riportok,
     tetelek,
@@ -34,6 +37,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app import models_finance  # noqa: F401 — register finance models on Base.metadata
 from app import models_ext  # noqa: F401 — register CRM extension models
+from app import models_projekt  # noqa: F401 — register project lifecycle models
 from app.services.ertesitesek import digest_utemezo
 from app.services.seed import (
     seed_admin,
@@ -102,6 +106,9 @@ app.include_router(egyedi_mezok.router, prefix="/api")
 app.include_router(jegyek.router, prefix="/api")
 app.include_router(leiratkozas.router, prefix="/api")
 app.include_router(elorejelzes.router, prefix="/api")
+app.include_router(atvetel.router, prefix="/api")
+app.include_router(naplo.router, prefix="/api")
+app.include_router(vevoi_ajanlat.router, prefix="/api")
 
 
 @app.get("/api/health")

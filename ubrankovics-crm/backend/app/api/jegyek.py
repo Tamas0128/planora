@@ -43,6 +43,7 @@ def list_jegyek(
     allapot: JegyAllapot | None = None,
     ugyfel_id: int | None = None,
     felelos_id: int | None = None,
+    projekt_id: int | None = None,
     nyitott: bool | None = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
@@ -52,6 +53,8 @@ def list_jegyek(
         q = q.filter(Jegy.allapot == allapot)
     if ugyfel_id is not None:
         q = q.filter(Jegy.ugyfel_id == ugyfel_id)
+    if projekt_id is not None:
+        q = q.filter(Jegy.projekt_id == projekt_id)
     if felelos_id is not None:
         q = q.filter(Jegy.felelos_id == felelos_id)
     if nyitott is True:

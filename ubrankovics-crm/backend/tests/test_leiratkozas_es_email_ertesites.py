@@ -20,6 +20,7 @@ def kuldott(monkeypatch):
         lista.append({"to": to, "subject": subject, "body": body, "headers": extra_headers or {}})
         return True
 
+    monkeypatch.setattr("app.config.settings.public_base_url", "http://localhost:3101")
     monkeypatch.setattr("app.api.cimkek.send_email", fake)
     monkeypatch.setattr("app.services.ertesitesek.send_email", fake)
     return lista

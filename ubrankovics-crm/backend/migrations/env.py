@@ -43,6 +43,14 @@ from app.models_ext import (  # noqa: F401 — register CRM extension models
     Jegy,
     Kampany,
 )
+from app.models_projekt import (  # noqa: F401 — register project lifecycle models
+    AjanlatSor,
+    AjanlatVerzio,
+    Atvetel,
+    NaploBejegyzes,
+    NaploFoto,
+    VevoiAjanlat,
+)
 from app.models_finance import (  # noqa: F401 — register finance models on Base.metadata
     AlvallalkozoiSzamla,
     BankEgyenleg,
