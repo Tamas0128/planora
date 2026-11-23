@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
+import KommunikacioNaplo from "@/components/KommunikacioNaplo";
 import { api, Ugyfel, UgyfelProjektLink } from "@/lib/api";
 
 const ALLAPOT_LABEL: Record<string, string> = {
@@ -95,6 +96,7 @@ export default function UgyfelDetailPage() {
           </div>
         </div>
 
+        <div className="space-y-4">
         <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
           <h2 className="mb-3 text-sm font-semibold">Projektek</h2>
           {projektek.length === 0 ? (
@@ -119,6 +121,10 @@ export default function UgyfelDetailPage() {
               ))}
             </ul>
           )}
+        </div>
+        <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
+          <KommunikacioNaplo ugyfelId={ugyfel.id} />
+        </div>
         </div>
       </div>
     </AppLayout>

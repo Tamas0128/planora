@@ -1,5 +1,6 @@
 import enum
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -731,3 +732,64 @@ class Feladat(Base):
     felelos: Mapped["User | None"] = relationship(foreign_keys=[felelos_id])
     letrehozo: Mapped["User"] = relationship(foreign_keys=[letrehozo_id])
     projekt: Mapped["Projekt | None"] = relationship()
+
+
+# ---------------------------------------------------------------------------
+# CRM: érdeklődők (lead) + kommunikációs napló
+# ---------------------------------------------------------------------------
+
+
+class ErdeklodesAllapot(str, enum.Enum):
+    UJ = "uj"
+    KAPCSOLATFELVETEL = "kapcsolatfelvetel"
+    AJANLAT = "ajanlat"
+    TARGYALAS = "targyalas"
+    NYERT = "nyert"
+    ELVESZETT = "elveszett"
+
+
+class KommunikacioTipus(str, enum.Enum):
+    HIVAS = "hivas"
+    EMAIL = "email"
+    TALALKOZO = "talalkozo"
+    MEGJEGYZES = "megjegyzes"
+
+
+class Erdeklodes(Base):
+    """Érdeklődő (lead) / értékesítési lehetőség. Pipeline-szakaszokon halad
+    végig; "nyert" állapotba konvertálva Ügyfél jön létre belőle."""
+
+    __tablename__ = "erdeklodok"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nev: Mapped[str] = mapped_column(String(255), index=True)
+    telefon: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    forras: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    allapot: Mapped[ErdeklodesAllapot] = mapped_column(Enum(ErdeklodesAllapot), default=ErdeklodesAllapot.UJ)
+    becsult_ertek: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    megjegyzes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    ugyfel_id: Mapped[int | None] = mapped_column(ForeignKey("ugyfelek.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    owner: Mapped["User | None"] = relationship()
+    ugyfel: Mapped["Ugyfel | None"] = relationship()
+
+
+class Kommunikacio(Base):
+    """Kommunikációs napló bejegyzés (hívás, e-mail, találkozó, megjegyzés) —
+    ügyfélhez VAGY érdeklődőhöz kötve."""
+
+    __tablename__ = "kommunikaciok"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ugyfel_id: Mapped[int | None] = mapped_column(ForeignKey("ugyfelek.id", ondelete="CASCADE"), nullable=True, index=True)
+    erdeklodes_id: Mapped[int | None] = mapped_column(ForeignKey("erdeklodok.id", ondelete="CASCADE"), nullable=True, index=True)
+    tipus: Mapped[KommunikacioTipus] = mapped_column(Enum(KommunikacioTipus))
+    datum: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    tartalom: Mapped[str] = mapped_column(Text)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User | None"] = relationship()

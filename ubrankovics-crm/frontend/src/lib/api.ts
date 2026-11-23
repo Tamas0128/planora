@@ -131,6 +131,61 @@ export interface Feladat {
   created_at: string;
 }
 
+export type ErdeklodesAllapot = "uj" | "kapcsolatfelvetel" | "ajanlat" | "targyalas" | "nyert" | "elveszett";
+
+export interface Erdeklodes {
+  id: number;
+  nev: string;
+  telefon?: string | null;
+  email?: string | null;
+  forras?: string | null;
+  allapot: ErdeklodesAllapot;
+  becsult_ertek?: string | null;
+  megjegyzes?: string | null;
+  owner_id?: number | null;
+  owner?: UserBrief | null;
+  ugyfel_id?: number | null;
+  created_at: string;
+}
+
+export interface PipelineSzakasz {
+  allapot: ErdeklodesAllapot;
+  darab: number;
+  ertek_osszesen: string;
+}
+
+export type KommunikacioTipus = "hivas" | "email" | "talalkozo" | "megjegyzes";
+
+export interface Kommunikacio {
+  id: number;
+  ugyfel_id?: number | null;
+  erdeklodes_id?: number | null;
+  tipus: KommunikacioTipus;
+  datum: string;
+  tartalom: string;
+  user?: UserBrief | null;
+}
+
+export interface ErtesitesItem {
+  tipus: string;
+  szint: string; // "lejart" | "kozeli"
+  cim: string;
+  reszlet?: string | null;
+  datum?: string | null;
+  link: string;
+}
+
+export interface UgyfelImportValasz {
+  letrehozva: number;
+  kihagyva_duplikatum: number;
+  hibas_sorok: string[];
+}
+
+export interface UgyfelDuplikatumCsoport {
+  ok: string;
+  ugyfelek: Ugyfel[];
+}
+
 export interface SzakaszMegoszlasItem {
   szakasz: string;
   tetel_szam: number;
@@ -876,6 +931,36 @@ export const api = {
   getPenzugyiOsszesito: () => request<PenzugyiOsszesito>("/riportok/penzugyi-osszesito"),
 
   kereses: (q: string) => request<KeresesResult[]>(`/kereses?q=${encodeURIComponent(q)}`),
+
+  listErdeklodok: () => request<Erdeklodes[]>("/erdeklodok"),
+  getPipeline: () => request<PipelineSzakasz[]>("/erdeklodok/pipeline"),
+  createErdeklodes: (body: Partial<Erdeklodes>) =>
+    request<Erdeklodes>("/erdeklodok", { method: "POST", body: JSON.stringify(body) }),
+  updateErdeklodes: (id: number, body: Partial<Erdeklodes>) =>
+    request<Erdeklodes>(`/erdeklodok/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteErdeklodes: (id: number) => request<void>(`/erdeklodok/${id}`, { method: "DELETE" }),
+  konvertalErdeklodes: (id: number) => request<Ugyfel>(`/erdeklodok/${id}/konverzio`, { method: "POST" }),
+
+  listKommunikacio: (params: { ugyfel_id?: number; erdeklodes_id?: number }) => {
+    const qs = new URLSearchParams();
+    if (params.ugyfel_id != null) qs.set("ugyfel_id", String(params.ugyfel_id));
+    if (params.erdeklodes_id != null) qs.set("erdeklodes_id", String(params.erdeklodes_id));
+    return request<Kommunikacio[]>(`/kommunikacio?${qs}`);
+  },
+  createKommunikacio: (body: { ugyfel_id?: number; erdeklodes_id?: number; tipus: KommunikacioTipus; tartalom: string }) =>
+    request<Kommunikacio>("/kommunikacio", { method: "POST", body: JSON.stringify(body) }),
+  deleteKommunikacio: (id: number) => request<void>(`/kommunikacio/${id}`, { method: "DELETE" }),
+
+  listErtesitesek: () => request<ErtesitesItem[]>("/ertesitesek"),
+
+  importUgyfelek: (file: File) => {
+    const form = new FormData();
+    form.set("file", file);
+    return request<UgyfelImportValasz>("/ugyfelek/import", { method: "POST", body: form });
+  },
+  listUgyfelDuplikatumok: () => request<UgyfelDuplikatumCsoport[]>("/ugyfelek/duplikatumok"),
+  egyesitUgyfelek: (celId: number, forrasId: number) =>
+    request<Ugyfel>(`/ugyfelek/${celId}/egyesites`, { method: "POST", body: JSON.stringify({ forras_id: forrasId }) }),
 
   elemezBankkivonat: (file: File) => {
     const form = new FormData();

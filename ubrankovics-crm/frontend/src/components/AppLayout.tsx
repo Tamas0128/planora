@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, Building2, CheckSquare, Home, LogOut, Search, UserCog, Users, Wallet, Wrench } from "lucide-react";
+import { BarChart3, Building2, CheckSquare, Home, LogOut, Search, Target, UserCog, Users, Wallet, Wrench } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 import GlobalSearch from "@/components/GlobalSearch";
+import NotificationBell from "@/components/NotificationBell";
 
 const NAV = [
   { href: "/", label: "Kezdőlap", icon: Home },
+  { href: "/erdeklodok", label: "Érdeklődők", icon: Target },
   { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
   { href: "/projektek", label: "Projektek", icon: Building2 },
   { href: "/feladatok", label: "Feladatok", icon: CheckSquare },
@@ -68,6 +70,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </span>
             <span className="text-xs opacity-60">Ctrl+K</span>
           </button>
+          <div className="mb-4">
+            <NotificationBell />
+          </div>
           <nav className="space-y-1">
             {[...NAV, ...(user?.role === "admin" ? ADMIN_NAV : [])].map(({ href, label, icon: Icon }) => {
               const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);

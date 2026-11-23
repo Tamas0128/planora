@@ -6,6 +6,8 @@ from pydantic import BaseModel, EmailStr
 
 from app.models import (
     AjanlatkeresAllapot,
+    ErdeklodesAllapot,
+    KommunikacioTipus,
     DokumentumSablonTipus,
     MunkanemCsoport,
     ProjektAllapot,
@@ -780,3 +782,104 @@ class BankkivonatJovahagyottTetel(BaseModel):
 class BankkivonatJovahagyasValasz(BaseModel):
     feldolgozott_szama: int
     erintett_projektek: list[int]
+
+
+# --- Érdeklődő (lead) + pipeline -----------------------------------------------
+
+
+class ErdeklodesCreate(BaseModel):
+    nev: str
+    telefon: Optional[str] = None
+    email: Optional[str] = None
+    forras: Optional[str] = None
+    allapot: ErdeklodesAllapot = ErdeklodesAllapot.UJ
+    becsult_ertek: Optional[Decimal] = None
+    megjegyzes: Optional[str] = None
+    owner_id: Optional[int] = None
+
+
+class ErdeklodesUpdate(BaseModel):
+    nev: Optional[str] = None
+    telefon: Optional[str] = None
+    email: Optional[str] = None
+    forras: Optional[str] = None
+    allapot: Optional[ErdeklodesAllapot] = None
+    becsult_ertek: Optional[Decimal] = None
+    megjegyzes: Optional[str] = None
+    owner_id: Optional[int] = None
+
+
+class ErdeklodesResponse(BaseModel):
+    id: int
+    nev: str
+    telefon: Optional[str]
+    email: Optional[str]
+    forras: Optional[str]
+    allapot: ErdeklodesAllapot
+    becsult_ertek: Optional[Decimal]
+    megjegyzes: Optional[str]
+    owner_id: Optional[int]
+    owner: Optional[UserBrief]
+    ugyfel_id: Optional[int]
+    created_at: datetime
+
+    model_config = _from_attrs
+
+
+class PipelineSzakasz(BaseModel):
+    allapot: ErdeklodesAllapot
+    darab: int
+    ertek_osszesen: Decimal
+
+
+# --- Kommunikációs napló ---------------------------------------------------------
+
+
+class KommunikacioCreate(BaseModel):
+    ugyfel_id: Optional[int] = None
+    erdeklodes_id: Optional[int] = None
+    tipus: KommunikacioTipus
+    tartalom: str
+    datum: Optional[datetime] = None
+
+
+class KommunikacioResponse(BaseModel):
+    id: int
+    ugyfel_id: Optional[int]
+    erdeklodes_id: Optional[int]
+    tipus: KommunikacioTipus
+    datum: datetime
+    tartalom: str
+    user: Optional[UserBrief]
+
+    model_config = _from_attrs
+
+
+# --- Értesítések -------------------------------------------------------------------
+
+
+class ErtesitesItem(BaseModel):
+    tipus: str  # "feladat" | "szamla"
+    szint: str  # "lejart" | "kozeli"
+    cim: str
+    reszlet: Optional[str] = None
+    datum: Optional[date] = None
+    link: str
+
+
+# --- Import / egyesítés ---------------------------------------------------------------
+
+
+class UgyfelImportValasz(BaseModel):
+    letrehozva: int
+    kihagyva_duplikatum: int
+    hibas_sorok: list[str]
+
+
+class UgyfelDuplikatumCsoport(BaseModel):
+    ok: str  # "azonos nev" | "azonos email"
+    ugyfelek: list[UgyfelResponse]
+
+
+class UgyfelEgyesitesRequest(BaseModel):
+    forras_id: int

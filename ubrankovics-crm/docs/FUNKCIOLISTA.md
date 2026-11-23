@@ -98,3 +98,17 @@ Jelenleg nincs ismert hiányosság a funkciólistához képest — az előző k�
 ## Backend API-felszín
 
 Minden fenti funkcióhoz tartozó végpont regisztrálva és elérhető, beleértve az újakat is: `dokumentumok` (upload/letöltés/törlés), `feladatok`, `riportok/ertekesitesi-allapot`, `riportok/penzugyi-osszesito`, `kereses`, `ugyfelek/{id}/projektek`, `alvallalkozok/{id}/{tetelek,tig,szamlak}`, `szemelyek/{id}/{szerepek,tetelek}` — a korábbi lista (`auth`, `ugyfelek`, `projektek` + al-erőforrásai, `munkanemek`, `torzsadatok`, `berkoltsegek`, `cashflow/*`) mellett.
+
+---
+
+## 10. CRM-bővítés (2026-11-23) — KÉSZ
+
+Forrás: a "PLANora CRM funkciók gyűjtése" dokumentum hiánylistája; sorrend: lead+pipeline → kommunikációs napló → értesítések → import/export. Backend: 76/76 pytest zöld (16 új teszt: `tests/test_crm_funkciok.py`); élő böngészős próba a futó stacken.
+
+- **Érdeklődők + pipeline (`/erdeklodok`)**: lead felvétele (név, telefon, e-mail, forrás, becsült érték, felelős), kanban nézet 6 szakasszal (Új → Kapcsolatfelvétel → Ajánlat → Tárgyalás → Nyert / Elveszett), léptetés húzással vagy legördülővel, oszloponként darabszám és érték. "Ügyféllé alakítás": Ügyfél jön létre, a lead "nyert" lesz, a kommunikációs napló átkerül.
+- **Kommunikációs napló**: hívás / e-mail / találkozó / megjegyzés időrendben, szerzővel; az ügyfélkártyán és az érdeklődő kártyán is.
+- **Értesítések**: oldalsáv "Értesítések" gomb számlálóval (percenként frissül) — a saját lejárt és 2 napon belüli feladatok; pénzügyi szerepkörnek (és adminnak) a lejárt ügyfél- és alvállalkozói számlák. Élőben számolt, nincs külön tábla; e-mailes emlékeztető nincs.
+- **Import/export**: ügyféllista export CSV-be (BOM-mal, `;` elválasztó) és Excelbe; import .csv/.xlsx fájlból (oszlopok: nev, telefon, email) duplikátum-kihagyással és hibás sorok jelzésével.
+- **Duplikátum-keresés és egyesítés**: azonos név / azonos e-mail csoportok; egyesítéskor a projektek, napló és érdeklődők átkerülnek, a hiányzó elérhetőség átvétele után a forrás ügyfél törlődik.
+
+Még nincs: marketing/szegmentálás, ügyfélszolgálati jegyek, előrejelzés, egyedi mezők, auditnapló, e-mailes értesítés, Playwright e2e a fenti modulokra.

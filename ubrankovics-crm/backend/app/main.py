@@ -8,6 +8,10 @@ from app.api import (
     bankkivonat,
     dokumentumok,
     dokumentumok_email,
+    erdeklodok,
+    ertesitesek,
+    kommunikacio,
+    ugyfel_adatok,
     feladatok,
     finance,
     gantt,
@@ -61,6 +65,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api")
+app.include_router(ugyfel_adatok.router, prefix="/api")  # /ugyfelek/{id} elé kell
 app.include_router(ugyfelek.router, prefix="/api")
 app.include_router(projektek.router, prefix="/api")
 app.include_router(tetelek.router, prefix="/api")
@@ -75,6 +80,9 @@ app.include_router(feladatok.router, prefix="/api")
 app.include_router(riportok.router, prefix="/api")
 app.include_router(kereses.router, prefix="/api")
 app.include_router(bankkivonat.router, prefix="/api")
+app.include_router(erdeklodok.router, prefix="/api")
+app.include_router(kommunikacio.router, prefix="/api")
+app.include_router(ertesitesek.router, prefix="/api")
 
 
 @app.get("/api/health")
