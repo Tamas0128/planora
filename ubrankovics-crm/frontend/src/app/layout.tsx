@@ -15,7 +15,7 @@ const raleway = Raleway({
 });
 
 export const metadata: Metadata = {
-  title: "Ubrankovics CRM",
+  title: { default: "Ubrankovics CRM", template: "%s – Ubrankovics CRM" },
   description: "Ügyfél-, projekt- és tételkövetés",
 };
 

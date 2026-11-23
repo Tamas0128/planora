@@ -157,7 +157,7 @@ export default function UgyfelekPage() {
         </form>
       )}
 
-      <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+      <div tabIndex={0} className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
         <table className="w-full text-sm">
           <thead className="bg-black/5 text-left">
             <tr>

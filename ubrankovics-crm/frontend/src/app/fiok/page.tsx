@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import QrKod from "@/components/QrKod";
 import { api, UserResponse } from "@/lib/api";
 
 const INPUT = "w-full rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm";
@@ -82,10 +83,11 @@ export default function FiokPage() {
         ) : setup ? (
           <form onSubmit={bekapcsol} className="space-y-3">
             <p className="text-sm">
-              Add hozzá a fiókot a hitelesítő alkalmazásodhoz (pl. Google Authenticator, Aegis) a kulcs kézi megadásával, majd írd be a megjelenő 6 jegyű kódot.
+              Olvasd be a QR-kódot a hitelesítő alkalmazással (pl. Google Authenticator, Aegis), majd írd be a megjelenő 6 jegyű kódot. A kétlépcsős belépés opcionális, bármikor kikapcsolhatod.
             </p>
+            <QrKod ertek={setup.otpauth_uri} felirat="QR-kód a hitelesítő alkalmazás beállításához" />
             <div className="space-y-1">
-              <label htmlFor="tfa-kulcs" className="text-sm font-medium">Titkos kulcs</label>
+              <label htmlFor="tfa-kulcs" className="text-sm font-medium">Ha nem tudod beolvasni: titkos kulcs kézi megadáshoz</label>
               <input id="tfa-kulcs" readOnly className={`${INPUT} font-mono`} value={setup.secret} onFocus={(e) => e.currentTarget.select()} data-testid="tfa-kulcs" />
             </div>
             <div className="space-y-1">

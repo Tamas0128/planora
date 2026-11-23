@@ -154,14 +154,25 @@ aside :where(a, button):focus-visible {
   background: color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
-/* Aki csökkentett mozgást kér, annak nincs animáció és sima görgetés sem. */
+/* Csökkentett mozgás: a térbeli mozgás (csúszás, pattogás, sima görgetés) megszűnik, de az
+   állapotváltás visszajelzése megmarad: a szín-, keret- és átlátszóság-átmenet rövid, a
+   betöltésjelző lassan, de tovább forog, hogy látszódjon: dolgozik a rendszer. */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    transition-property: color, background-color, border-color, opacity, visibility;
+    transition-duration: 0.12s;
+  }
+  .animate-pulse,
+  .animate-bounce,
+  .animate-ping {
+    animation: none;
+  }
+  .animate-spin {
+    animation-duration: 2.5s;
   }
 }

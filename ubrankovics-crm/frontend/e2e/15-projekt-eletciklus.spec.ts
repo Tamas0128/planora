@@ -116,6 +116,10 @@ test.describe("Projekt életciklus", () => {
 
     await page.goto("/naptar");
     await expect(page.getByRole("heading", { name: "Naptár" })).toBeVisible();
+    await expect(page).toHaveTitle(/^Naptár – Ubrankovics CRM$/);
+    expect(await page.getByRole("row").count()).toBeGreaterThanOrEqual(5); // fejléc + a hónap hetei
+    expect((await page.getByRole("gridcell").count()) % 7).toBe(0);
+
     await expect(page.getByTestId("naptar-lista").getByText(cim)).toBeVisible();
 
     const [letoltes] = await Promise.all([
@@ -149,6 +153,7 @@ test.describe("Projekt életciklus", () => {
     await page.goto("/fiok");
     await expect(page.getByRole("heading", { name: "Fiókom" })).toBeVisible();
     await page.getByRole("button", { name: "Beállítás indítása" }).click();
+    await expect(page.getByRole("img", { name: /QR-kód/ })).toBeVisible();
     await expect(page.getByTestId("tfa-kulcs")).toHaveValue(/^[A-Z2-7]{32}$/);
     // a bekapcsolást szándékosan nem végezzük el: az admin belépés a többi tesztben kód nélkül működik
   });

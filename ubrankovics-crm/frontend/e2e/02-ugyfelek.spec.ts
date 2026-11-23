@@ -16,7 +16,7 @@ test.describe("Ügyfelek", () => {
     await page.getByPlaceholder("Név").fill(nev);
     await page.getByPlaceholder("Telefon").fill("+36201112233");
     await page.getByPlaceholder("E-mail").fill("e2e@example.com");
-    await page.getByRole("button", { name: "Mentés" }).click();
+    await page.getByRole("button", { name: "Mentés" }).first().click();
 
     await expect(page.locator(`text=${nev}`)).toBeVisible();
     await shot(page, "ugyfelek-uj-letrehozva");
@@ -31,7 +31,7 @@ test.describe("Ügyfelek", () => {
 
     const nameInput = page.locator("input").first();
     await nameInput.fill(`${nev} (szerkesztve)`);
-    await page.getByRole("button", { name: "Mentés" }).click();
+    await page.getByRole("button", { name: "Mentés" }).first().click();
     await expect(page.getByRole("heading", { name: `${nev} (szerkesztve)` })).toBeVisible();
   });
 
@@ -40,7 +40,7 @@ test.describe("Ügyfelek", () => {
     await page.goto("/ugyfelek");
     await page.getByRole("button", { name: "Új ügyfél" }).click();
     await page.getByPlaceholder("Név").fill(nev);
-    await page.getByRole("button", { name: "Mentés" }).click();
+    await page.getByRole("button", { name: "Mentés" }).first().click();
     await expect(page.locator(`text=${nev}`)).toBeVisible();
 
     await page.getByRole("link", { name: nev }).click();

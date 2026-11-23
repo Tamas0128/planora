@@ -1355,7 +1355,8 @@ export const api = {
     return request<NaploBejegyzes>(`/naplo/${id}/fotok`, { method: "POST", body: form });
   },
   deleteNaploFoto: (fotoId: number) => request<void>(`/naplo-fotok/${fotoId}`, { method: "DELETE" }),
-  naploFotoUrl: (fotoId: number) => blobUrl(`/naplo-fotok/${fotoId}`),
+  naploFotoUrl: (fotoId: number, thumb = false) => blobUrl(`/naplo-fotok/${fotoId}${thumb ? "?thumb=true" : ""}`),
+  openNaploFoto: async (fotoId: number) => { window.open(await blobUrl(`/naplo-fotok/${fotoId}`), "_blank", "noopener"); },
 
   listAjanlatok: (projektId: number) => request<VevoiAjanlat[]>(`/projektek/${projektId}/ajanlatok`),
   createAjanlat: (projektId: number, body: AjanlatVerzioInput & { cim: string }) =>

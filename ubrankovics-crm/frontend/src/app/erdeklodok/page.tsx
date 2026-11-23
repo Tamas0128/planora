@@ -131,7 +131,7 @@ export default function ErdeklodokPage() {
         </form>
       )}
 
-      <div className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${SZAKASZOK.length}, minmax(13rem, 1fr))` }}>
+      <div tabIndex={0} className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${SZAKASZOK.length}, minmax(13rem, 1fr))` }}>
         {SZAKASZOK.map(({ allapot, label }) => {
           const oszlop = lista.filter((l) => l.allapot === allapot);
           const p = pipeline.find((x) => x.allapot === allapot);

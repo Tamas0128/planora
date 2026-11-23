@@ -1,10 +1,12 @@
 """Építési napló: napi bejegyzések fotókkal (mobilról kamerával is)."""
 
+import io
 import os
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from PIL import Image, ImageOps
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
@@ -86,10 +88,26 @@ def delete_naplo(bejegyzes_id: int, db: Session = Depends(get_db), user: User = 
     db.commit()
 
 
+def _thumb_name(name: str) -> str:
+    return f"thumb-{name}.jpg"
+
+
 def _remove_file(name: str) -> None:
+    for n in (name, _thumb_name(name)):
+        try:
+            os.remove(os.path.join(settings.upload_dir, n))
+        except OSError:
+            pass
+
+
+def _make_thumb(content: bytes, stored: str) -> None:
+    """320 px-es JPEG miniatűr; ha a formátum nem olvasható (pl. HEIC), nincs miniatűr, és az eredeti szolgál."""
     try:
-        os.remove(os.path.join(settings.upload_dir, name))
-    except OSError:
+        with Image.open(io.BytesIO(content)) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+            im.thumbnail((320, 320))
+            im.save(os.path.join(settings.upload_dir, _thumb_name(stored)), "JPEG", quality=78)
+    except Exception:  # noqa: BLE001 — a miniatűr csak optimalizáció
         pass
 
 
@@ -111,6 +129,7 @@ async def upload_foto(
     stored = f"naplo-{uuid.uuid4()}{ext}"
     with open(os.path.join(settings.upload_dir, stored), "wb") as fh:
         fh.write(content)
+    _make_thumb(content, stored)
     db.add(
         NaploFoto(
             bejegyzes_id=b.id,
@@ -127,10 +146,14 @@ async def upload_foto(
 
 
 @router.get("/naplo-fotok/{foto_id}")
-def get_foto(foto_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def get_foto(foto_id: int, thumb: bool = False, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     f = db.query(NaploFoto).get(foto_id)
     if not f:
         raise HTTPException(status_code=404, detail="Fotó not found")
+    if thumb:
+        tpath = os.path.join(settings.upload_dir, _thumb_name(f.utvonal))
+        if os.path.exists(tpath):
+            return FileResponse(tpath, media_type="image/jpeg")
     path = os.path.join(settings.upload_dir, f.utvonal)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="A fájl nem található")

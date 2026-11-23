@@ -58,7 +58,7 @@ export default function ElorejelzesPage() {
       </p>
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
 
-      <div className="mb-6 overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+      <div tabIndex={0} className="mb-6 overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
         <table className="w-full text-sm">
           <thead className="bg-black/5 text-left">
             <tr>
@@ -113,7 +113,7 @@ export default function ElorejelzesPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
+        <div tabIndex={0} className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
           <h2 className="px-3 pt-3 text-sm font-semibold">Teljesítmény felelősönként</h2>
           <table className="mt-2 w-full text-sm">
             <thead className="bg-black/5 text-left">

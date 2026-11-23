@@ -12,7 +12,7 @@ function Foto({ id, nev, onDelete }: { id: number; nev?: string | null; onDelete
   useEffect(() => {
     let url: string | null = null;
     let eldobva = false;
-    api.naploFotoUrl(id).then((u) => {
+    api.naploFotoUrl(id, true).then((u) => {
       if (eldobva) URL.revokeObjectURL(u);
       else {
         url = u;
@@ -27,8 +27,10 @@ function Foto({ id, nev, onDelete }: { id: number; nev?: string | null; onDelete
   return (
     <div className="group relative h-24 w-24 overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-black/5">
       {src && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={nev || "Építési fotó"} className="h-full w-full object-cover" />
+        <button type="button" onClick={() => api.openNaploFoto(id)} aria-label={`Fotó megnyitása teljes méretben: ${nev || "építési fotó"}`} className="h-full w-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt={nev || "Építési fotó"} className="h-full w-full object-cover" />
+        </button>
       )}
       <button
         type="button"

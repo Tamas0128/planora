@@ -146,7 +146,7 @@ function AjanlatKartya({ a, onChange }: { a: VevoiAjanlat; onChange: () => void 
               {elozo && <VerzioDiff elozo={elozo} mostani={v} />}
               {v === utolso && (
                 <>
-                  <div className="overflow-x-auto">
+                  <div tabIndex={0} className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                       <thead className="text-xs text-[var(--muted)]">
                         <tr>

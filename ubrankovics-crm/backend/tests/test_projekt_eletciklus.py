@@ -161,3 +161,21 @@ def test_ajanlat_verziozas(client, admin_headers):
 
     assert len(client.get(f"/api/projektek/{pid}/ajanlatok", headers=admin_headers).json()) == 1
     assert client.delete(f"/api/ajanlatok/{a['id']}", headers=admin_headers).status_code == 204
+
+
+def test_naplo_foto_miniatur(client, admin_headers):
+    from PIL import Image
+
+    pid = _projekt(client, admin_headers, ugyfellel=False)
+    b = client.post(f"/api/projektek/{pid}/naplo", json={"datum": date.today().isoformat(), "munka": "x"}, headers=admin_headers).json()
+    buf = io.BytesIO()
+    Image.new("RGB", (1600, 1200), (200, 100, 50)).save(buf, "PNG")
+    original = buf.getvalue()
+    up = client.post(f"/api/naplo/{b['id']}/fotok", files={"file": ("nagy.png", io.BytesIO(original), "image/png")}, headers=admin_headers)
+    fid = up.json()["fotok"][0]["id"]
+
+    thumb = client.get(f"/api/naplo-fotok/{fid}?thumb=true", headers=admin_headers)
+    assert thumb.status_code == 200 and thumb.headers["content-type"] == "image/jpeg"
+    assert Image.open(io.BytesIO(thumb.content)).size[0] <= 320
+    assert client.get(f"/api/naplo-fotok/{fid}", headers=admin_headers).content == original
+    assert client.delete(f"/api/naplo-fotok/{fid}", headers=admin_headers).status_code == 204

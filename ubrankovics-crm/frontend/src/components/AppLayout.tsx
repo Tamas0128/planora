@@ -80,6 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+
   // Mobilon az oldalsáv off-canvas fiók: útvonalváltáskor és Esc-re bezárul.
   const [lastPath, setLastPath] = useState(pathname);
   if (pathname !== lastPath) {

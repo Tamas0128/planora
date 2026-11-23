@@ -14,7 +14,7 @@ test.describe("Hitelesítés", () => {
     await inputs.nth(0).fill("admin");
     await inputs.nth(1).fill("rossz-jelszo-xyz");
     await page.getByRole("button", { name: "Bejelentkezés" }).click();
-    await expect(page.locator("text=/sikertelen|Hiba|Invalid credentials/i")).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("text=/sikertelen|Hiba|Invalid credentials|Hibás felhasználónév/i")).toBeVisible({ timeout: 10_000 });
     await expect(page).toHaveURL(/\/login/);
     await shot(page, "login-failure-error");
   });

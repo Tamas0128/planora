@@ -198,7 +198,7 @@ function CashflowTab() {
         <div className="mb-4">
           <CashflowChart bucketek={data.bucketek} />
         </div>
-        <div className={`${cardCls} overflow-x-auto`}>
+        <div tabIndex={0} className={`${cardCls} overflow-x-auto`}>
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--border)] text-left text-[var(--muted)]">
               <tr>
