@@ -180,7 +180,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
         <div className="space-y-2 border-t border-white/10 pt-3 text-sm">
-          {user && <div className="px-4">{user.full_name}</div>}
+          {user && (
+            <Link
+              href="/fiok"
+              aria-current={pathname === "/fiok" ? "page" : undefined}
+              className="block px-4 py-2 hover:bg-[var(--sidebar-hover)] md:py-1"
+            >
+              {user.full_name}
+            </Link>
+          )}
           <button
             onClick={logout}
             className="flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-[var(--sidebar-hover)] md:py-2"

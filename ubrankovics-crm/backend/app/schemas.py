@@ -14,6 +14,7 @@ class TokenResponse(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+    otp: Optional[str] = None
 
 
 class RefreshRequest(BaseModel):
@@ -50,5 +51,6 @@ class UserResponse(BaseModel):
     full_name: str
     role: UserRole
     is_active: bool
+    totp_enabled: bool = False
 
     model_config = {"from_attributes": True}

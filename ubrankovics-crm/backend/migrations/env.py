@@ -43,6 +43,7 @@ from app.models_ext import (  # noqa: F401 — register CRM extension models
     Jegy,
     Kampany,
 )
+from app.models_auth import JelszoVisszaallitas  # noqa: F401
 from app.models_projekt import (  # noqa: F401 — register project lifecycle models
     AjanlatSor,
     AjanlatVerzio,

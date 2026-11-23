@@ -19,6 +19,7 @@ export interface KeresesResult {
 }
 
 export interface UserResponse extends UserBrief {
+  totp_enabled?: boolean;
   username: string;
   email: string;
   is_active: boolean;
@@ -864,12 +865,23 @@ export interface NaptarEsemeny {
 }
 
 export const api = {
-  async login(username: string, password: string): Promise<TokenResponse> {
+  async login(username: string, password: string, otp?: string): Promise<TokenResponse> {
     return request("/auth/login/json", {
       method: "POST",
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, otp: otp || undefined }),
     });
   },
+  elfelejtettJelszo: (azonosito: string) =>
+    request<{ uzenet: string }>("/auth/elfelejtett-jelszo", { method: "POST", body: JSON.stringify({ azonosito }) }),
+  ujJelszo: (token: string, password: string) =>
+    request<{ uzenet: string }>("/auth/uj-jelszo", { method: "POST", body: JSON.stringify({ token, password }) }),
+  tfaBeallitas: () => request<{ secret: string; otpauth_uri: string }>("/auth/2fa/beallitas", { method: "POST" }),
+  tfaBekapcsolas: (code: string) =>
+    request<{ totp_enabled: boolean }>("/auth/2fa/bekapcsolas", { method: "POST", body: JSON.stringify({ code }) }),
+  tfaKikapcsolas: (password: string, code: string) =>
+    request<{ totp_enabled: boolean }>("/auth/2fa/kikapcsolas", { method: "POST", body: JSON.stringify({ password, code }) }),
+  tfaAdminVisszaallitas: (userId: number) =>
+    request<{ totp_enabled: boolean }>(`/auth/users/${userId}/2fa-visszaallitas`, { method: "POST" }),
   me: () => request<UserResponse>("/auth/me"),
   usersDirectory: () => request<UserBrief[]>("/auth/users/directory"),
   listUsers: () => request<UserResponse[]>("/auth/users"),

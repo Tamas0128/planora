@@ -11,6 +11,7 @@ from app.api import (
     cimkek,
     egyedi_mezok,
     elorejelzes,
+    fiok,
     jegyek,
     leiratkozas,
     bankkivonat,
@@ -39,6 +40,7 @@ from app.database import SessionLocal
 from app import models_finance  # noqa: F401 — register finance models on Base.metadata
 from app import models_ext  # noqa: F401 — register CRM extension models
 from app import models_projekt  # noqa: F401 — register project lifecycle models
+from app import models_auth  # noqa: F401 — register auth models
 from app.services.ertesitesek import digest_utemezo
 from app.services.seed import (
     seed_admin,
@@ -83,6 +85,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api")
+app.include_router(fiok.router, prefix="/api")
 app.include_router(ugyfel_adatok.router, prefix="/api")  # /ugyfelek/{id} elé kell
 app.include_router(ugyfelek.router, prefix="/api")
 app.include_router(projektek.router, prefix="/api")

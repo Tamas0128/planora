@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.core import totp
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -55,24 +56,32 @@ def _issue_tokens(user: User) -> TokenResponse:
         refresh_token=create_refresh_token(token_data),
     )
 
+def _authenticate(db: Session, username: str, password: str, otp: str | None) -> User:
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not verify_password(password, user.hashed_password) or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if user.totp_enabled and user.totp_secret:
+        if not otp:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="otp_required")
+        step = totp.verify(user.totp_secret, otp, last_step=user.totp_utolso_lepes or 0)
+        if step is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Hibás vagy lejárt hitelesítő kód")
+        user.totp_utolso_lepes = step
+        db.commit()
+    return user
+
 
 @router.post("/login", response_model=TokenResponse)
 def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     _check_login_rate(request)
-    user = db.query(User).filter(User.username == form.username).first()
-    if not user or not verify_password(form.password, user.hashed_password) or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return _issue_tokens(user)
+    # az OAuth2 űrlapos belépésnek nincs OTP mezője; a kétlépcsős fiókok a /login/json-t használják
+    return _issue_tokens(_authenticate(db, form.username, form.password, None))
 
 
 @router.post("/login/json", response_model=TokenResponse)
 def login_json(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     _check_login_rate(request)
-    user = db.query(User).filter(User.username == body.username).first()
-    if not user or not verify_password(body.password, user.hashed_password) or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return _issue_tokens(user)
-
+    return _issue_tokens(_authenticate(db, body.username, body.password, body.otp))
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(body: RefreshRequest, db: Session = Depends(get_db)):
