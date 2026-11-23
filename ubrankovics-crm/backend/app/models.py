@@ -7,6 +7,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
@@ -194,6 +195,9 @@ class Projekt(Base):
     allapot: Mapped[ProjektAllapot] = mapped_column(Enum(ProjektAllapot), default=ProjektAllapot.UJ)
     utemezes_aktiv: Mapped[bool] = mapped_column(Boolean, default=False)
     delivery_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Térképi pozíció (kézzel megadott vagy a címből feloldott)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     completion_percent: Mapped[float] = mapped_column(Numeric(5, 1), default=0)
     # Épülettípus-sablon, amiből a fázis/lépés checklist egyszer, létrehozáskor
     # átmásolódik a projektre — utána a sablontól függetlenül szabadon

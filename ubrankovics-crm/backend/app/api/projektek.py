@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -32,6 +33,7 @@ from app.schemas_crm import (
     ProjektUgyfelResponse,
     ProjektUpdate,
 )
+from app.services.geocoding import geocode_address
 from app.services.schedule_engine import recalculate_schedule
 
 router = APIRouter(prefix="/projektek", tags=["projektek"])
@@ -101,7 +103,24 @@ def _copy_tipus_into_projekt(db: Session, projekt: Projekt, projekt_tipus_id: in
 
 @router.get("", response_model=list[ProjektListItem])
 def list_projektek(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
-    return db.query(Projekt).order_by(Projekt.created_at.desc()).all()
+    projektek = (
+        db.query(Projekt)
+        .options(joinedload(Projekt.ugyfel_linkek).joinedload(ProjektUgyfel.ugyfel))
+        .order_by(Projekt.created_at.desc())
+        .all()
+    )
+    tetel_db = dict(
+        db.query(ProjektTetel.projekt_id, func.count(ProjektTetel.id)).group_by(ProjektTetel.projekt_id).all()
+    )
+    out = []
+    for p in projektek:
+        link = next((l for l in p.ugyfel_linkek if l.epitesi_cim), None) or (p.ugyfel_linkek[0] if p.ugyfel_linkek else None)
+        item = ProjektListItem.model_validate(p)
+        item.ugyfel_nev = link.ugyfel.nev if link and link.ugyfel else None
+        item.epitesi_cim = link.epitesi_cim if link else None
+        item.tetel_db = tetel_db.get(p.id, 0)
+        out.append(item)
+    return out
 
 
 @router.post("", response_model=ProjektDetail, status_code=201)
@@ -123,6 +142,55 @@ def create_projekt(
             recalculate_schedule(db, projekt)
     db.commit()
     return _detail_query(db).get(projekt.id)
+
+
+def _projekt_cim(projekt: Projekt) -> str | None:
+    for l in projekt.ugyfel_linkek:
+        if l.epitesi_cim:
+            return l.epitesi_cim
+    return None
+
+
+@router.post("/{projekt_id}/geokodolas", response_model=ProjektDetail)
+def geokodolas(projekt_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    """A projekt építési címének feloldása térképi koordinátává (OpenStreetMap Nominatim)."""
+    projekt = db.query(Projekt).get(projekt_id)
+    if not projekt:
+        raise HTTPException(status_code=404, detail="Projekt not found")
+    cim = _projekt_cim(projekt)
+    if not cim:
+        raise HTTPException(status_code=400, detail="A projekthez nincs építési cím megadva")
+    coords = geocode_address(cim)
+    if not coords:
+        raise HTTPException(status_code=422, detail="A címet nem sikerült feloldani; add meg a koordinátákat kézzel")
+    projekt.latitude, projekt.longitude = coords
+    db.commit()
+    return _detail_query(db).get(projekt_id)
+
+
+@router.post("/geokodolas-hianyzok")
+def geokodolas_hianyzok(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    """Koordináta nélküli, címmel rendelkező projektek feloldása (egyszerre legfeljebb 15, a Nominatim sebességkorlátja miatt)."""
+    import time
+
+    projektek = (
+        db.query(Projekt)
+        .options(joinedload(Projekt.ugyfel_linkek))
+        .filter(Projekt.latitude.is_(None), Projekt.longitude.is_(None))
+        .order_by(Projekt.created_at.desc())
+        .all()
+    )
+    jelolt = [p for p in projektek if _projekt_cim(p)]
+    feloldva = 0
+    for i, p in enumerate(jelolt[:15]):
+        if i:
+            time.sleep(1.1)
+        coords = geocode_address(_projekt_cim(p))
+        if coords:
+            p.latitude, p.longitude = coords
+            feloldva += 1
+    db.commit()
+    return {"feloldva": feloldva, "vizsgalt": min(len(jelolt), 15), "maradt": max(0, len(jelolt) - 15)}
 
 
 @router.get("/{projekt_id}", response_model=ProjektDetail)

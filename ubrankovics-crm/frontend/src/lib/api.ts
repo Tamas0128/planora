@@ -117,6 +117,13 @@ export interface ProjektListItem {
   allapot: string;
   utemezes_aktiv: boolean;
   created_at: string;
+  delivery_date?: string | null;
+  completion_percent?: number | string;
+  latitude?: number | null;
+  longitude?: number | null;
+  ugyfel_nev?: string | null;
+  epitesi_cim?: string | null;
+  tetel_db?: number;
 }
 
 export interface Feladat {
@@ -1382,6 +1389,10 @@ export const api = {
     q.set("kezdo_datum", params.kezdo_datum);
     return request<CashflowItem[]>(`/cashflow/rolling/items?${q.toString()}`);
   },
+
+  geokodolasProjekt: (id: number) => request<unknown>(`/projektek/${id}/geokodolas`, { method: "POST" }),
+  geokodolasHianyzok: () =>
+    request<{ feloldva: number; vizsgalt: number; maradt: number }>("/projektek/geokodolas-hianyzok", { method: "POST" }),
 
   listAtvetelek: (projektId: number) => request<Atvetel[]>(`/projektek/${projektId}/atvetelek`),
   createAtvetel: (projektId: number, body: AtvetelInput) =>

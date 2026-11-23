@@ -251,3 +251,32 @@ main h1 {
   .bar-grow { transform: scaleX(var(--w, 1)); }
   .cf-line { stroke-dasharray: none; animation: cf-fade 0.2s ease-out both; }
 }
+
+/* Térkép: a csempék a meleg palettához igazítva; a jelölők állapot szerint színezettek. */
+.projekt-terkep .leaflet-tile-pane {
+  filter: sepia(0.28) saturate(0.85) contrast(0.95);
+}
+.projekt-terkep .leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--background);
+}
+.terkep-pin {
+  background: transparent;
+  border: 0;
+}
+.terkep-pin span {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid var(--card);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.3);
+}
+.terkep-pin span::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--card);
+}

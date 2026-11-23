@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.models import (
     AjanlatkeresAllapot,
@@ -254,6 +254,8 @@ class ProjektUpdate(BaseModel):
     allapot: Optional[ProjektAllapot] = None
     utemezes_aktiv: Optional[bool] = None
     delivery_date: Optional[date] = None
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
 
 
 class ProjektListItem(BaseModel):
@@ -262,6 +264,13 @@ class ProjektListItem(BaseModel):
     allapot: ProjektAllapot
     utemezes_aktiv: bool
     created_at: datetime
+    delivery_date: Optional[date] = None
+    completion_percent: Decimal = Decimal("0")
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    ugyfel_nev: Optional[str] = None
+    epitesi_cim: Optional[str] = None
+    tetel_db: int = 0
 
     model_config = _from_attrs
 
@@ -275,6 +284,8 @@ class ProjektDetail(BaseModel):
     allapot: ProjektAllapot
     utemezes_aktiv: bool
     delivery_date: Optional[date]
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     completion_percent: Decimal
     projekt_tipus_id: Optional[int]
     created_at: datetime
