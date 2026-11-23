@@ -16,14 +16,14 @@ colors:
   oat-line: "#e0d7c2"
   oat-400: "#c7bc9f"
   oat-500: "#a89b7c"
-  oat-muted: "#8a7d61"
+  oat-muted: "#6b6049"
   oat-700: "#6b6049"
   oat-800: "#453d2e"
   bark-sidebar: "#25221d"
   bark-hover: "#34302a"
   bark-text: "#d9d2c0"
   ink: "#2b271f"
-  clay-critical: "#ae523a"
+  clay-critical: "#a24a33"
   clay-critical-bg: "#f6e4dc"
   amber-warning: "#b8873a"
   amber-warning-bg: "#f7ecd6"
@@ -125,12 +125,13 @@ Meleg, földszínű paletta: krém és zab neutrálisok, kéreg-barna oldalsáv,
 - **Meleg Krém Kártya** (#fdf6ee, `--card`): kártyák, táblázatok, modálok felülete.
 - **Halvány Krém** (#faf6ee): finom alapfelület, az elsődleges gomb szövege.
 - **Zab Vonal** (#e0d7c2, `--border`): kártyakeretek és elválasztók.
-- **Néma Barna** (#8a7d61, `--muted`): másodlagos szöveg, hint, címke.
+- **Néma Barna** (#6b6049, `--muted`): másodlagos szöveg, hint, címke. AA kontrasztú a kártyán (5,7:1), az oldalháttéren (5,1:1) és a színezett oszlopokon (4,8:1); a placeholder a #756a52 (`--placeholder`).
 - **Tinta** (#2b271f, `--foreground`): törzsszöveg.
 - **Kéreg Oldalsáv** (#25221d), **Kéreg Hover** (#34302a), **Kéreg Szöveg** (#d9d2c0): az oldalsáv felülete, hoverje és szövege.
 
 ### Semantic
-- **Agyag Kritikus** (#ae523a) és háttere (#f6e4dc): hiba, törlés, lejárt határidő. A kód ma főként szövegszínként használja.
+- **Erdőzöld pozitív** (`--positive`, azonos az elsődleges #22582b-vel): bevétel és pozitív összeg szövegként. A tervezett összeg ugyanezen a színen, dőlt betűvel jelenik meg, így a megkülönböztetés nem csak színárnyalat.
+- **Agyag Kritikus** (#a24a33) és háttere (#f6e4dc): hiba, törlés, lejárt határidő. A kód ma főként szövegszínként használja.
 - **Borostyán Figyelmeztetés** (#b8873a) és háttere (#f7ecd6): figyelmeztetés (a meglévő tokenek között).
 
 ### Named Rules
@@ -206,10 +207,12 @@ Lekerekített, de visszafogott: a fő sugár 0.85rem (kártyák, gombok, mezők)
 - **Do** tartsd az erdőzöldet (#22582b) elsődleges műveletre, aktív állapotra és pozitív jelvényre.
 - **Do** hagyd laposnak a kártyákat: 1px Zab Vonal keret, 0.85rem sugár, árnyék nélkül.
 - **Do** használj Ralewayt a címekhez és Archivót minden máshoz, törzsszöveg 14px.
-- **Do** a hiba- és lejárt-jelzéshez az Agyag Kritikus (#ae523a) színt használd.
+- **Do** a hiba- és lejárt-jelzéshez az Agyag Kritikus (#a24a33) színt használd.
+- **Do** a diagramon az erdőzöld a bevétel, az agyag a kiadás, a kéreg-barna az egyenleg; a tervezett sáv világosabb kitöltést és saját színű keretet kap.
 
 ### Don't:
 - **Don't** használj hideg szürkét, tiszta fekete/fehér felületet vagy kék akcentust.
 - **Don't** adj kártyára árnyékot vagy üveghatást (glassmorphism); a visszautasított irány a színes SaaS-dashboard és a neon.
 - **Don't** használd az erdőzöldet díszítésre.
+- **Don't** használj Tailwind alap színskálát (emerald, red, blue) a szemantikus színekhez; csak a fenti tokeneket.
 - **Don't** vezess be harmadik betűtípust.

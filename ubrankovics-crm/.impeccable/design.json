@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-23T00:00:00Z",
+  "title": "Design System: Ubrankovics CRM",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Ubrankovics Erdőzöld", "canonical": "#22582b", "tonalRamp": ["#1a4521", "#22582b", "#2f6b3b", "#5f9268", "#9cc0a1", "#c9ddcc", "#e8f0e9", "#f3f8f4"] },
+      "oat-page": { "role": "neutral", "displayName": "Zabpehely Oldalháttér", "canonical": "#efe8d8", "tonalRamp": ["#25221d", "#453d2e", "#6b6049", "#6b6049", "#a89b7c", "#c7bc9f", "#e0d7c2", "#faf6ee"] },
+      "bark-sidebar": { "role": "neutral", "displayName": "Kéreg Oldalsáv", "canonical": "#25221d", "tonalRamp": ["#25221d", "#34302a", "#453d2e", "#6b6049", "#6b6049", "#a89b7c", "#d9d2c0", "#efe8d8"] },
+      "clay-critical": { "role": "semantic", "displayName": "Agyag Kritikus", "canonical": "#a24a33", "tonalRamp": ["#5c2a1e", "#7d3a29", "#a24a33", "#c47a64", "#d8a493", "#e8c5b8", "#f6e4dc", "#fbf2ee"] }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Title", "purpose": "Oldalcímek (Raleway 600)." },
+      "section": { "displayName": "Section", "purpose": "Kártya- és modálcímek." },
+      "body": { "displayName": "Body", "purpose": "Űrlapok, táblázatok, listák; a felület alapmérete." },
+      "label": { "displayName": "Label", "purpose": "Jelvények és metaadat." }
+    },
+    "shadows": [
+      { "name": "overlay-modal", "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)", "purpose": "Modál (shadow-lg). Kártyák nem kapnak árnyékot." },
+      { "name": "overlay-search", "value": "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)", "purpose": "Globális Ctrl+K keresés (shadow-xl)." }
+    ],
+    "motion": [
+      { "name": "nav-colors", "value": "color, background-color 150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Navigációs sor hover/aktív átmenet (Tailwind transition-colors)." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Elsődleges művelet: mentés, létrehozás.",
+      "html": "<button class=\"ds-btn-primary\">Mentés</button>",
+      "css": ".ds-btn-primary { background: #22582b; color: #faf6ee; padding: 6px 12px; border: none; border-radius: 0.85rem; font-size: 0.875rem; font-weight: 500; font-family: Archivo, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: #1a4521; } .ds-btn-primary:focus-visible { outline: 2px solid #5f9268; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Űrlapmező kerettel.",
+      "html": "<input class=\"ds-input\" placeholder=\"Név\" />",
+      "css": ".ds-input { width: 100%; box-sizing: border-box; border: 1px solid #e0d7c2; background: #fdf6ee; color: #2b271f; border-radius: 0.85rem; padding: 6px 8px; font-size: 0.875rem; font-family: Archivo, system-ui, sans-serif; } .ds-input:focus-visible { outline: 2px solid #22582b; outline-offset: 1px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Lapos, keretes tartalomkártya.",
+      "html": "<div class=\"ds-card\"><h2 class=\"ds-card-title\">Projektek</h2><p>12 aktív projekt</p></div>",
+      "css": ".ds-card { background: #fdf6ee; border: 1px solid #e0d7c2; border-radius: 0.85rem; padding: 16px; color: #2b271f; font-family: Archivo, system-ui, sans-serif; font-size: 0.875rem; } .ds-card-title { margin: 0 0 8px; font-family: Raleway, Helvetica, Arial, sans-serif; font-size: 0.875rem; font-weight: 600; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-status",
+      "description": "Pill alakú állapotjelvény.",
+      "html": "<span class=\"ds-badge\">Aktív</span>",
+      "css": ".ds-badge { display: inline-block; background: #e8f0e9; color: #1a4521; border-radius: 9999px; padding: 2px 8px; font-size: 0.75rem; font-weight: 500; font-family: Archivo, system-ui, sans-serif; }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Oldalsáv navigációs sor; aktív változata erdőzöld.",
+      "html": "<div style=\"background:#25221d;padding:8px 0;width:200px\"><a class=\"ds-nav\" href=\"#\">Projektek</a><a class=\"ds-nav ds-nav-active\" href=\"#\">Pénzügy</a></div>",
+      "css": ".ds-nav { display: block; padding: 8px 16px; color: #d9d2c0; font-size: 0.875rem; text-decoration: none; font-family: Archivo, system-ui, sans-serif; transition: background-color 150ms; } .ds-nav:hover { background: #34302a; } .ds-nav-active { background: #22582b; color: #fff; font-weight: 500; } .ds-nav-active:hover { background: #22582b; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "A Rendezett Faház",
+    "overview": "A felület egy rendben tartott faház belső tere: meleg krém felületek, sötét kéreg-színű oldalsáv, és egyetlen mély, erdőzöld hang, amely az Ubrankovics weboldalának gombszínéből származik (#22582b). A hangulat nyugodt, megbízható és magabiztos. Ez munkaeszköz, nem showroom: a márka a részletekben él, nem a díszítésben.",
+    "keyCharacteristics": [
+      "Meleg, krém alapú neutrálisok zöldes-barna árnyalattal, soha hideg szürke.",
+      "Egyetlen akcentus (erdőzöld), a státusz-jelzések külön, földszínű család.",
+      "Lapos felületek kerettel; árnyék csak lebegő elemen.",
+      "Lekerekített, de visszafogott formák (0.85rem).",
+      "Raleway címek, Archivo törzsszöveg."
+    ],
+    "rules": [
+      { "name": "Az Egy Hang Szabály", "body": "Az erdőzöld az egyetlen akcentus. Aktív állapotot, elsődleges műveletet és pozitív jelvényt jelöl; dekorációra nem használjuk.", "section": "colors" },
+      { "name": "A Meleg Neutrális Szabály", "body": "Minden semleges árnyalat zöldes-barna irányba hajlik. Hideg szürke vagy tiszta fekete/fehér nem kerül a felületre.", "section": "colors" },
+      { "name": "A Két Betű Szabály", "body": "Raleway csak címekre (h1–h3, .font-heading), minden más Archivo. Harmadik betűtípus nem kerül be.", "section": "typography" },
+      { "name": "A Lapos Alapállapot Szabály", "body": "Kártyák és táblázatok nem kapnak árnyékot. Árnyék csak ott van, ahol a felület az oldal fölé lebeg.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do használd a CSS-változókat (var(--primary), var(--card), var(--border)), ne új hex értékeket.",
+      "Do tartsd az erdőzöldet (#22582b) elsődleges műveletre, aktív állapotra és pozitív jelvényre.",
+      "Do hagyd laposnak a kártyákat: 1px Zab Vonal keret, 0.85rem sugár, árnyék nélkül.",
+      "Do használj Ralewayt a címekhez és Archivót minden máshoz, törzsszöveg 14px.",
+      "Do a hiba- és lejárt-jelzéshez az Agyag Kritikus (#a24a33) színt használd."
+    ],
+    "donts": [
+      "Don't használj hideg szürkét, tiszta fekete/fehér felületet vagy kék akcentust.",
+      "Don't adj kártyára árnyékot vagy üveghatást (glassmorphism); a visszautasított irány a színes SaaS-dashboard és a neon.",
+      "Don't használd az erdőzöldet díszítésre.",
+      "Don't vezess be harmadik betűtípust."
+    ]
+  }
+}
