@@ -19,6 +19,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import Modal from "@/components/Modal";
+import AtvetelTab from "@/components/projekt/AtvetelTab";
+import NaploTab from "@/components/projekt/NaploTab";
+import AjanlatTab from "@/components/projekt/AjanlatTab";
 import {
   Ajanlatkeres,
   AnyagRendeles,
@@ -117,7 +120,7 @@ const SZEREP_LABEL: Record<string, string> = {
 export default function ProjektDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projektId = Number(id);
-  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok" | "dokumentumok">("attekintes");
+  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok" | "dokumentumok" | "ajanlat" | "naplo" | "atadas">("attekintes");
   const [projekt, setProjekt] = useState<ProjektDetail | null>(null);
   const [tetelek, setTetelek] = useState<ProjektTetel[]>([]);
   const [munkanemek, setMunkanemek] = useState<Munkanem[]>([]);
@@ -174,8 +177,8 @@ export default function ProjektDetailPage() {
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
         {(
           projekt.utemezes_aktiv
-            ? (["attekintes", "tetelek", "utemezes", "fazisok", "dokumentumok"] as const)
-            : (["attekintes", "tetelek", "fazisok", "dokumentumok"] as const)
+            ? (["attekintes", "tetelek", "utemezes", "fazisok", "ajanlat", "naplo", "atadas", "dokumentumok"] as const)
+            : (["attekintes", "tetelek", "fazisok", "ajanlat", "naplo", "atadas", "dokumentumok"] as const)
         ).map((t) => (
           <button
             key={t}
@@ -192,6 +195,12 @@ export default function ProjektDetailPage() {
               ? "Ütemezés"
               : t === "fazisok"
               ? "Fázisok"
+              : t === "ajanlat"
+              ? "Ajánlat"
+              : t === "naplo"
+              ? "Építési napló"
+              : t === "atadas"
+              ? "Átadás"
               : "Dokumentumok"}
           </button>
         ))}
@@ -215,6 +224,9 @@ export default function ProjektDetailPage() {
       {tab === "fazisok" && (
         <FazisokTab projektId={projektId} fazisok={fazisok} onChange={loadFazisok} />
       )}
+      {tab === "ajanlat" && <AjanlatTab projektId={projektId} />}
+      {tab === "naplo" && <NaploTab projektId={projektId} />}
+      {tab === "atadas" && <AtvetelTab projektId={projektId} />}
       {tab === "dokumentumok" && (
         <DokumentumokTab projektId={projektId} dokumentumok={dokumentumok} onChange={loadDokumentumok} />
       )}

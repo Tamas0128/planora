@@ -763,6 +763,95 @@ export async function downloadFile(path: string, filename: string): Promise<void
   URL.revokeObjectURL(url);
 }
 
+
+export interface Atvetel {
+  id: number;
+  projekt_id: number;
+  datum: string;
+  atado_nev: string;
+  atvevo_nev: string;
+  hibak?: string | null;
+  megjegyzes?: string | null;
+  garancia_honap: number;
+  allapot: "tervezet" | "alairt";
+  alairva_at?: string | null;
+  garancia_lejar?: string | null;
+  garancia_aktiv: boolean;
+  created_at: string;
+}
+export type AtvetelInput = {
+  datum: string;
+  atado_nev: string;
+  atvevo_nev: string;
+  hibak?: string | null;
+  megjegyzes?: string | null;
+  garancia_honap: number;
+};
+
+export interface NaploFoto {
+  id: number;
+  eredeti_nev?: string | null;
+  meret?: number | null;
+}
+export interface NaploBejegyzes {
+  id: number;
+  projekt_id: number;
+  datum: string;
+  idojaras?: string | null;
+  letszam?: number | null;
+  munka: string;
+  megjegyzes?: string | null;
+  szerzo?: UserBrief | null;
+  fotok: NaploFoto[];
+  created_at: string;
+}
+export type NaploInput = { datum: string; idojaras?: string | null; letszam?: number | null; munka: string; megjegyzes?: string | null };
+
+export type AjanlatAllapot = "tervezet" | "elkuldve" | "elfogadva" | "elutasitva";
+export interface AjanlatSor {
+  id?: number;
+  megnevezes: string;
+  mennyiseg: string | number;
+  egyseg?: string | null;
+  egysegar: string | number;
+}
+export interface AjanlatVerzio {
+  id: number;
+  verzio: number;
+  allapot: AjanlatAllapot;
+  ervenyes_ig?: string | null;
+  megjegyzes?: string | null;
+  netto_osszeg: string;
+  created_at: string;
+  sorok: AjanlatSor[];
+}
+export interface VevoiAjanlat {
+  id: number;
+  projekt_id: number;
+  cim: string;
+  created_at: string;
+  verziok: AjanlatVerzio[];
+}
+export type AjanlatVerzioInput = { sorok: AjanlatSor[]; megjegyzes?: string | null; ervenyes_ig?: string | null };
+
+async function fetchBlob(path: string): Promise<Blob> {
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
+  if (!res.ok) throw new Error(`Hiba (${res.status})`);
+  return res.blob();
+}
+
+/** Védett erőforrás blob URL-ként (pl. <img src>), mert a Bearer fejléc nem küldhető linkből. */
+export async function blobUrl(path: string): Promise<string> {
+  return URL.createObjectURL(await fetchBlob(path));
+}
+
+/** Védett HTML (pl. nyomtatható jegyzőkönyv) megnyitása új lapon. */
+export async function openHtml(path: string): Promise<void> {
+  const url = await blobUrl(path);
+  window.open(url, "_blank", "noopener");
+}
 export const api = {
   async login(username: string, password: string): Promise<TokenResponse> {
     return request("/auth/login/json", {
@@ -1222,4 +1311,35 @@ export const api = {
     q.set("kezdo_datum", params.kezdo_datum);
     return request<CashflowItem[]>(`/cashflow/rolling/items?${q.toString()}`);
   },
+
+  listAtvetelek: (projektId: number) => request<Atvetel[]>(`/projektek/${projektId}/atvetelek`),
+  createAtvetel: (projektId: number, body: AtvetelInput) =>
+    request<Atvetel>(`/projektek/${projektId}/atvetelek`, { method: "POST", body: JSON.stringify(body) }),
+  alairAtvetel: (id: number) => request<Atvetel>(`/atvetelek/${id}/alairas`, { method: "POST" }),
+  deleteAtvetel: (id: number) => request<void>(`/atvetelek/${id}`, { method: "DELETE" }),
+  openJegyzokonyv: (id: number) => openHtml(`/atvetelek/${id}/jegyzokonyv`),
+  garanciaHiba: (projektId: number, body: { targy: string; leiras?: string | null }) =>
+    request<Jegy>(`/projektek/${projektId}/garancia-hiba`, { method: "POST", body: JSON.stringify(body) }),
+  listProjektJegyek: (projektId: number) => request<Jegy[]>(`/jegyek?projekt_id=${projektId}`),
+
+  listNaplo: (projektId: number) => request<NaploBejegyzes[]>(`/projektek/${projektId}/naplo`),
+  createNaplo: (projektId: number, body: NaploInput) =>
+    request<NaploBejegyzes>(`/projektek/${projektId}/naplo`, { method: "POST", body: JSON.stringify(body) }),
+  deleteNaplo: (id: number) => request<void>(`/naplo/${id}`, { method: "DELETE" }),
+  uploadNaploFoto: (id: number, file: File) => {
+    const form = new FormData();
+    form.set("file", file);
+    return request<NaploBejegyzes>(`/naplo/${id}/fotok`, { method: "POST", body: form });
+  },
+  deleteNaploFoto: (fotoId: number) => request<void>(`/naplo-fotok/${fotoId}`, { method: "DELETE" }),
+  naploFotoUrl: (fotoId: number) => blobUrl(`/naplo-fotok/${fotoId}`),
+
+  listAjanlatok: (projektId: number) => request<VevoiAjanlat[]>(`/projektek/${projektId}/ajanlatok`),
+  createAjanlat: (projektId: number, body: AjanlatVerzioInput & { cim: string }) =>
+    request<VevoiAjanlat>(`/projektek/${projektId}/ajanlatok`, { method: "POST", body: JSON.stringify(body) }),
+  ujAjanlatVerzio: (ajanlatId: number, body: AjanlatVerzioInput) =>
+    request<VevoiAjanlat>(`/ajanlatok/${ajanlatId}/verziok`, { method: "POST", body: JSON.stringify(body) }),
+  setAjanlatAllapot: (verzioId: number, allapot: AjanlatAllapot) =>
+    request<VevoiAjanlat>(`/ajanlat-verziok/${verzioId}/allapot`, { method: "PATCH", body: JSON.stringify({ allapot }) }),
+  deleteAjanlat: (id: number) => request<void>(`/ajanlatok/${id}`, { method: "DELETE" }),
 };
