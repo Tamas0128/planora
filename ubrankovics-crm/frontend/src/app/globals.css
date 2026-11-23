@@ -176,3 +176,78 @@ aside :where(a, button):focus-visible {
     animation-duration: 2.5s;
   }
 }
+
+/* Oldalcím: a Raleway teljes erejével, hogy minden képernyő határozott belépőt kapjon. */
+main h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 767px) {
+  main h1 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Mozgás: egyetlen szerzői pillanat — a cash-flow diagram és a dashboard állapotsávjai a nullvonalról/balról
+   "nőnek be" betöltéskor. Gyors, exponenciális lassulás; látható alapállapotból indul a CSS-sel együtt. */
+.font-heading {
+  font-variant-numeric: lining-nums;
+}
+
+@keyframes cf-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes cf-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes cf-pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes cf-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(var(--w, 1)); }
+}
+
+.cf-grow-up,
+.cf-grow-down,
+.cf-dot {
+  transform-box: fill-box;
+}
+.cf-grow-up { transform-origin: 50% 100%; animation: cf-grow 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.cf-grow-down { transform-origin: 50% 0%; animation: cf-grow 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.cf-line {
+  stroke-dasharray: 1;
+  animation: cf-draw 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+.cf-dot { transform-origin: 50% 50%; animation: cf-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.cf-late { animation: cf-fade 0.3s ease-out 1s both; }
+.cf-tip { animation: cf-fade 0.12s ease-out both; }
+.bar-grow {
+  transform-origin: 0 50%;
+  transform: scaleX(var(--w, 1));
+  animation: bar-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Kevesebb mozgás: a térbeli növekedés helyett csak áttűnés, a jelentés (az értékek) megmarad. */
+@media (prefers-reduced-motion: reduce) {
+  .cf-grow-up,
+  .cf-grow-down,
+  .cf-dot,
+  .bar-grow {
+    animation: cf-fade 0.2s ease-out both;
+    transform: none;
+  }
+  .bar-grow { transform: scaleX(var(--w, 1)); }
+  .cf-line { stroke-dasharray: none; animation: cf-fade 0.2s ease-out both; }
+}

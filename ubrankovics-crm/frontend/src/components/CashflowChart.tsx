@@ -138,10 +138,12 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                 >
                   <rect x={cx - barWidth / 2} y={0} width={barWidth} height={flowHeight} fill="transparent" />
                   {bevTeny > 0 && (
-                    <rect x={cx - barWidth / 2} y={flowY(bevTeny)} width={barWidth} height={zero - flowY(bevTeny)} rx={3} fill={COLOR.bevetelTeny} />
+                    <rect className="cf-grow-up" style={{ animationDelay: `${i * 25}ms` }} x={cx - barWidth / 2} y={flowY(bevTeny)} width={barWidth} height={zero - flowY(bevTeny)} rx={3} fill={COLOR.bevetelTeny} />
                   )}
                   {bevTerv > 0 && (
                     <rect
+                      className="cf-grow-up"
+                      style={{ animationDelay: `${i * 25}ms` }}
                       x={cx - barWidth / 2}
                       y={flowY(bevTeny + bevTerv) - (bevTeny > 0 ? 2 : 0)}
                       width={barWidth}
@@ -153,10 +155,12 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                     />
                   )}
                   {kiaTeny > 0 && (
-                    <rect x={cx - barWidth / 2} y={zero} width={barWidth} height={flowY(-kiaTeny) - zero} rx={3} fill={COLOR.kiadasTeny} />
+                    <rect className="cf-grow-down" style={{ animationDelay: `${i * 25}ms` }} x={cx - barWidth / 2} y={zero} width={barWidth} height={flowY(-kiaTeny) - zero} rx={3} fill={COLOR.kiadasTeny} />
                   )}
                   {kiaTerv > 0 && (
                     <rect
+                      className="cf-grow-down"
+                      style={{ animationDelay: `${i * 25}ms` }}
                       x={cx - barWidth / 2}
                       y={flowY(-kiaTeny) + (kiaTeny > 0 ? 2 : 0)}
                       width={barWidth}
@@ -192,10 +196,11 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                 </text>
               </g>
             ))}
-            <path d={linePath} fill="none" stroke={COLOR.zaro} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            <path className="cf-line" pathLength={1} d={linePath} fill="none" stroke={COLOR.zaro} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
             {linePoints.map((p, i) => (
               <circle
                 key={i}
+                className="cf-dot"
                 cx={p.x}
                 cy={p.y}
                 r={5}
@@ -204,11 +209,12 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                 strokeWidth={2}
                 onMouseEnter={() => setHoverIdx(i)}
                 onMouseLeave={() => setHoverIdx((cur) => (cur === i ? null : cur))}
-                style={{ cursor: "pointer" }}
+                style={{ cursor: "pointer", animationDelay: `${200 + (i / Math.max(1, n - 1)) * 800}ms` }}
               />
             ))}
             {linePoints.length > 0 && (
               <text
+                className="cf-late"
                 x={linePoints[linePoints.length - 1].x}
                 y={linePoints[linePoints.length - 1].y - 10}
                 textAnchor="end"
@@ -237,7 +243,7 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
 
         {hovered && (
           <div
-            className="pointer-events-none absolute top-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-xs shadow-lg"
+            className="cf-tip pointer-events-none absolute top-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-xs shadow-lg"
             style={{
               left: `${Math.min(92, Math.max(8, ((hoverIdx! + 0.5) / n) * 100))}%`,
               transform: "translateX(-50%)",

@@ -66,7 +66,7 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <h1 className="mb-4 text-xl font-semibold">Kezdőlap{me ? ` — ${me.full_name}` : ""}</h1>
+      <h1 className="text-xl font-semibold">Kezdőlap{me ? ` — ${me.full_name}` : ""}</h1>
 
       {aktivBucket?.negativ && (
         <div className="mb-4 rounded-[var(--radius)] border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">
@@ -75,21 +75,21 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className={`${cardCls} p-3`}>
+        <div className={`${cardCls} p-4`}>
           <div className="text-xs text-[var(--muted)]">Projektek összesen</div>
-          <div className="text-2xl font-semibold">{projektek ? projektek.length : "—"}</div>
+          <div className="font-heading text-4xl font-bold leading-tight">{projektek ? projektek.length : "—"}</div>
         </div>
-        <div className={`${cardCls} p-3`}>
+        <div className={`${cardCls} p-4`}>
           <div className="text-xs text-[var(--muted)]">Nyitott saját feladat</div>
-          <div className="text-2xl font-semibold">{sajatFeladatok.length}</div>
+          <div className="font-heading text-4xl font-bold leading-tight">{sajatFeladatok.length}</div>
         </div>
-        <div className={`${cardCls} p-3`}>
+        <div className={`${cardCls} p-4`}>
           <div className="text-xs text-[var(--muted)]">Lejárt bevétel (hátralék)</div>
-          <div className="text-xl font-semibold text-[var(--positive)]">{osszesito ? huf(osszesito.lejart_bevetel_osszesen) : "—"}</div>
+          <div className="font-heading text-3xl font-bold leading-tight text-[var(--positive)]">{osszesito ? huf(osszesito.lejart_bevetel_osszesen) : "—"}</div>
         </div>
-        <div className={`${cardCls} p-3`}>
+        <div className={`${cardCls} p-4`}>
           <div className="text-xs text-[var(--muted)]">Lejárt kiadás (hátralék)</div>
-          <div className="text-xl font-semibold text-[var(--danger)]">{osszesito ? huf(osszesito.lejart_kiadas_osszesen) : "—"}</div>
+          <div className="font-heading text-3xl font-bold leading-tight text-[var(--danger)]">{osszesito ? huf(osszesito.lejart_kiadas_osszesen) : "—"}</div>
         </div>
       </div>
 
@@ -104,11 +104,22 @@ export default function DashboardPage() {
           {!projektMegoszlas ? (
             <p className="text-sm text-[var(--muted)]">Betöltés…</p>
           ) : (
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-2.5 text-sm">
               {Object.entries(ALLAPOT_LABEL).map(([v, l]) => (
-                <li key={v} className="flex justify-between">
-                  <span>{l}</span>
-                  <span className="text-[var(--muted)]">{projektMegoszlas.get(v) || 0}</span>
+                <li key={v} className="space-y-1">
+                  <div className="flex justify-between">
+                    <span>{l}</span>
+                    <span className="font-medium">{projektMegoszlas.get(v) || 0}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-[var(--border)]" aria-hidden="true">
+                    <div
+                      className="bar-grow h-full w-full rounded-full bg-[var(--primary)]"
+                      style={{
+                        "--w": (projektMegoszlas.get(v) || 0) / Math.max(1, projektek?.length || 1),
+                        animationDelay: `${Object.keys(ALLAPOT_LABEL).indexOf(v) * 50}ms`,
+                      } as React.CSSProperties}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
