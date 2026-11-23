@@ -76,25 +76,64 @@ function useProjektOptions() {
   return projektek;
 }
 
+function isoDate(d: Date) {
+  const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return z.toISOString().slice(0, 10);
+}
+function addDays(d: Date, n: number) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+interface Preset {
+  label: string;
+  range: (now: Date) => [Date, Date, ("het" | "honap")?];
+}
+const PRESETS: Preset[] = [
+  { label: "Következő 13 hét", range: (n) => [n, addDays(n, 13 * 7 - 1), "het"] },
+  { label: "Következő 26 hét", range: (n) => [n, addDays(n, 26 * 7 - 1), "het"] },
+  { label: "Ez a negyedév", range: (n) => { const q = Math.floor(n.getMonth() / 3) * 3; return [new Date(n.getFullYear(), q, 1), new Date(n.getFullYear(), q + 3, 0), "het"]; } },
+  { label: "Idén", range: (n) => [new Date(n.getFullYear(), 0, 1), new Date(n.getFullYear(), 11, 31), "honap"] },
+  { label: "Következő 12 hónap", range: (n) => [new Date(n.getFullYear(), n.getMonth(), 1), new Date(n.getFullYear(), n.getMonth() + 12, 0), "honap"] },
+];
+
 function CashflowTab() {
   const projektek = useProjektOptions();
   const [bucket, setBucket] = useState<"het" | "honap">("het");
-  const [horizon, setHorizon] = useState(13);
+  const [tol, setTol] = useState(() => isoDate(new Date()));
+  const [ig, setIg] = useState(() => isoDate(addDays(new Date(), 13 * 7 - 1)));
   const [projektId, setProjektId] = useState<number | "">("");
   const [data, setData] = useState<CashflowRolling | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [items, setItems] = useState<CashflowItem[]>([]);
   const [snapshots, setSnapshots] = useState<BankEgyenleg[]>([]);
+  const [periodError, setPeriodError] = useState("");
   const [snapDatum, setSnapDatum] = useState("");
   const [snapEgyenleg, setSnapEgyenleg] = useState("");
 
   function load() {
     api
-      .getRollingCashflow({ bucket, horizon, projekt_id: projektId === "" ? undefined : projektId })
-      .then(setData)
-      .catch(() => {});
+      .getRollingCashflow({ bucket, tol, ig, projekt_id: projektId === "" ? undefined : projektId })
+      .then((d) => {
+        setData(d);
+        setPeriodError("");
+      })
+      .catch((err) => setPeriodError(err instanceof Error ? err.message : "Hiba"));
   }
-  useEffect(load, [bucket, horizon, projektId]);
+  useEffect(() => {
+    if (!tol || !ig) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bucket, tol, ig, projektId]);
+
+  function preset(p: Preset) {
+    const now = new Date();
+    const [a, b, bk] = p.range(now);
+    setTol(isoDate(a));
+    setIg(isoDate(b));
+    if (bk) setBucket(bk);
+  }
   useEffect(() => {
     api.listBankegyenleg().then(setSnapshots).catch(() => {});
   }, []);
@@ -106,7 +145,8 @@ function CashflowTab() {
     }
     const its = await api.getRollingCashflowItems({
       bucket,
-      horizon,
+      tol,
+      ig,
       projekt_id: projektId === "" ? undefined : projektId,
       kezdo_datum: b.kezdo_datum,
     });
@@ -137,15 +177,12 @@ function CashflowTab() {
           </select>
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-[var(--muted)]">Horizont</span>
-          <input
-            type="number"
-            min={1}
-            max={104}
-            value={horizon}
-            onChange={(e) => setHorizon(Number(e.target.value) || 1)}
-            className={`${inputCls} w-24`}
-          />
+          <span className="mb-1 block text-[var(--muted)]">Időszak kezdete</span>
+          <input type="date" value={tol} onChange={(e) => setTol(e.target.value)} className={inputCls} />
+        </label>
+        <label className="text-sm">
+          <span className="mb-1 block text-[var(--muted)]">Időszak vége</span>
+          <input type="date" value={ig} min={tol} onChange={(e) => setIg(e.target.value)} className={inputCls} />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-[var(--muted)]">Projekt</span>
@@ -163,6 +200,24 @@ function CashflowTab() {
           </select>
         </label>
       </div>
+
+      <div className="-mt-1 mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Gyors időszakválasztás">
+        {PRESETS.map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            onClick={() => preset(p)}
+            className="rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs hover:border-[var(--primary)] hover:text-[var(--primary)]"
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {periodError && (
+        <div role="alert" className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">
+          {periodError}
+        </div>
+      )}
 
       <form onSubmit={saveSnapshot} className={`${cardCls} mb-4 flex flex-wrap items-end gap-2 p-3`}>
         <div className="text-sm font-medium">Bankegyenleg rögzítése</div>

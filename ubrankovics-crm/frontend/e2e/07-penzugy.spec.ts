@@ -76,3 +76,13 @@ test.describe("Pénzügy", () => {
     await shot(page, `penzugy-tig-${projektId}`);
   });
 });
+
+test("Cash flow: időszak megadása és gyors választó", async ({ page }) => {
+  await page.goto("/penzugy");
+  await page.getByLabel("Időszak kezdete").fill("2027-01-04");
+  await page.getByLabel("Időszak vége").fill("2027-01-24");
+  await expect(page.getByRole("img", { name: /cash-flow diagram/ })).toBeVisible();
+  await expect(page.locator("tbody tr").first()).toContainText("2027-01-04");
+  await page.getByRole("button", { name: "Idén" }).click();
+  await expect(page.getByLabel("Bucket méret")).toHaveValue("honap");
+});

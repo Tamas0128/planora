@@ -1356,23 +1356,29 @@ export const api = {
   createBankegyenleg: (body: Record<string, unknown>) =>
     request<BankEgyenleg>("/cashflow/bankegyenleg", { method: "POST", body: JSON.stringify(body) }),
 
-  getRollingCashflow: (params: { bucket?: string; horizon?: number; projekt_id?: number }) => {
+  getRollingCashflow: (params: { bucket?: string; horizon?: number; projekt_id?: number; tol?: string; ig?: string }) => {
     const q = new URLSearchParams();
     if (params.bucket) q.set("bucket", params.bucket);
     if (params.horizon) q.set("horizon", String(params.horizon));
     if (params.projekt_id) q.set("projekt_id", String(params.projekt_id));
+    if (params.tol) q.set("tol", params.tol);
+    if (params.ig) q.set("ig", params.ig);
     return request<CashflowRolling>(`/cashflow/rolling?${q.toString()}`);
   },
   getRollingCashflowItems: (params: {
     bucket?: string;
     horizon?: number;
     projekt_id?: number;
+    tol?: string;
+    ig?: string;
     kezdo_datum: string;
   }) => {
     const q = new URLSearchParams();
     if (params.bucket) q.set("bucket", params.bucket);
     if (params.horizon) q.set("horizon", String(params.horizon));
     if (params.projekt_id) q.set("projekt_id", String(params.projekt_id));
+    if (params.tol) q.set("tol", params.tol);
+    if (params.ig) q.set("ig", params.ig);
     q.set("kezdo_datum", params.kezdo_datum);
     return request<CashflowItem[]>(`/cashflow/rolling/items?${q.toString()}`);
   },

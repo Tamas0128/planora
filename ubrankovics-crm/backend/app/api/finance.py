@@ -38,6 +38,8 @@ from app.schemas_finance import (
     UgyfelSzamlaUpdate,
 )
 from app.services.afa import compute_afa
+from app.services.cashflow import _bucket_start as cashflow_bucket_start
+from app.services.cashflow import _next_bucket_start as cashflow_next_bucket_start
 from app.services.cashflow import rolling_forecast
 
 _PENZUGY = (UserRole.PENZUGY, UserRole.VEZETES)
@@ -393,20 +395,37 @@ def create_bankegyenleg(
     return snap
 
 
+def _cashflow_idoszak(bucket: str, horizon: int, tol: date | None, ig: date | None) -> tuple[date | None, int]:
+    """Megadott időszakból (tól–ig) kiszámolja a kezdő napot és a bucketek számát."""
+    if bucket not in ("het", "honap"):
+        raise HTTPException(status_code=400, detail="bucket csak 'het' vagy 'honap' lehet")
+    if ig is not None:
+        kezdo = tol or date.today()
+        if ig < kezdo:
+            raise HTTPException(status_code=400, detail="Az időszak vége nem lehet a kezdete előtt")
+        start = cashflow_bucket_start(kezdo, bucket)
+        horizon = 0
+        while start <= ig:
+            horizon += 1
+            start = cashflow_next_bucket_start(start, bucket)
+    if not 1 <= horizon <= 104:
+        raise HTTPException(status_code=400, detail="Az időszak 1 és 104 bucket közé essen")
+    return tol, horizon
+
+
 @router.get("/cashflow/rolling", response_model=CashflowRollingResponse)
 def get_rolling_cashflow(
     bucket: str = "het",
     horizon: int = 13,
     projekt_id: int | None = None,
+    tol: date | None = None,
+    ig: date | None = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    if bucket not in ("het", "honap"):
-        raise HTTPException(status_code=400, detail="bucket csak 'het' vagy 'honap' lehet")
-    if not 1 <= horizon <= 104:
-        raise HTTPException(status_code=400, detail="horizon 1 és 104 között lehet")
+    kezdo, horizon = _cashflow_idoszak(bucket, horizon, tol, ig)
     summaries, _item_lists, nyito_datum = rolling_forecast(
-        db, bucket_meret=bucket, horizont=horizon, projekt_id=projekt_id
+        db, bucket_meret=bucket, horizont=horizon, projekt_id=projekt_id, today=kezdo
     )
     return CashflowRollingResponse(
         bucket_meret=bucket, horizont=horizon, nyito_egyenleg_datuma=nyito_datum, bucketek=summaries
@@ -419,14 +438,15 @@ def get_rolling_cashflow_items(
     horizon: int = 13,
     projekt_id: int | None = None,
     kezdo_datum: date | None = None,
+    tol: date | None = None,
+    ig: date | None = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     """Drill-down: egy adott bucket (kezdo_datum alapján azonosítva) tételei."""
-    if bucket not in ("het", "honap"):
-        raise HTTPException(status_code=400, detail="bucket csak 'het' vagy 'honap' lehet")
+    kezdo, horizon = _cashflow_idoszak(bucket, horizon, tol, ig)
     summaries, item_lists, _nyito_datum = rolling_forecast(
-        db, bucket_meret=bucket, horizont=horizon, projekt_id=projekt_id
+        db, bucket_meret=bucket, horizont=horizon, projekt_id=projekt_id, today=kezdo
     )
     if kezdo_datum is None:
         return item_lists[0] if item_lists else []

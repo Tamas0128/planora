@@ -260,3 +260,21 @@ def test_berkoltseg_crud_requires_unique_month(client, admin_headers):
         "/api/berkoltsegek", json={"honap": "2026-12-01", "osszeg": "4700000"}, headers=admin_headers
     )
     assert resp.status_code == 400
+
+
+def test_rolling_cashflow_custom_period(client, admin_headers):
+    tol = date(2027, 1, 4)  # hétfő
+    resp = client.get("/api/cashflow/rolling?bucket=het&tol=2027-01-04&ig=2027-01-24", headers=admin_headers)
+    assert resp.status_code == 200, resp.text
+    bucketek = resp.json()["bucketek"]
+    assert len(bucketek) == 3
+    assert bucketek[0]["kezdo_datum"] == tol.isoformat()
+    assert bucketek[-1]["vege_datum"] == "2027-01-24"
+
+    havi = client.get("/api/cashflow/rolling?bucket=honap&tol=2027-01-15&ig=2027-03-10", headers=admin_headers).json()
+    assert [b["kezdo_datum"] for b in havi["bucketek"]] == ["2027-01-01", "2027-02-01", "2027-03-01"]
+
+
+def test_rolling_cashflow_period_validation(client, admin_headers):
+    assert client.get("/api/cashflow/rolling?tol=2027-02-01&ig=2027-01-01", headers=admin_headers).status_code == 400
+    assert client.get("/api/cashflow/rolling?tol=2020-01-01&ig=2027-01-01", headers=admin_headers).status_code == 400
