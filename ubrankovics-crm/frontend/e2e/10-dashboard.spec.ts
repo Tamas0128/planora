@@ -14,12 +14,13 @@ test.describe("Dashboard / Kezdőlap", () => {
     await expect(page).toHaveURL(/\/riportok/);
   });
 
-  test("Kezdőlap nav-elem csak a gyökéroldalon aktív", async ({ page }) => {
+  test("Főmenü: a Kezdőlap nem terület, a projekt oldalakon a Projektek aktív", async ({ page }) => {
     await page.goto("/");
-    const kezdolapLink = page.getByRole("link", { name: "Kezdőlap" });
-    await expect(kezdolapLink).toHaveClass(/sidebar-active|font-medium/);
+    const fomenu = page.getByRole("navigation", { name: "Főmenü" });
+    await expect(fomenu.locator("[aria-current=page]")).toHaveCount(0);
 
     await page.goto("/projektek");
-    await expect(kezdolapLink).not.toHaveClass(/sidebar-active/);
+    await expect(fomenu.getByRole("link", { name: "Projektek" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("link", { name: "Kezdőlap" })).not.toHaveAttribute("aria-current", "page");
   });
 });

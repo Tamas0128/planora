@@ -3,56 +3,68 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, Building2, CalendarDays, CheckSquare, History, Home, LifeBuoy, LogOut, Mail, Menu, Search, Target, TrendingUp, UserCog, Users, Wallet, Wrench, X } from "lucide-react";
+import { LogOut, Menu, Search, X } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 import GlobalSearch from "@/components/GlobalSearch";
 import LabelAssociator from "@/components/LabelAssociator";
 import NotificationBell from "@/components/NotificationBell";
 
-type NavItem = { href: string; label: string; icon: typeof Home; adminOnly?: boolean };
-type NavGroup = { id: string; label?: string; items: NavItem[] };
+type NavItem = { href: string; label: string; adminOnly?: boolean };
+type NavSection = { id: string; label: string; href: string; prefixes: string[]; items: NavItem[] };
 
-// A menü a munkafolyamat szerint csoportosított: az érdeklődőtől az átadásig és a pénzügyig.
-const NAV_GROUPS: NavGroup[] = [
-  { id: "kezdo", items: [{ href: "/", label: "Kezdőlap", icon: Home }] },
+// A felső keret négy fő területe; az almenü az aktív terület oldalait mutatja.
+// A munkavégzés a projekten belül történik (feladatok, ütemezés, naptár), a globális oldalak csak összesítők.
+const SECTIONS: NavSection[] = [
   {
     id: "ertekesites",
     label: "Értékesítés",
+    href: "/erdeklodok",
+    prefixes: ["/erdeklodok", "/ugyfelek", "/kampanyok", "/elorejelzes"],
     items: [
-      { href: "/erdeklodok", label: "Érdeklődők", icon: Target },
-      { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
-      { href: "/kampanyok", label: "Kampányok", icon: Mail },
-      { href: "/elorejelzes", label: "Előrejelzés", icon: TrendingUp },
+      { href: "/erdeklodok", label: "Érdeklődők" },
+      { href: "/ugyfelek", label: "Ügyfelek" },
+      { href: "/kampanyok", label: "Kampányok" },
+      { href: "/elorejelzes", label: "Előrejelzés" },
     ],
   },
   {
-    id: "munka",
-    label: "Munkavégzés",
+    id: "projektek",
+    label: "Projektek",
+    href: "/projektek",
+    prefixes: ["/projektek", "/feladatok", "/naptar", "/jegyek"],
     items: [
-      { href: "/projektek", label: "Projektek", icon: Building2 },
-      { href: "/feladatok", label: "Feladatok", icon: CheckSquare },
-      { href: "/naptar", label: "Naptár", icon: CalendarDays },
-      { href: "/jegyek", label: "Jegyek", icon: LifeBuoy },
+      { href: "/projektek", label: "Projektek" },
+      { href: "/feladatok", label: "Feladatok" },
+      { href: "/naptar", label: "Naptár" },
+      { href: "/jegyek", label: "Jegyek" },
     ],
   },
   {
-    id: "penz",
-    label: "Pénzügy és elemzés",
+    id: "penzugy",
+    label: "Pénzügy",
+    href: "/penzugy",
+    prefixes: ["/penzugy", "/riportok"],
     items: [
-      { href: "/penzugy", label: "Pénzügy", icon: Wallet },
-      { href: "/riportok", label: "Riportok", icon: BarChart3 },
+      { href: "/penzugy", label: "Pénzügy" },
+      { href: "/riportok", label: "Riportok" },
     ],
   },
   {
     id: "rendszer",
-    label: "Rendszer",
+    label: "Rendszer beállítások",
+    href: "/torzsadatok",
+    prefixes: ["/torzsadatok", "/felhasznalok", "/audit", "/alvallalkozok", "/szemelyek"],
     items: [
-      { href: "/torzsadatok", label: "Törzsadatok", icon: Wrench },
-      { href: "/felhasznalok", label: "Felhasználók", icon: UserCog, adminOnly: true },
-      { href: "/audit", label: "Auditnapló", icon: History, adminOnly: true },
+      { href: "/torzsadatok", label: "Törzsadatok" },
+      { href: "/alvallalkozok", label: "Alvállalkozók" },
+      { href: "/felhasznalok", label: "Felhasználók", adminOnly: true },
+      { href: "/audit", label: "Auditnapló", adminOnly: true },
     ],
   },
 ];
+
+const matches = (pathname: string | null, prefixes: string[]) =>
+  !!pathname && prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -80,8 +92,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-
-  // Mobilon az oldalsáv off-canvas fiók: útvonalváltáskor és Esc-re bezárul.
+  // Mobilon a menü lenyíló panel: útvonalváltáskor és Esc-re bezárul.
   const [lastPath, setLastPath] = useState(pathname);
   if (pathname !== lastPath) {
     setLastPath(pathname);
@@ -102,131 +113,137 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     router.push("/login");
   }
 
+  const isAdmin = user?.role === "admin";
+  const visibleItems = (s: NavSection) => s.items.filter((it) => !it.adminOnly || isAdmin);
+  const aktivSzekcio = SECTIONS.find((s) => matches(pathname, s.prefixes));
+  const iconBtn =
+    "flex h-11 w-11 items-center justify-center rounded-[var(--radius)] hover:bg-[var(--sidebar-hover)] md:h-9 md:w-9";
+
   return (
-    <div className="flex min-h-dvh">
-      {menuOpen && (
-        <button
-          type="button"
-          aria-label="Menü bezárása"
-          onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
-        />
-      )}
-      <aside
-        id="fo-menu"
-        className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-64 shrink-0 flex-col justify-between overflow-y-auto bg-[var(--sidebar)] py-4 text-[var(--sidebar-foreground)] transition-[transform,visibility] duration-200 ease-out motion-reduce:transition-none md:sticky md:top-0 md:z-auto md:h-dvh md:w-60 md:self-start md:translate-x-0 md:overflow-y-auto md:visible ${
-          menuOpen ? "translate-x-0" : "-translate-x-full invisible"
-        }`}
-      >
-        <div>
-          <div className="mb-2 flex justify-end px-4 md:hidden">
-            <button
-              type="button"
-              aria-label="Menü bezárása"
-              onClick={() => setMenuOpen(false)}
-              className="flex h-11 w-11 items-center justify-center rounded-[var(--radius)] hover:bg-[var(--sidebar-hover)]"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          <div className="mb-6 px-4">
-            <div className="rounded-[var(--radius)] bg-[var(--card)] p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/ubrankovics-logo.svg" alt="Ubrankovics" className="w-full" />
-            </div>
-          </div>
+    <div className="flex min-h-dvh flex-col">
+      <header className="sticky top-0 z-30 bg-[var(--sidebar)] text-[var(--sidebar-foreground)]">
+        <div className="flex h-14 items-center gap-2 px-2 md:gap-4 md:px-4">
           <button
-            onClick={() => setSearchOpen(true)}
-            className="mx-4 mb-4 flex items-center justify-between gap-2 rounded-[var(--radius)] border border-white/10 px-3 py-1.5 text-sm text-[var(--sidebar-foreground)]/70 hover:bg-[var(--sidebar-hover)]"
+            type="button"
+            aria-label={menuOpen ? "Menü bezárása" : "Menü megnyitása"}
+            aria-expanded={menuOpen}
+            aria-controls="fo-menu"
+            onClick={() => setMenuOpen((o) => !o)}
+            className={`${iconBtn} md:hidden`}
           >
-            <span className="flex items-center gap-2">
-              <Search size={14} /> Keresés
-            </span>
-            <span className="text-xs opacity-60">Ctrl+K</span>
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-          <div className="mb-4">
-            <NotificationBell />
-          </div>
-          <nav aria-label="Főmenü">
-            {NAV_GROUPS.map((group) => {
-              const items = group.items.filter((it) => !it.adminOnly || user?.role === "admin");
-              if (items.length === 0) return null;
+          <Link href="/" aria-label="Kezdőlap" className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--card)] px-2 py-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/ubrankovics-logo.svg" alt="" className="h-7 w-auto md:h-8" />
+          </Link>
+
+          <nav aria-label="Főmenü" className="ml-2 hidden items-center gap-1 md:flex">
+            {SECTIONS.map((s) => {
+              const active = aktivSzekcio?.id === s.id;
               return (
-                <div key={group.id} role="group" aria-labelledby={group.label ? `nav-${group.id}` : undefined} className="mt-5 first:mt-0">
-                  {group.label && (
-                    <p id={`nav-${group.id}`} className="px-4 pb-1 text-xs font-medium text-[var(--color-neutral-500)]">
-                      {group.label}
-                    </p>
-                  )}
-                  <div className="space-y-0.5">
-                    {items.map(({ href, label, icon: Icon }) => {
-                      const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
-                      return (
-                        <Link
-                          key={href}
-                          href={href}
-                          aria-current={active ? "page" : undefined}
-                          className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors md:py-2 ${
-                            active ? "bg-[var(--sidebar-active)] font-medium text-white" : "hover:bg-[var(--sidebar-hover)]"
-                          }`}
-                        >
-                          <Icon size={16} />
-                          {label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
+                <Link
+                  key={s.id}
+                  href={s.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`rounded-[var(--radius)] px-3 py-1.5 text-sm transition-colors ${
+                    active ? "bg-[var(--sidebar-active)] font-medium text-white" : "hover:bg-[var(--sidebar-hover)]"
+                  }`}
+                >
+                  {s.label}
+                </Link>
               );
             })}
           </nav>
-        </div>
-        <div className="space-y-2 border-t border-white/10 pt-3 text-sm">
-          {user && (
-            <Link
-              href="/fiok"
-              aria-current={pathname === "/fiok" ? "page" : undefined}
-              className="block px-4 py-2 hover:bg-[var(--sidebar-hover)] md:py-1"
+
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Keresés"
+              className="hidden items-center gap-2 rounded-[var(--radius)] border border-white/10 px-3 py-1.5 text-sm text-[var(--sidebar-foreground)]/80 hover:bg-[var(--sidebar-hover)] md:flex"
             >
+              <Search size={14} /> Keresés <span className="text-xs opacity-60">Ctrl+K</span>
+            </button>
+            <button type="button" aria-label="Keresés" onClick={() => setSearchOpen(true)} className={`${iconBtn} md:hidden`}>
+              <Search size={20} />
+            </button>
+            <NotificationBell />
+            {user && (
+              <Link
+                href="/fiok"
+                aria-current={pathname === "/fiok" ? "page" : undefined}
+                className="hidden rounded-[var(--radius)] px-2 py-1.5 text-sm hover:bg-[var(--sidebar-hover)] lg:block"
+              >
+                {user.full_name}
+              </Link>
+            )}
+            <button type="button" onClick={logout} aria-label="Kijelentkezés" title="Kijelentkezés" className={iconBtn}>
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
+
+        {aktivSzekcio && (
+          <nav
+            aria-label={`${aktivSzekcio.label} almenü`}
+            className="hidden border-t border-white/10 bg-[var(--card)] px-2 text-[var(--foreground)] md:flex md:px-4"
+          >
+            {visibleItems(aktivSzekcio).map((it) => {
+              const active = matches(pathname, [it.href]);
+              return (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`px-3 py-2 text-sm ${
+                    active ? "border-b-2 border-[var(--primary)] font-medium text-[var(--primary)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {it.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
+
+        <div
+          id="fo-menu"
+          hidden={!menuOpen}
+          className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-white/10 pb-3 md:hidden"
+        >
+          <Link href="/" className="block px-4 py-3 text-sm hover:bg-[var(--sidebar-hover)]">
+            Kezdőlap
+          </Link>
+          {SECTIONS.map((s) => (
+            <div key={s.id} role="group" aria-labelledby={`nav-${s.id}`} className="mt-2">
+              <p id={`nav-${s.id}`} className="px-4 pb-1 text-xs font-medium text-[var(--color-neutral-500)]">
+                {s.label}
+              </p>
+              {visibleItems(s).map((it) => {
+                const active = matches(pathname, [it.href]);
+                return (
+                  <Link
+                    key={it.href}
+                    href={it.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`block px-4 py-3 text-sm ${active ? "bg-[var(--sidebar-active)] font-medium text-white" : "hover:bg-[var(--sidebar-hover)]"}`}
+                  >
+                    {it.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+          {user && (
+            <Link href="/fiok" className="mt-2 block px-4 py-3 text-sm hover:bg-[var(--sidebar-hover)]">
               {user.full_name}
             </Link>
           )}
-          <button
-            onClick={logout}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-[var(--sidebar-hover)] md:py-2"
-          >
-            <LogOut size={16} />
-            Kijelentkezés
-          </button>
         </div>
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 bg-[var(--sidebar)] px-2 text-[var(--sidebar-foreground)] md:hidden">
-          <button
-            type="button"
-            aria-label="Menü megnyitása"
-            aria-expanded={menuOpen}
-            aria-controls="fo-menu"
-            onClick={() => setMenuOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius)] hover:bg-[var(--sidebar-hover)]"
-          >
-            <Menu size={22} />
-          </button>
-          <div className="rounded-[var(--radius-sm)] bg-[var(--card)] px-2 py-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/ubrankovics-logo.svg" alt="Ubrankovics" className="h-7 w-auto" />
-          </div>
-          <button
-            type="button"
-            aria-label="Keresés"
-            onClick={() => setSearchOpen(true)}
-            className="ml-auto flex h-11 w-11 items-center justify-center rounded-[var(--radius)] hover:bg-[var(--sidebar-hover)]"
-          >
-            <Search size={20} />
-          </button>
-        </header>
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
-      </div>
+      </header>
+
+      <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
       <LabelAssociator />
       {searchOpen && <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />}
     </div>

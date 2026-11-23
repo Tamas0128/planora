@@ -142,7 +142,7 @@ export default function FeladatokPage() {
       <ul className={`${cardCls} divide-y divide-[var(--border)]`}>
         {lathato.map((f) => (
           <li key={f.id} className="flex items-start gap-3 px-3 py-2 text-sm">
-            <input type="checkbox" checked={f.kesz} onChange={() => toggleKesz(f)} className="mt-1" />
+            <input type="checkbox" aria-label={`${f.cim} kész`} checked={f.kesz} onChange={() => toggleKesz(f)} className="mt-1" />
             <div className="flex-1">
               <div className={f.kesz ? "text-[var(--muted)] line-through" : ""}>{f.cim}</div>
               {f.leiras && <div className="text-xs text-[var(--muted)]">{f.leiras}</div>}
@@ -160,7 +160,7 @@ export default function FeladatokPage() {
                 )}
               </div>
             </div>
-            <button onClick={() => remove(f)} className="text-[var(--danger)]">
+            <button onClick={() => remove(f)} aria-label={`${f.cim} törlése`} className="text-[var(--danger)]">
               <Trash2 size={14} />
             </button>
           </li>

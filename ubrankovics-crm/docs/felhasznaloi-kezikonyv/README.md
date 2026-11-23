@@ -23,16 +23,20 @@ Ez a kézikönyv a Ubrankovics Gerenda- és Készházgyártó Kft. CRM-rendszer�
 
 Lépj be a felhasználóneveddel és jelszavaddal. Ha a fiókodon be van kapcsolva a kétlépcsős azonosítás, a rendszer a belépés után a hitelesítő alkalmazás kódját is kéri.
 
-A bal oldali menü négy csoportra oszlik:
+Az oldal tetején egy **felső keret** található, ez minden oldalon ugyanott van. A keret négy fő területből áll, alatta pedig az aktív terület oldalainak almenüje látszik:
 
-| Csoport | Tartalma |
+| Terület | Almenü |
 |---|---|
 | **Értékesítés** | Érdeklődők, Ügyfelek, Kampányok, Előrejelzés |
-| **Munkavégzés** | Projektek, Feladatok, Naptár, Jegyek |
-| **Pénzügy és elemzés** | Pénzügy, Riportok |
-| **Rendszer** | Törzsadatok, Felhasználók, Auditnapló |
+| **Projektek** | Projektek, Feladatok, Naptár, Jegyek |
+| **Pénzügy** | Pénzügy, Riportok |
+| **Rendszer beállítások** | Törzsadatok, Alvállalkozók, Felhasználók*, Auditnapló* |
 
-A menü tetején lévő **Keresés** (Ctrl+K) az egész rendszerben keres, az **Értesítések** a rád váró teendőket és figyelmeztetéseket gyűjti.
+* Csak adminisztrátornak látható.
+
+A keret jobb oldalán találod a **Keresés** gombot (Ctrl+K, az egész rendszerben keres), az **Értesítések** harangot (a rád váró teendők és figyelmeztetések száma a harangon látszik; kattintásra lenyílik a lista, itt kapcsolható be a napi összefoglaló e-mail is), a saját nevedet (fiókbeállítások) és a kijelentkezés gombot. A bal felső logóra kattintva a **Kezdőlapra** jutsz. Telefonon a keret összecsukódik: a bal felső gombbal nyílik a teljes menü.
+
+**A munka a projekten belül történik.** Egy projekt oldalán minden megtalálható, amire szükséged van: tételek, ütemezés, feladatok, naptár, ajánlat, napló, átadás, dokumentumok és a beállítások (3.4). A Feladatok, Naptár és Jegyek menüpontok csak összesítő nézetek az összes projektről.
 
 ## 2. Kezdőlap
 
@@ -66,7 +70,7 @@ Ha egy projekthez még nincs térképi pozíció, az oldal alján megjelenik a *
 
 ### 3.4 Egy projekt részletei
 
-A projekt oldalán fülek találhatók. A leggyakrabban használtak:
+A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, Fázisok, Feladatok, Naptár, Ajánlat, Építési napló, Átadás, Dokumentumok, Beállítások**. A leggyakrabban használtak:
 
 **Áttekintés** – az ügyfél és az építési cím, a projekt szerepkörei (építésvezető, projektfelelős), alapadatok.
 
@@ -76,7 +80,7 @@ A projekt oldalán fülek találhatók. A leggyakrabban használtak:
 
 ![Projekt tételek](kepek/07-projekt-tetelek.png)
 
-**Ütemezés / Fázisok** – a munkafázisok időrendje. Ha az ütemező aktív, a fázisok sorrendje és időtartama alapján a rendszer kiszámolja a határidőket; a sorrend húzással módosítható.
+**Ütemezés / Fázisok** – a munkafázisok időrendje. Az **Ütemezés** fül akkor működik, ha az ütemező be van kapcsolva a projektnél (kikapcsolt állapotban az Ütemezés fülön egy gombbal, vagy a Beállítások fülön kapcsolható be). Bekapcsolva a tételekhez kezdő- és befejező dátum, felelős és függőség rendelhető, a rendszer kiszámolja a határidőket, a sorrend húzással módosítható, és a Gantt-diagram PDF-ben is letölthető.
 
 ![Projekt ütemezés](kepek/08-projekt-utemezes.png)
 
@@ -91,6 +95,18 @@ A projekt oldalán fülek találhatók. A leggyakrabban használtak:
 **Átadás** – az átadás-átvételi jegyzőkönyv, hibalista és jótállási határidők.
 
 ![Átadás](kepek/11-projekt-atadas.png)
+
+**Feladatok** – a projekt saját teendői: új feladat címmel, leírással, határidővel és felelőssel; a pipával késznek jelölhető, a lejárt határidő pirossal látszik.
+
+![Projekt feladatok](kepek/28-projekt-feladatok.png)
+
+**Naptár** – csak ennek a projektnek a határidői (feladatok, ütemezett tételek, átadás, garancia lejárata), havi nézetben.
+
+![Projekt naptár](kepek/29-projekt-naptar.png)
+
+**Beállítások** – az ütemező be- és kikapcsolása, a projekt alapadatai (név, állapot, átadási határidő, helyrajzi szám, e-napló iktatószám, mappa útvonal, térképi koordináták) és a projekt törlése.
+
+![Projekt beállítások](kepek/30-projekt-beallitasok.png)
 
 **Dokumentumok** – a projekthez feltöltött fájlok. Itt található a **DOCX generálása** gomb is: a feltöltött sablonból a projekt adataival kitöltött Word-dokumentumot készít (lásd 7.2).
 
@@ -151,7 +167,7 @@ Az ügyfél oldalán időrendben látod a kapcsolattartás történetét (hívá
 
 ![Feladatok](kepek/18-feladatok.png)
 
-**Naptár** – a határidők, átadások és ütemezett események havi nézetben.
+**Naptár** – az összes projekt határidői, átadásai és ütemezett eseményei havi nézetben. A hónap és az év legördülőből választható, a **Ma** gomb visszaugrik a mai napra; a jelmagyarázat mutatja az esemény típusait (feladat, átadás, ütemezett tétel, garancia lejár). Egy napra kattintva csak annak a napnak az eseményei jelennek meg a lenti listában, a címre kattintva pedig megnyílik a projekt. Az **iCal exportálás** gombbal a határidők a saját naptáralkalmazásodba (Outlook, Google Naptár) is átvihetők.
 
 ![Naptár](kepek/19-naptar.png)
 
@@ -189,11 +205,11 @@ A **Törzsadatok → Dokumentumsablonok** lapon Word (`.docx`) sablonokat tölth
 
 ![Keresés](kepek/25-kereses.png)
 
-A **Ctrl+K** billentyűkombinációval (vagy a menü tetején lévő mezővel) bárhol rákereshetsz projektre, ügyfélre, alvállalkozóra, dokumentumra; a találatra Entert nyomva azonnal odaugrik a rendszer.
+A **Ctrl+K** billentyűkombinációval (vagy a felső keret Keresés gombjával) bárhol rákereshetsz projektre, ügyfélre, alvállalkozóra, dokumentumra; a találatra Entert nyomva azonnal odaugrik a rendszer.
 
 ### 9.2 Mobil nézet
 
-A rendszer telefonon is használható; a menü a bal felső gombbal nyitható, a fülek vízszintesen görgethetők.
+A rendszer telefonon is használható; a menü a bal felső gombbal nyitható, a keresés és az értesítések a keretben maradnak, a fülek vízszintesen görgethetők.
 
 | Projekt oldal | Projektkártyák |
 |---|---|

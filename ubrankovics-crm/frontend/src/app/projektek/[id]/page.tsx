@@ -24,6 +24,9 @@ import Modal from "@/components/Modal";
 import AtvetelTab from "@/components/projekt/AtvetelTab";
 import NaploTab from "@/components/projekt/NaploTab";
 import AjanlatTab from "@/components/projekt/AjanlatTab";
+import FeladatokTab from "@/components/projekt/FeladatokTab";
+import BeallitasokTab from "@/components/projekt/BeallitasokTab";
+import NaptarNezet from "@/components/NaptarNezet";
 import {
   Ajanlatkeres,
   AnyagRendeles,
@@ -119,10 +122,25 @@ const SZEREP_LABEL: Record<string, string> = {
   gyartastervezo: "Gyártástervező",
 };
 
+type FulId = "attekintes" | "tetelek" | "utemezes" | "fazisok" | "feladatok" | "naptar" | "ajanlat" | "naplo" | "atadas" | "dokumentumok" | "beallitasok";
+const FULEK: [FulId, string][] = [
+  ["attekintes", "Áttekintés"],
+  ["tetelek", "Tételek"],
+  ["utemezes", "Ütemezés"],
+  ["fazisok", "Fázisok"],
+  ["feladatok", "Feladatok"],
+  ["naptar", "Naptár"],
+  ["ajanlat", "Ajánlat"],
+  ["naplo", "Építési napló"],
+  ["atadas", "Átadás"],
+  ["dokumentumok", "Dokumentumok"],
+  ["beallitasok", "Beállítások"],
+];
+
 export default function ProjektDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projektId = Number(id);
-  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok" | "dokumentumok" | "ajanlat" | "naplo" | "atadas">("attekintes");
+  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok" | "dokumentumok" | "ajanlat" | "naplo" | "atadas" | "feladatok" | "naptar" | "beallitasok">("attekintes");
   const [projekt, setProjekt] = useState<ProjektDetail | null>(null);
   const [tetelek, setTetelek] = useState<ProjektTetel[]>([]);
   const [munkanemek, setMunkanemek] = useState<Munkanem[]>([]);
@@ -177,33 +195,16 @@ export default function ProjektDetailPage() {
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
 
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
-        {(
-          projekt.utemezes_aktiv
-            ? (["attekintes", "tetelek", "utemezes", "fazisok", "ajanlat", "naplo", "atadas", "dokumentumok"] as const)
-            : (["attekintes", "tetelek", "fazisok", "ajanlat", "naplo", "atadas", "dokumentumok"] as const)
-        ).map((t) => (
+        {FULEK.map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
+            aria-pressed={tab === t}
             className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium ${
               tab === t ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
             }`}
           >
-            {t === "attekintes"
-              ? "Áttekintés"
-              : t === "tetelek"
-              ? "Tételek"
-              : t === "utemezes"
-              ? "Ütemezés"
-              : t === "fazisok"
-              ? "Fázisok"
-              : t === "ajanlat"
-              ? "Ajánlat"
-              : t === "naplo"
-              ? "Építési napló"
-              : t === "atadas"
-              ? "Átadás"
-              : "Dokumentumok"}
+            {label}
           </button>
         ))}
       </div>
@@ -220,9 +221,26 @@ export default function ProjektDetailPage() {
           onChange={loadTetelek}
         />
       )}
-      {tab === "utemezes" && projekt.utemezes_aktiv && (
-        <UtemezesTab projekt={projekt} projektId={projektId} tetelek={tetelek} szemelyek={szemelyek} onChange={loadAll} />
-      )}
+      {tab === "utemezes" &&
+        (projekt.utemezes_aktiv ? (
+          <UtemezesTab projekt={projekt} projektId={projektId} tetelek={tetelek} szemelyek={szemelyek} onChange={loadAll} />
+        ) : (
+          <div className="max-w-xl rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4 text-sm">
+            <p className="mb-3">Ennél a projektnél az ütemező ki van kapcsolva. Bekapcsolva a tételekhez dátum, felelős és függőség rendelhető, és megjelenik a Gantt-diagram.</p>
+            <button
+              onClick={async () => {
+                await api.updateProjekt(projektId, { utemezes_aktiv: true });
+                loadProjekt();
+              }}
+              className="rounded-[var(--radius)] bg-[var(--primary)] px-4 py-1.5 text-[var(--primary-foreground)]"
+            >
+              Ütemező bekapcsolása
+            </button>
+          </div>
+        ))}
+      {tab === "feladatok" && <FeladatokTab projektId={projektId} />}
+      {tab === "naptar" && <NaptarNezet projektId={projektId} />}
+      {tab === "beallitasok" && <BeallitasokTab projekt={projekt} onChange={loadProjekt} />}
       {tab === "fazisok" && (
         <FazisokTab projektId={projektId} fazisok={fazisok} onChange={loadFazisok} />
       )}

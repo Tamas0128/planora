@@ -20,8 +20,9 @@ test.describe("Pénzügy", () => {
   test("bankegyenleg rögzítése frissíti a nyitó egyenleget", async ({ page }) => {
     await page.goto("/penzugy");
     const datum = new Date().toISOString().slice(0, 10);
-    await page.locator('input[type="date"]').first().fill(datum);
-    await page.getByPlaceholder("Egyenleg (Ft)").fill("9999000");
+    const egyenleg = page.getByPlaceholder("Egyenleg (Ft)");
+    await egyenleg.locator("xpath=..").locator('input[type="date"]').fill(datum); // nem az időszak-választó
+    await egyenleg.fill("9999000");
     await page.getByRole("button", { name: "Mentés" }).click();
     await expect(page.getByText("Legutóbbi rögzített egyenleg")).toContainText("9 999 000");
   });

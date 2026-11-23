@@ -16,13 +16,13 @@ async function api(request: APIRequestContext) {
 }
 
 async function shot(page: Page, nev: string, opts: { full?: boolean } = {}) {
-  await page.waitForLoadState("networkidle").catch(() => {});
+  await page.waitForLoadState("networkidle", { timeout: 4000 }).catch(() => {});
   await page.waitForTimeout(1900); // animációk lefutnak
   await page.screenshot({ path: path.join(KEP_DIR, `${nev}.png`), fullPage: opts.full ?? false });
 }
 
 test("Képernyőképek", async ({ page, request, browser }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(900_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   const headers = await api(request);
   const projektek: { id: number; projekt_nev: string }[] = await (await request.get("/api/projektek", { headers })).json();
@@ -72,6 +72,12 @@ test("Képernyőképek", async ({ page, request, browser }) => {
   await shot(page, "10-projekt-naplo");
   await page.getByRole("button", { name: "Dokumentumok" }).click();
   await shot(page, "12-projekt-dokumentumok");
+  await page.getByRole("button", { name: "Feladatok", exact: true }).click();
+  await shot(page, "28-projekt-feladatok");
+  await page.getByRole("button", { name: "Naptár", exact: true }).click();
+  await shot(page, "29-projekt-naptar");
+  await page.getByRole("button", { name: "Beállítások", exact: true }).click();
+  await shot(page, "30-projekt-beallitasok", { full: true });
 
   await page.goto(`/projektek/${HORVATH}`);
   await page.getByRole("button", { name: "Ajánlat", exact: true }).click();

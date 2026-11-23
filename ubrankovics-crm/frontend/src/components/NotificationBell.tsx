@@ -56,23 +56,26 @@ export default function NotificationBell() {
   }
 
   return (
-    <div className="relative px-4">
+    <div className="md:relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between rounded-[var(--radius)] border border-white/10 px-3 py-1.5 text-sm hover:bg-[var(--sidebar-hover)]"
-        aria-label="Értesítések"
+        aria-expanded={open}
+        className="relative flex h-11 w-11 items-center justify-center rounded-[var(--radius)] hover:bg-[var(--sidebar-hover)] md:h-9 md:w-9"
+        aria-label={items.length > 0 ? `Értesítések, ${items.length} teendő` : "Értesítések"}
       >
-        <span className="flex items-center gap-2">
-          <Bell size={14} /> Értesítések
-        </span>
+        <Bell size={18} />
         {items.length > 0 && (
-          <span className="rounded-full bg-[var(--danger)] px-1.5 text-xs font-medium text-white" data-testid="ertesites-darab">
+          <span
+            aria-hidden="true"
+            className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-[var(--danger)] px-1 text-center text-[10px] font-medium leading-4 text-white"
+            data-testid="ertesites-darab"
+          >
             {items.length}
           </span>
         )}
       </button>
       {open && (
-        <div className="mt-1 max-h-96 w-full overflow-y-auto md:absolute md:left-4 md:top-full md:z-40 md:w-80 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-lg">
+        <div className="fixed inset-x-2 top-14 z-50 max-h-[70dvh] overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-lg md:absolute md:inset-x-auto md:right-0 md:top-full md:mt-1 md:w-80">
           {items.length === 0 ? (
             <p className="p-3 text-sm text-[var(--muted)]">Nincs teendő — minden rendben.</p>
           ) : (

@@ -1426,7 +1426,8 @@ export const api = {
     request<VevoiAjanlat>(`/ajanlat-verziok/${verzioId}/allapot`, { method: "PATCH", body: JSON.stringify({ allapot }) }),
   deleteAjanlat: (id: number) => request<void>(`/ajanlatok/${id}`, { method: "DELETE" }),
 
-  getNaptar: (tol: string, ig: string) => request<NaptarEsemeny[]>(`/naptar?tol=${tol}&ig=${ig}`),
+  getNaptar: (tol: string, ig: string, projektId?: number) =>
+    request<NaptarEsemeny[]>(`/naptar?tol=${tol}&ig=${ig}${projektId ? `&projekt_id=${projektId}` : ""}`),
   downloadNaptarIcs: () => downloadFile("/naptar/export.ics", "ubrankovics-naptar.ics"),
 
   listSablonfajlok: () => request<SablonLista>("/sablonfajlok"),
