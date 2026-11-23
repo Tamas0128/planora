@@ -12,6 +12,7 @@ export default function KampanyokPage() {
   const [kampanyok, setKampanyok] = useState<Kampany[]>([]);
   const [cimkeId, setCimkeId] = useState("");
   const [cimzettek, setCimzettek] = useState<number | null>(null);
+  const [leiratkozott, setLeiratkozott] = useState(0);
   const [szegmens, setSzegmens] = useState<Ugyfel[]>([]);
   const [nev, setNev] = useState("");
   const [targy, setTargy] = useState("");
@@ -29,7 +30,13 @@ export default function KampanyokPage() {
 
   useEffect(() => {
     const id = cimkeId ? Number(cimkeId) : null;
-    api.getKampanyCimzettek(id).then((r) => setCimzettek(r.darab)).catch(() => setCimzettek(null));
+    api
+      .getKampanyCimzettek(id)
+      .then((r) => {
+        setCimzettek(r.darab);
+        setLeiratkozott(r.leiratkozott);
+      })
+      .catch(() => setCimzettek(null));
     if (id) api.listSzegmensUgyfelek(id).then(setSzegmens).catch(() => setSzegmens([]));
     else setSzegmens([]);
   }, [cimkeId]);
@@ -117,6 +124,7 @@ export default function KampanyokPage() {
             </select>
             <div className="text-xs text-[var(--muted)]" data-testid="cimzettek-szama">
               Címzettek (e-mail címmel): {cimzettek ?? "—"}
+              {leiratkozott > 0 && ` (+${leiratkozott} leiratkozott, kihagyva)`}
               {szegmens.length > 0 && (
                 <>
                   {" · "}

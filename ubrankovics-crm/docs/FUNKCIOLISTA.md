@@ -124,3 +124,13 @@ Backend 85/85 pytest zöld (9 új teszt: `tests/test_crm_bovites.py`); élő pr�
 - **Értékesítési előrejelzés (`/elorejelzes`)**: az érdeklődők becsült értéke szakaszonkénti valószínűséggel (10/25/50/75%) súlyozva, várható lezárási hónap szerint, havi cél beállításával és teljesülés-sávval; felelősönkénti teljesítmény.
 
 Még nincs: e-mailes értesítés, kampány-leiratkozás, Playwright e2e a CRM-bővítésekre.
+
+## 12. Kampány-leiratkozás és e-mailes értesítés (2026-11-23) — KÉSZ
+
+Backend 92/92 pytest zöld (7 új: `tests/test_leiratkozas_es_email_ertesites.py`); élő próba Mailpitbe (levél, `List-Unsubscribe` fejléc, leiratkozó oldal, napi összefoglaló).
+
+- **Kampány-leiratkozás**: minden kampánylevél alján egyedi, kitalálhatatlan leiratkozó link + `List-Unsubscribe` fejléc. A publikus oldal (`/api/leiratkozas/{token}`) a GET-re csak megerősítést kér, a leiratkoztatást a POST végzi (a levélszkennerek ne iratkoztassanak le senkit). A leiratkozott ügyfél kimarad a kampányokból, a kampányoldal jelzi, hány címzettet hagyott ki; a leiratkozás bekerül a kommunikációs naplóba és az auditnaplóba. Az ügyfélkártyán a munkatárs kézzel is le- vagy visszairatkoztathat.
+- **E-mailes értesítés**: az Értesítések panelen (harang) kapcsolható "Napi összefoglaló e-mailben", plusz "Küldés most". Az ütemező óránként ellenőriz, 8 óra után (`EMAIL_DIGEST_HOUR`) naponta legfeljebb egyszer küld, csak ha van teendő; kikapcsolható (`EMAIL_DIGEST_ENABLED`). A levélben a feladatok, jegyek és (pénzügyi szerepkörnek) a lejárt számlák linkelve. SMTP nélkül nem jelöli elküldöttnek.
+- Beállítás: `PUBLIC_BASE_URL` (docker-compose, alapérték `http://localhost:3101`) — a levelekbe kerülő linkek alapja; éles környezetben a valódi címre kell állítani.
+
+Még nincs: Playwright e2e a CRM-bővítésekre.

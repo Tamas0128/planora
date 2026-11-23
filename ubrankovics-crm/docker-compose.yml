@@ -29,6 +29,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3101}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3101}
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_USE_TLS: "false"

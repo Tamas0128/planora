@@ -30,6 +30,7 @@ export interface Ugyfel {
   telefon?: string | null;
   email?: string | null;
   owner_id?: number | null;
+  leiratkozott?: boolean;
   created_at: string;
 }
 
@@ -1061,7 +1062,7 @@ export const api = {
 
   listKampanyok: () => request<Kampany[]>("/kampanyok"),
   getKampanyCimzettek: (cimkeId?: number | null) =>
-    request<{ darab: number }>(`/kampanyok/cimzettek-szama${cimkeId != null ? `?cimke_id=${cimkeId}` : ""}`),
+    request<{ darab: number; leiratkozott: number }>(`/kampanyok/cimzettek-szama${cimkeId != null ? `?cimke_id=${cimkeId}` : ""}`),
   sendKampany: (body: { nev: string; targy: string; uzenet: string; cimke_id?: number | null }) =>
     request<Kampany>("/kampanyok", { method: "POST", body: JSON.stringify(body) }),
 
@@ -1080,6 +1081,14 @@ export const api = {
   getElorejelzes: (honapok = 6) => request<Elorejelzes>(`/elorejelzes?honapok=${honapok}`),
   setErtekesitesiCel: (honap: string, osszeg: string) =>
     request<{ honap: string; osszeg: string }>("/elorejelzes/cel", { method: "PUT", body: JSON.stringify({ honap, osszeg }) }),
+
+  getEmailBeallitas: () => request<{ email_ertesites: boolean; email: string }>("/ertesitesek/beallitas"),
+  putEmailBeallitas: (email_ertesites: boolean) =>
+    request<{ email_ertesites: boolean; email: string }>("/ertesitesek/beallitas", {
+      method: "PUT",
+      body: JSON.stringify({ email_ertesites }),
+    }),
+  kuldesMostErtesites: () => request<{ allapot: string }>("/ertesitesek/kuldes-most", { method: "POST" }),
 
   listErtesitesek: () => request<ErtesitesItem[]>("/ertesitesek"),
 

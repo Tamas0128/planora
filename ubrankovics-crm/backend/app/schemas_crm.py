@@ -41,6 +41,7 @@ class UgyfelUpdate(BaseModel):
     telefon: Optional[str] = None
     email: Optional[str] = None
     owner_id: Optional[int] = None
+    leiratkozott: Optional[bool] = None
 
 
 class UgyfelResponse(BaseModel):
@@ -49,6 +50,7 @@ class UgyfelResponse(BaseModel):
     telefon: Optional[str]
     email: Optional[str]
     owner_id: Optional[int]
+    leiratkozott: bool = False
     created_at: datetime
 
     model_config = _from_attrs

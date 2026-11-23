@@ -17,7 +17,7 @@ def _header_safe(value: str) -> str:
     return " ".join(value.replace("\r", " ").replace("\n", " ").split())
 
 
-def send_email(to: str, subject: str, html_body: str) -> bool:
+def send_email(to: str, subject: str, html_body: str, extra_headers: dict[str, str] | None = None) -> bool:
     """True, ha a levelet átadtuk az SMTP szervernek; False, ha az SMTP nincs
     beállítva. Kapcsolati/hitelesítési hibánál kivételt dob."""
     if not settings.smtp_host:
@@ -29,6 +29,8 @@ def send_email(to: str, subject: str, html_body: str) -> bool:
     msg["Subject"] = _header_safe(subject)
     msg["From"] = settings.smtp_from
     msg["To"] = to
+    for name, value in (extra_headers or {}).items():
+        msg[name] = _header_safe(value)
 
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as server:
         if settings.smtp_use_tls:

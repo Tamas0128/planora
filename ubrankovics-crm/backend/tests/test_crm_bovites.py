@@ -118,15 +118,15 @@ def test_cimkek_es_szegmens(client, admin_headers):
 
 def test_kampany_kuldes_szegmensnek(client, admin_headers, monkeypatch):
     kuldve = []
-    monkeypatch.setattr("app.api.cimkek.send_email", lambda to, subject, body: kuldve.append((to, subject)) or True)
+    monkeypatch.setattr("app.api.cimkek.send_email", lambda to, subject, body, extra_headers=None: kuldve.append((to, subject)) or True)
     a = _ugyfel(client, admin_headers, "A Kft.", email="a@x.hu")
     _ugyfel(client, admin_headers, "B Bt.", email="b@x.hu")
     _ugyfel(client, admin_headers, "Email nélkül")
     cid = client.post("/api/cimkek", json={"nev": "Hírlevél"}, headers=admin_headers).json()["id"]
     client.put(f"/api/ugyfelek/{a['id']}/cimkek", json={"cimke_ids": [cid]}, headers=admin_headers)
 
-    assert client.get("/api/kampanyok/cimzettek-szama", headers=admin_headers).json() == {"darab": 2}
-    assert client.get(f"/api/kampanyok/cimzettek-szama?cimke_id={cid}", headers=admin_headers).json() == {"darab": 1}
+    assert client.get("/api/kampanyok/cimzettek-szama", headers=admin_headers).json() == {"darab": 2, "leiratkozott": 0}
+    assert client.get(f"/api/kampanyok/cimzettek-szama?cimke_id={cid}", headers=admin_headers).json() == {"darab": 1, "leiratkozott": 0}
 
     r = client.post(
         "/api/kampanyok",

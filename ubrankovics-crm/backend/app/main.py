@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,6 +11,7 @@ from app.api import (
     egyedi_mezok,
     elorejelzes,
     jegyek,
+    leiratkozas,
     bankkivonat,
     dokumentumok,
     dokumentumok_email,
@@ -32,6 +34,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app import models_finance  # noqa: F401 — register finance models on Base.metadata
 from app import models_ext  # noqa: F401 — register CRM extension models
+from app.services.ertesitesek import digest_utemezo
 from app.services.seed import (
     seed_admin,
     seed_munkanemek,
@@ -56,7 +59,11 @@ async def lifespan(app: FastAPI):
         seed_projekt_tipus_tetelek(db)
     finally:
         db.close()
-    yield
+    digest_task = asyncio.create_task(digest_utemezo(SessionLocal))
+    try:
+        yield
+    finally:
+        digest_task.cancel()
 
 
 app = FastAPI(title="Ubrankovics CRM API", version="0.1.0", lifespan=lifespan)
@@ -93,6 +100,7 @@ app.include_router(audit.router, prefix="/api")
 app.include_router(cimkek.router, prefix="/api")
 app.include_router(egyedi_mezok.router, prefix="/api")
 app.include_router(jegyek.router, prefix="/api")
+app.include_router(leiratkozas.router, prefix="/api")
 app.include_router(elorejelzes.router, prefix="/api")
 
 

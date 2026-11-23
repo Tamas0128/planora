@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     smtp_from: str = "noreply@ubrankovics.local"
     smtp_use_tls: bool = True
     cegnev: str = "Ubrankovics Kft."
+    # A kampány-levelek leiratkozó linkjének alapja (a frontend /api proxyja a backendre mutat).
+    public_base_url: str = "http://localhost:3101"
+    # Napi e-mailes értesítő ütemező (óránként ellenőriz, felhasználónként naponta egyszer küld).
+    email_digest_enabled: bool = True
+    email_digest_hour: int = 8
 
     upload_dir: str = "/app/uploads"
 

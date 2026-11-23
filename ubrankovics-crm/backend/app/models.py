@@ -149,6 +149,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True)
     full_name: Mapped[str] = mapped_column(String(255))
     hashed_password: Mapped[str] = mapped_column(String(255))
+    email_ertesites: Mapped[bool] = mapped_column(Boolean, default=False)
+    utolso_email_ertesites: Mapped[date | None] = mapped_column(Date, nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.ERTEKESITES)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -168,6 +170,9 @@ class Ugyfel(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    leiratkozott: Mapped[bool] = mapped_column(Boolean, default=False)
+    leiratkozasi_token: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
 
     owner: Mapped[User | None] = relationship()
     projekt_linkek: Mapped[list["ProjektUgyfel"]] = relationship(

@@ -2,6 +2,7 @@
 
 import html
 import logging
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.config import settings
 from app.models import Kommunikacio, KommunikacioTipus, Ugyfel, User
 from app.models_ext import Cimke, Kampany, ugyfel_cimkek
 from app.schemas import UserBrief  # noqa: F401
@@ -107,8 +109,8 @@ def set_ugyfel_cimkei(
     return ugyfel_cimkei(ugyfel_id, db, user)
 
 
-def _cimzettek(db: Session, cimke_id: int | None) -> list[Ugyfel]:
-    q = db.query(Ugyfel).filter(Ugyfel.email.isnot(None), Ugyfel.email != "")
+def _cimzettek(db: Session, cimke_id: int | None, leiratkozottak: bool = False) -> list[Ugyfel]:
+    q = db.query(Ugyfel).filter(Ugyfel.email.isnot(None), Ugyfel.email != "", Ugyfel.leiratkozott.is_(leiratkozottak))
     if cimke_id is not None:
         q = q.join(ugyfel_cimkek, ugyfel_cimkek.c.ugyfel_id == Ugyfel.id).filter(ugyfel_cimkek.c.cimke_id == cimke_id)
     return q.order_by(Ugyfel.nev).all()
@@ -138,7 +140,10 @@ def list_kampanyok(db: Session = Depends(get_db), _: User = Depends(get_current_
 
 @router.get("/kampanyok/cimzettek-szama")
 def cimzettek_szama(cimke_id: int | None = None, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
-    return {"darab": len(_cimzettek(db, cimke_id))}
+    return {
+        "darab": len(_cimzettek(db, cimke_id)),
+        "leiratkozott": len(_cimzettek(db, cimke_id, leiratkozottak=True)),
+    }
 
 
 @router.post("/kampanyok", response_model=KampanyResponse, status_code=201)
@@ -153,8 +158,16 @@ def send_kampany(body: KampanyCreate, db: Session = Depends(get_db), user: User 
     sikeres = 0
     for u in cimzettek:
         torzs = html.escape(body.uzenet).replace("\n", "<br>")
+        if not u.leiratkozasi_token:
+            u.leiratkozasi_token = secrets.token_urlsafe(24)
+            db.flush()
+        link = f"{settings.public_base_url.rstrip('/')}/api/leiratkozas/{u.leiratkozasi_token}"
+        teljes = (
+            f"<p>Kedves {html.escape(u.nev)}!</p><p>{torzs}</p><hr>"
+            f'<p><small>Ha nem szeretnél több kampánylevelet kapni, <a href="{link}">iratkozz le itt</a>.</small></p>'
+        )
         try:
-            if send_email(u.email, body.targy, f"<p>Kedves {html.escape(u.nev)}!</p><p>{torzs}</p>"):
+            if send_email(u.email, body.targy, teljes, extra_headers={"List-Unsubscribe": f"<{link}>"}):
                 sikeres += 1
                 db.add(
                     Kommunikacio(

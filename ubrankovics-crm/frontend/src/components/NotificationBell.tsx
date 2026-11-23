@@ -5,9 +5,17 @@ import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { api, ErtesitesItem } from "@/lib/api";
 
+const KULDES_UZENET: Record<string, string> = {
+  elkuldve: "Elküldve a címedre.",
+  nincs_teendo: "Nincs teendő, nincs mit küldeni.",
+  nincs_smtp: "Az e-mail küldés nincs beállítva a szerveren.",
+};
+
 export default function NotificationBell() {
   const [items, setItems] = useState<ErtesitesItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [emailOn, setEmailOn] = useState(false);
+  const [uzenet, setUzenet] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -23,6 +31,29 @@ export default function NotificationBell() {
       clearInterval(t);
     };
   }, []);
+
+  useEffect(() => {
+    if (open) api.getEmailBeallitas().then((b) => setEmailOn(b.email_ertesites)).catch(() => {});
+  }, [open]);
+
+  async function toggleEmail(on: boolean) {
+    setEmailOn(on);
+    try {
+      setEmailOn((await api.putEmailBeallitas(on)).email_ertesites);
+    } catch {
+      setEmailOn(!on);
+    }
+  }
+
+  async function kuldesMost() {
+    setUzenet("");
+    try {
+      const r = await api.kuldesMostErtesites();
+      setUzenet(KULDES_UZENET[r.allapot] || r.allapot);
+    } catch (e) {
+      setUzenet(e instanceof Error ? e.message : "Hiba");
+    }
+  }
 
   return (
     <div className="relative px-4">
@@ -62,6 +93,16 @@ export default function NotificationBell() {
               ))}
             </ul>
           )}
+          <div className="space-y-1 border-t border-[var(--border)] p-3 text-xs">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={emailOn} onChange={(e) => toggleEmail(e.target.checked)} />
+              Napi összefoglaló e-mailben
+            </label>
+            <button onClick={kuldesMost} className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1">
+              Küldés most
+            </button>
+            {uzenet && <div className="text-[var(--muted)]">{uzenet}</div>}
+          </div>
         </div>
       )}
     </div>
