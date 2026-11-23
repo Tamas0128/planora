@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Erdeklodes, ErdeklodesAllapot, Kommunikacio, Ugyfel, User
+from app.services.audit import log_audit
 from app.schemas_crm import (
     ErdeklodesCreate,
     ErdeklodesResponse,
@@ -71,6 +72,8 @@ def create_erdeklodes(
         data["owner_id"] = user.id
     erdeklodes = Erdeklodes(**data)
     db.add(erdeklodes)
+    db.flush()
+    log_audit(db, user, "erdeklodes", erdeklodes.id, "letrehozas", erdeklodes.nev)
     db.commit()
     return _query(db).filter(Erdeklodes.id == erdeklodes.id).first()
 
@@ -92,13 +95,18 @@ def update_erdeklodes(
     erdeklodes_id: int,
     body: ErdeklodesUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     erdeklodes = db.query(Erdeklodes).get(erdeklodes_id)
     if not erdeklodes:
         raise HTTPException(status_code=404, detail="Érdeklődő not found")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    adat = body.model_dump(exclude_unset=True)
+    for field, value in adat.items():
         setattr(erdeklodes, field, value)
+    if "allapot" in adat:
+        log_audit(db, user, "erdeklodes", erdeklodes.id, "allapot", erdeklodes.allapot.value)
+    else:
+        log_audit(db, user, "erdeklodes", erdeklodes.id, "modositas")
     db.commit()
     return _query(db).filter(Erdeklodes.id == erdeklodes_id).first()
 
@@ -128,6 +136,7 @@ def konverzio(
     erdeklodes.allapot = ErdeklodesAllapot.NYERT
     for k in db.query(Kommunikacio).filter(Kommunikacio.erdeklodes_id == erdeklodes.id).all():
         k.ugyfel_id = ugyfel.id
+    log_audit(db, user, "erdeklodes", erdeklodes.id, "konverzio", f"ugyfel #{ugyfel.id}")
     db.commit()
     db.refresh(ugyfel)
     return ugyfel
@@ -137,10 +146,11 @@ def konverzio(
 def delete_erdeklodes(
     erdeklodes_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     erdeklodes = db.query(Erdeklodes).get(erdeklodes_id)
     if not erdeklodes:
         raise HTTPException(status_code=404, detail="Érdeklődő not found")
+    log_audit(db, user, "erdeklodes", erdeklodes.id, "torles", erdeklodes.nev)
     db.delete(erdeklodes)
     db.commit()

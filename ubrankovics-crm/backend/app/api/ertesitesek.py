@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Feladat, User, UserRole
+from app.models_ext import Jegy, JegyAllapot, JegyPrioritas
 from app.models_finance import AlvallalkozoiSzamla, UgyfelSzamla
 from app.schemas_crm import ErtesitesItem
 
@@ -49,6 +50,23 @@ def list_ertesitesek(
                 reszlet="Lejárt feladat" if lejart else "Közelgő határidő",
                 datum=f.hatarido,
                 link="/feladatok",
+            )
+        )
+
+    for j in (
+        db.query(Jegy)
+        .options(joinedload(Jegy.ugyfel))
+        .filter(Jegy.felelos_id == user.id, Jegy.allapot.in_((JegyAllapot.NYITOTT, JegyAllapot.FOLYAMATBAN)))
+        .all()
+    ):
+        items.append(
+            ErtesitesItem(
+                tipus="jegy",
+                szint="lejart" if j.prioritas == JegyPrioritas.SURGOS else "kozeli",
+                cim=f"Jegy: {j.targy}",
+                reszlet=f"{j.ugyfel.nev} — {'sürgős' if j.prioritas == JegyPrioritas.SURGOS else 'nyitott'}",
+                datum=j.created_at.date(),
+                link="/jegyek",
             )
         )
 

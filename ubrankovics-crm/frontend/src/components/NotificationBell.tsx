@@ -41,7 +41,7 @@ export default function NotificationBell() {
         )}
       </button>
       {open && (
-        <div className="absolute left-4 top-full z-40 mt-1 max-h-96 w-80 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-lg">
+        <div className="mt-1 max-h-96 w-full overflow-y-auto md:absolute md:left-4 md:top-full md:z-40 md:w-80 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-lg">
           {items.length === 0 ? (
             <p className="p-3 text-sm text-[var(--muted)]">Nincs teendő — minden rendben.</p>
           ) : (

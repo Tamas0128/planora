@@ -77,3 +77,30 @@ textarea,
 button {
   font-family: inherit;
 }
+
+/* Érintéses és keskeny képernyő: a kattintási célok legalább 44px magasak,
+   a jelölőnégyzetek nagyobbak. Asztali egérrel a sűrű elrendezés marad. */
+@media (max-width: 767px), (pointer: coarse) {
+  button,
+  [role="button"],
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+  }
+  /* 16px alatti mezőbetű esetén az iOS Safari fókuszkor ráközelít az oldalra. */
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]) {
+    font-size: 16px;
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  main table a {
+    display: inline-block;
+    padding-block: 0.75rem;
+  }
+}

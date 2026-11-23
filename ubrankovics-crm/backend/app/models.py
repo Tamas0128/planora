@@ -766,6 +766,7 @@ class Erdeklodes(Base):
     telefon: Mapped[str | None] = mapped_column(String(50), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     forras: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    varhato_lezaras: Mapped[date | None] = mapped_column(Date, nullable=True)
     allapot: Mapped[ErdeklodesAllapot] = mapped_column(Enum(ErdeklodesAllapot), default=ErdeklodesAllapot.UJ)
     becsult_ertek: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     megjegyzes: Mapped[str | None] = mapped_column(Text, nullable=True)

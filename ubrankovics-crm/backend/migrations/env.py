@@ -34,6 +34,15 @@ from app.models import (  # noqa: F401 — register all models on Base.metadata
     Ugyfel,
     User,
 )
+from app.models_ext import (  # noqa: F401 — register CRM extension models
+    AuditNaplo,
+    Cimke,
+    EgyediMezo,
+    EgyediMezoErtek,
+    ErtekesitesiCel,
+    Jegy,
+    Kampany,
+)
 from app.models_finance import (  # noqa: F401 — register finance models on Base.metadata
     AlvallalkozoiSzamla,
     BankEgyenleg,

@@ -111,4 +111,16 @@ Forrás: a "PLANora CRM funkciók gyűjtése" dokumentum hiánylistája; sorrend
 - **Import/export**: ügyféllista export CSV-be (BOM-mal, `;` elválasztó) és Excelbe; import .csv/.xlsx fájlból (oszlopok: nev, telefon, email) duplikátum-kihagyással és hibás sorok jelzésével.
 - **Duplikátum-keresés és egyesítés**: azonos név / azonos e-mail csoportok; egyesítéskor a projektek, napló és érdeklődők átkerülnek, a hiányzó elérhetőség átvétele után a forrás ügyfél törlődik.
 
-Még nincs: marketing/szegmentálás, ügyfélszolgálati jegyek, előrejelzés, egyedi mezők, auditnapló, e-mailes értesítés, Playwright e2e a fenti modulokra.
+Még nincs: lásd a 11. szakaszt.
+
+## 11. CRM-bővítés, 2. kör (2026-11-23) — KÉSZ
+
+Backend 85/85 pytest zöld (9 új teszt: `tests/test_crm_bovites.py`); élő próba a futó stacken (jegy, szegmens + kampány Mailpitbe, egyedi mező, előrejelzés-cél).
+
+- **Auditnapló (`/audit`, csak admin/vezetés)**: ki, mikor, mit — ügyfél, érdeklődő, jegy, kampány, címke, egyedi mező, cél létrehozás/módosítás/törlés/egyesítés/import.
+- **Egyedi mezők**: az admin ügyfélhez vagy érdeklődőhöz szöveg/szám/dátum mezőt vehet fel (az ügyfélkártyán és az érdeklődő kártyán), bárki kitöltheti; érték szerint validált, törléskor az értékek is törlődnek.
+- **Címkék, szegmensek, kampányok (`/kampanyok`)**: címkék az ügyfélkártyán, egy címke = egy szegmens; e-mail kampány egy szegmensnek vagy minden e-mailes ügyfélnek, címzettszám-előnézettel, a kimenő levél bekerül az ügyfél kommunikációs naplójába. SMTP nélkül nem jelöl elküldöttnek semmit.
+- **Ügyfélszolgálati jegyek (`/jegyek`)**: ügyfélhez kötött reklamáció/hibajegy, prioritás, felelős, állapot (nyitott → folyamatban → megoldva → lezárt); a felelős értesítést kap (sürgős = piros).
+- **Értékesítési előrejelzés (`/elorejelzes`)**: az érdeklődők becsült értéke szakaszonkénti valószínűséggel (10/25/50/75%) súlyozva, várható lezárási hónap szerint, havi cél beállításával és teljesülés-sávval; felelősönkénti teljesítmény.
+
+Még nincs: e-mailes értesítés, kampány-leiratkozás, Playwright e2e a CRM-bővítésekre.

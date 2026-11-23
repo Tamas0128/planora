@@ -792,6 +792,7 @@ class ErdeklodesCreate(BaseModel):
     telefon: Optional[str] = None
     email: Optional[str] = None
     forras: Optional[str] = None
+    varhato_lezaras: Optional[date] = None
     allapot: ErdeklodesAllapot = ErdeklodesAllapot.UJ
     becsult_ertek: Optional[Decimal] = None
     megjegyzes: Optional[str] = None
@@ -803,6 +804,7 @@ class ErdeklodesUpdate(BaseModel):
     telefon: Optional[str] = None
     email: Optional[str] = None
     forras: Optional[str] = None
+    varhato_lezaras: Optional[date] = None
     allapot: Optional[ErdeklodesAllapot] = None
     becsult_ertek: Optional[Decimal] = None
     megjegyzes: Optional[str] = None
@@ -815,6 +817,7 @@ class ErdeklodesResponse(BaseModel):
     telefon: Optional[str]
     email: Optional[str]
     forras: Optional[str]
+    varhato_lezaras: Optional[date]
     allapot: ErdeklodesAllapot
     becsult_ertek: Optional[Decimal]
     megjegyzes: Optional[str]

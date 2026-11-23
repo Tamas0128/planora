@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import ProjektUgyfel, Ugyfel, User
+from app.services.audit import log_audit
 from app.schemas_crm import UgyfelCreate, UgyfelProjektLinkResponse, UgyfelResponse, UgyfelUpdate
 
 router = APIRouter(prefix="/ugyfelek", tags=["ugyfelek"])
@@ -25,10 +26,12 @@ def list_ugyfelek(
 def create_ugyfel(
     body: UgyfelCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     ugyfel = Ugyfel(**body.model_dump())
     db.add(ugyfel)
+    db.flush()
+    log_audit(db, user, "ugyfel", ugyfel.id, "letrehozas", ugyfel.nev)
     db.commit()
     db.refresh(ugyfel)
     return ugyfel
@@ -78,13 +81,14 @@ def update_ugyfel(
     ugyfel_id: int,
     body: UgyfelUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     ugyfel = db.query(Ugyfel).get(ugyfel_id)
     if not ugyfel:
         raise HTTPException(status_code=404, detail="Ügyfél not found")
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(ugyfel, field, value)
+    log_audit(db, user, "ugyfel", ugyfel.id, "modositas", ugyfel.nev)
     db.commit()
     db.refresh(ugyfel)
     return ugyfel
@@ -94,10 +98,11 @@ def update_ugyfel(
 def delete_ugyfel(
     ugyfel_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     ugyfel = db.query(Ugyfel).get(ugyfel_id)
     if not ugyfel:
         raise HTTPException(status_code=404, detail="Ügyfél not found")
+    log_audit(db, user, "ugyfel", ugyfel.id, "torles", ugyfel.nev)
     db.delete(ugyfel)
     db.commit()

@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
+import EgyediMezok from "@/components/EgyediMezok";
 import KommunikacioNaplo from "@/components/KommunikacioNaplo";
-import { api, Ugyfel, UgyfelProjektLink } from "@/lib/api";
+import UgyfelCimkek from "@/components/UgyfelCimkek";
+import { api, Ugyfel, UgyfelProjektLink, UserResponse } from "@/lib/api";
 
 const ALLAPOT_LABEL: Record<string, string> = {
   uj: "Új",
@@ -21,10 +23,12 @@ export default function UgyfelDetailPage() {
   const [ugyfel, setUgyfel] = useState<Ugyfel | null>(null);
   const [projektek, setProjektek] = useState<UgyfelProjektLink[]>([]);
   const [error, setError] = useState("");
+  const [me, setMe] = useState<UserResponse | null>(null);
 
   useEffect(() => {
     api.getUgyfel(Number(id)).then(setUgyfel).catch((e) => setError(e.message));
     api.listUgyfelProjektek(Number(id)).then(setProjektek).catch(() => {});
+    api.me().then(setMe).catch(() => {});
   }, [id]);
 
   async function save() {
@@ -61,7 +65,8 @@ export default function UgyfelDetailPage() {
       <h1 className="mb-4 text-xl font-semibold">{ugyfel.nev}</h1>
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
       <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
-        <div className="h-fit space-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
+        <div className="h-fit space-y-4">
+        <div className="space-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
           <div className="space-y-1">
             <label className="text-sm font-medium">Név</label>
             <input
@@ -94,6 +99,13 @@ export default function UgyfelDetailPage() {
               Törlés
             </button>
           </div>
+        </div>
+        <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
+          <UgyfelCimkek ugyfelId={ugyfel.id} />
+        </div>
+        <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
+          <EgyediMezok entitas="ugyfel" entitasId={ugyfel.id} isAdmin={me?.role === "admin"} />
+        </div>
         </div>
 
         <div className="space-y-4">

@@ -4,9 +4,10 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import EgyediMezok from "@/components/EgyediMezok";
 import KommunikacioNaplo from "@/components/KommunikacioNaplo";
 import Modal from "@/components/Modal";
-import { api, Erdeklodes, ErdeklodesAllapot, PipelineSzakasz } from "@/lib/api";
+import { api, Erdeklodes, ErdeklodesAllapot, PipelineSzakasz, UserResponse } from "@/lib/api";
 
 const SZAKASZOK: { allapot: ErdeklodesAllapot; label: string }[] = [
   { allapot: "uj", label: "Új" },
@@ -31,6 +32,8 @@ export default function ErdeklodokPage() {
   const [email, setEmail] = useState("");
   const [forras, setForras] = useState("");
   const [ertek, setErtek] = useState("");
+  const [lezaras, setLezaras] = useState("");
+  const [me, setMe] = useState<UserResponse | null>(null);
   const [error, setError] = useState("");
   const [nyitott, setNyitott] = useState<Erdeklodes | null>(null);
   const [dragId, setDragId] = useState<number | null>(null);
@@ -42,6 +45,7 @@ export default function ErdeklodokPage() {
 
   useEffect(() => {
     load();
+    api.me().then(setMe).catch(() => {});
   }, []);
 
   async function handleCreate(e: FormEvent) {
@@ -54,12 +58,14 @@ export default function ErdeklodokPage() {
         email: email || null,
         forras: forras || null,
         becsult_ertek: ertek || null,
+        varhato_lezaras: lezaras || null,
       });
       setNev("");
       setTelefon("");
       setEmail("");
       setForras("");
       setErtek("");
+      setLezaras("");
       setShowForm(false);
       load();
     } catch (err) {
@@ -115,6 +121,10 @@ export default function ErdeklodokPage() {
           <input placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} className={`col-span-2 ${inputCls}`} />
           <input placeholder="Forrás (pl. ajánlás)" value={forras} onChange={(e) => setForras(e.target.value)} className={`col-span-2 ${inputCls}`} />
           <input placeholder="Becsült érték (Ft)" type="number" min="0" value={ertek} onChange={(e) => setErtek(e.target.value)} className={`col-span-2 ${inputCls}`} />
+          <label className="col-span-4 flex items-center gap-2 text-sm">
+            Várható lezárás
+            <input type="date" value={lezaras} onChange={(e) => setLezaras(e.target.value)} className={inputCls} />
+          </label>
           <button type="submit" className="col-span-4 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]">
             Mentés
           </button>
@@ -183,6 +193,7 @@ export default function ErdeklodokPage() {
             <div>Forrás: {nyitott.forras || "—"}</div>
             <div>Felelős: {nyitott.owner?.full_name || "—"}</div>
             {nyitott.becsult_ertek && <div>Becsült érték: {forint(nyitott.becsult_ertek)}</div>}
+            {nyitott.varhato_lezaras && <div>Várható lezárás: {nyitott.varhato_lezaras}</div>}
           </div>
           <div className="mb-4 flex gap-2">
             {nyitott.ugyfel_id ? (
@@ -203,6 +214,9 @@ export default function ErdeklodokPage() {
             <button onClick={() => torol(nyitott)} className="rounded-[var(--radius)] px-3 py-1.5 text-sm font-medium text-[var(--danger)]">
               Törlés
             </button>
+          </div>
+          <div className="mb-4">
+            <EgyediMezok entitas="erdeklodes" entitasId={nyitott.id} isAdmin={me?.role === "admin"} />
           </div>
           <KommunikacioNaplo erdeklodesId={nyitott.id} />
         </Modal>

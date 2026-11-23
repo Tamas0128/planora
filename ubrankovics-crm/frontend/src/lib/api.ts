@@ -139,6 +139,7 @@ export interface Erdeklodes {
   telefon?: string | null;
   email?: string | null;
   forras?: string | null;
+  varhato_lezaras?: string | null;
   allapot: ErdeklodesAllapot;
   becsult_ertek?: string | null;
   megjegyzes?: string | null;
@@ -184,6 +185,90 @@ export interface UgyfelImportValasz {
 export interface UgyfelDuplikatumCsoport {
   ok: string;
   ugyfelek: Ugyfel[];
+}
+
+export interface AuditNaploItem {
+  id: number;
+  user?: UserBrief | null;
+  entitas: string;
+  entitas_id?: number | null;
+  muvelet: string;
+  reszletek?: string | null;
+  created_at: string;
+}
+
+export interface EgyediMezo {
+  id: number;
+  entitas: string;
+  nev: string;
+  tipus: string; // szoveg | szam | datum
+  sorrend: number;
+}
+
+export interface EgyediMezoErtek {
+  mezo_id: number;
+  nev: string;
+  tipus: string;
+  ertek?: string | null;
+}
+
+export interface Cimke {
+  id: number;
+  nev: string;
+  ugyfel_szam: number;
+}
+
+export interface Kampany {
+  id: number;
+  nev: string;
+  targy: string;
+  uzenet: string;
+  cimke_id?: number | null;
+  cimke_nev?: string | null;
+  cimzettek_szama: number;
+  elkuldve_szama: number;
+  created_at: string;
+}
+
+export type JegyAllapot = "nyitott" | "folyamatban" | "megoldva" | "lezart";
+export type JegyPrioritas = "alacsony" | "normal" | "surgos";
+
+export interface Jegy {
+  id: number;
+  ugyfel_id: number;
+  ugyfel_nev?: string | null;
+  projekt_id?: number | null;
+  targy: string;
+  leiras?: string | null;
+  allapot: JegyAllapot;
+  prioritas: JegyPrioritas;
+  felelos_id?: number | null;
+  felelos?: UserBrief | null;
+  created_at: string;
+  lezarva_at?: string | null;
+}
+
+export interface ElorejelzesHonap {
+  honap: string;
+  nyitott_osszeg: string;
+  sulyozott_osszeg: string;
+  nyert_osszeg: string;
+  cel?: string | null;
+}
+
+export interface TeljesitmenyItem {
+  felelos?: string | null;
+  nyert_db: number;
+  nyert_osszeg: string;
+  nyitott_sulyozott: string;
+}
+
+export interface Elorejelzes {
+  honapok: ElorejelzesHonap[];
+  datum_nelkul_sulyozott: string;
+  sulyozott_osszesen: string;
+  teljesitmeny: TeljesitmenyItem[];
+  valoszinusegek: Record<string, number>;
 }
 
 export interface SzakaszMegoszlasItem {
@@ -950,6 +1035,51 @@ export const api = {
   createKommunikacio: (body: { ugyfel_id?: number; erdeklodes_id?: number; tipus: KommunikacioTipus; tartalom: string }) =>
     request<Kommunikacio>("/kommunikacio", { method: "POST", body: JSON.stringify(body) }),
   deleteKommunikacio: (id: number) => request<void>(`/kommunikacio/${id}`, { method: "DELETE" }),
+
+  listAudit: (entitas?: string) => request<AuditNaploItem[]>(`/audit${entitas ? `?entitas=${encodeURIComponent(entitas)}` : ""}`),
+
+  listEgyediMezok: (entitas?: string) =>
+    request<EgyediMezo[]>(`/egyedi-mezok${entitas ? `?entitas=${entitas}` : ""}`),
+  createEgyediMezo: (body: { entitas: string; nev: string; tipus: string }) =>
+    request<EgyediMezo>("/egyedi-mezok", { method: "POST", body: JSON.stringify(body) }),
+  deleteEgyediMezo: (id: number) => request<void>(`/egyedi-mezok/${id}`, { method: "DELETE" }),
+  getEgyediMezoErtekek: (entitas: string, entitasId: number) =>
+    request<EgyediMezoErtek[]>(`/egyedi-mezok/ertekek?entitas=${entitas}&entitas_id=${entitasId}`),
+  putEgyediMezoErtekek: (entitas: string, entitasId: number, ertekek: Record<number, string>) =>
+    request<EgyediMezoErtek[]>("/egyedi-mezok/ertekek", {
+      method: "PUT",
+      body: JSON.stringify({ entitas, entitas_id: entitasId, ertekek }),
+    }),
+
+  listCimkek: () => request<Cimke[]>("/cimkek"),
+  createCimke: (nev: string) => request<Cimke>("/cimkek", { method: "POST", body: JSON.stringify({ nev }) }),
+  deleteCimke: (id: number) => request<void>(`/cimkek/${id}`, { method: "DELETE" }),
+  listSzegmensUgyfelek: (cimkeId: number) => request<Ugyfel[]>(`/cimkek/${cimkeId}/ugyfelek`),
+  getUgyfelCimkek: (ugyfelId: number) => request<Cimke[]>(`/ugyfelek/${ugyfelId}/cimkek`),
+  setUgyfelCimkek: (ugyfelId: number, cimkeIds: number[]) =>
+    request<Cimke[]>(`/ugyfelek/${ugyfelId}/cimkek`, { method: "PUT", body: JSON.stringify({ cimke_ids: cimkeIds }) }),
+
+  listKampanyok: () => request<Kampany[]>("/kampanyok"),
+  getKampanyCimzettek: (cimkeId?: number | null) =>
+    request<{ darab: number }>(`/kampanyok/cimzettek-szama${cimkeId != null ? `?cimke_id=${cimkeId}` : ""}`),
+  sendKampany: (body: { nev: string; targy: string; uzenet: string; cimke_id?: number | null }) =>
+    request<Kampany>("/kampanyok", { method: "POST", body: JSON.stringify(body) }),
+
+  listJegyek: (params: { nyitott?: boolean; ugyfel_id?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.nyitott) qs.set("nyitott", "true");
+    if (params.ugyfel_id != null) qs.set("ugyfel_id", String(params.ugyfel_id));
+    return request<Jegy[]>(`/jegyek?${qs}`);
+  },
+  createJegy: (body: { ugyfel_id: number; targy: string; leiras?: string | null; prioritas: JegyPrioritas; felelos_id?: number | null }) =>
+    request<Jegy>("/jegyek", { method: "POST", body: JSON.stringify(body) }),
+  updateJegy: (id: number, body: Partial<Pick<Jegy, "allapot" | "prioritas" | "felelos_id" | "targy" | "leiras">>) =>
+    request<Jegy>(`/jegyek/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteJegy: (id: number) => request<void>(`/jegyek/${id}`, { method: "DELETE" }),
+
+  getElorejelzes: (honapok = 6) => request<Elorejelzes>(`/elorejelzes?honapok=${honapok}`),
+  setErtekesitesiCel: (honap: string, osszeg: string) =>
+    request<{ honap: string; osszeg: string }>("/elorejelzes/cel", { method: "PUT", body: JSON.stringify({ honap, osszeg }) }),
 
   listErtesitesek: () => request<ErtesitesItem[]>("/ertesitesek"),
 

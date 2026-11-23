@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Erdeklodes, Kommunikacio, ProjektUgyfel, Ugyfel, User
+from app.services.audit import log_audit
 from app.schemas_crm import (
     UgyfelDuplikatumCsoport,
     UgyfelEgyesitesRequest,
@@ -85,7 +86,7 @@ def _beolvas(filename: str, content: bytes) -> list[list[str]]:
 async def import_ugyfelek(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     """Oszlopok (fejléc kötelező): nev, telefon, email. Azonos e-mail, vagy
     e-mail nélkül azonos név esetén a sort duplikátumként kihagyja."""
@@ -121,6 +122,7 @@ async def import_ugyfelek(
         if email:
             letezo_email.add(email.lower())
         letrehozva += 1
+    log_audit(db, user, "ugyfel", None, "import", f"{letrehozva} új, {kihagyva} kihagyva")
     db.commit()
     return UgyfelImportValasz(letrehozva=letrehozva, kihagyva_duplikatum=kihagyva, hibas_sorok=hibas)
 
@@ -151,7 +153,7 @@ def egyesites(
     cel_id: int,
     body: UgyfelEgyesitesRequest,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     """A forrás ügyfél projektjeit, naplóját, érdeklődőit a célhoz köti, a
     hiányzó elérhetőségeket átveszi, majd a forrást törli."""
@@ -167,6 +169,7 @@ def egyesites(
     db.query(Kommunikacio).filter(Kommunikacio.ugyfel_id == forras.id).update({"ugyfel_id": cel.id})
     db.query(Erdeklodes).filter(Erdeklodes.ugyfel_id == forras.id).update({"ugyfel_id": cel.id})
     db.flush()
+    log_audit(db, user, "ugyfel", cel.id, "egyesites", f"#{forras.id} {forras.nev} beolvasztva")
     db.expire(forras)
     db.delete(forras)
     db.commit()
