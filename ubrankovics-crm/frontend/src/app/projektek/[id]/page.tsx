@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, Download, GripVertical, Plus, Trash2, X } fr
 import {
   DndContext,
   DragEndEvent,
+  KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -13,6 +14,7 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -1121,7 +1123,10 @@ function UtemezesTab({
 }) {
   const [deliveryDate, setDeliveryDate] = useState(projekt.delivery_date || "");
   const [error, setError] = useState("");
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   async function saveDeliveryDate() {
     setError("");
@@ -1314,7 +1319,7 @@ function TetelUtemezesRow({
       className="border-t border-[var(--border)] align-top"
     >
       <td className="px-2 py-2">
-        <button type="button" {...attributes} {...listeners} className="cursor-grab text-[var(--muted)]">
+        <button type="button" aria-label="Tétel áthelyezése (húzás, vagy Szóköz + nyilak)" {...attributes} {...listeners} className="cursor-grab touch-none text-[var(--muted)]">
           <GripVertical size={14} />
         </button>
       </td>

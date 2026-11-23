@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { BarChart3, Building2, CalendarDays, CheckSquare, History, Home, LifeBuoy, LogOut, Mail, Menu, Search, Target, TrendingUp, UserCog, Users, Wallet, Wrench, X } from "lucide-react";
 import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 import GlobalSearch from "@/components/GlobalSearch";
+import LabelAssociator from "@/components/LabelAssociator";
 import NotificationBell from "@/components/NotificationBell";
 
 type NavItem = { href: string; label: string; icon: typeof Home; adminOnly?: boolean };
@@ -225,6 +226,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
         <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
       </div>
+      <LabelAssociator />
       {searchOpen && <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />}
     </div>
   );

@@ -127,3 +127,41 @@ aside {
   color: var(--placeholder);
   opacity: 1;
 }
+
+/* Egységes állapotok: minden interaktív elem ugyanazt a fókuszgyűrűt, hibajelzést
+   és letiltott megjelenést kapja, függetlenül attól, melyik oldalon él. */
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+aside :where(a, button):focus-visible {
+  outline-color: var(--sidebar-foreground);
+  outline-offset: -2px;
+}
+:where(input, select, textarea):not(:focus-visible) {
+  transition: border-color 0.15s ease-out;
+}
+:where(input, select, textarea):user-invalid,
+:where(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--critical);
+}
+:where(button, input, select, textarea):disabled,
+:where(button, input, select, textarea)[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+:where(input, select, textarea):disabled {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+/* Aki csökkentett mozgást kér, annak nincs animáció és sima görgetés sem. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

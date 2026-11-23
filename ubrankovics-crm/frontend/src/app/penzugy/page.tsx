@@ -166,7 +166,7 @@ function CashflowTab() {
 
       <form onSubmit={saveSnapshot} className={`${cardCls} mb-4 flex flex-wrap items-end gap-2 p-3`}>
         <div className="text-sm font-medium">Bankegyenleg rögzítése</div>
-        <input type="date" value={snapDatum} onChange={(e) => setSnapDatum(e.target.value)} className={inputCls} required />
+        <input aria-label="Egyenleg dátuma" type="date" value={snapDatum} onChange={(e) => setSnapDatum(e.target.value)} className={inputCls} required />
         <input
           placeholder="Egyenleg (Ft)"
           value={snapEgyenleg}
@@ -379,8 +379,8 @@ function SzerzodesekTab() {
                   <option value="afa_0">0%</option>
                   <option value="forditott">Fordított</option>
                 </select>
-                <input type="date" value={kezdes} onChange={(e) => setKezdes(e.target.value)} className={inputCls} required />
-                <input type="date" value={befejezes} onChange={(e) => setBefejezes(e.target.value)} className={inputCls} required />
+                <input aria-label="Kezdés" type="date" value={kezdes} onChange={(e) => setKezdes(e.target.value)} className={inputCls} required />
+                <input aria-label="Befejezés" type="date" value={befejezes} onChange={(e) => setBefejezes(e.target.value)} className={inputCls} required />
               </div>
 
               <div>
@@ -404,7 +404,7 @@ function SzerzodesekTab() {
                       onChange={(e) => updateReszletRow(i, { osszeg: e.target.value })}
                       className={`${inputCls} w-32`}
                     />
-                    <input
+                    <input aria-label="Részlet esedékessége"
                       type="date"
                       value={r.esedekesseg}
                       onChange={(e) => updateReszletRow(i, { esedekesseg: e.target.value })}
@@ -539,9 +539,9 @@ function ReszletRow({
       {kiallitasOpen && (
         <form onSubmit={handleKiallit} className="mt-2 flex flex-wrap items-end gap-2 rounded-[var(--radius)] bg-black/[0.03] p-2">
           <input placeholder="Számlaszám" value={szamlaszam} onChange={(e) => setSzamlaszam(e.target.value)} className={inputCls} required />
-          <input type="date" value={kiallitasDatum} onChange={(e) => setKiallitasDatum(e.target.value)} className={inputCls} required />
-          <input type="date" value={teljesitesDatum} onChange={(e) => setTeljesitesDatum(e.target.value)} className={inputCls} required />
-          <input type="date" value={esedekesseg} onChange={(e) => setEsedekesseg(e.target.value)} className={inputCls} required />
+          <input aria-label="Kiállítás dátuma" type="date" value={kiallitasDatum} onChange={(e) => setKiallitasDatum(e.target.value)} className={inputCls} required />
+          <input aria-label="Teljesítés dátuma" type="date" value={teljesitesDatum} onChange={(e) => setTeljesitesDatum(e.target.value)} className={inputCls} required />
+          <input aria-label="Esedékesség" type="date" value={esedekesseg} onChange={(e) => setEsedekesseg(e.target.value)} className={inputCls} required />
           <button type="submit" className={btnCls}>
             Kiállítás
           </button>
@@ -654,8 +654,8 @@ function SzamlakTab() {
                   </option>
                 ))}
               </select>
-              <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} className={inputCls} required />
-              <input type="date" value={idoszakKezdet} onChange={(e) => setIdoszakKezdet(e.target.value)} className={inputCls} required />
+              <input aria-label="Dátum" type="date" value={datum} onChange={(e) => setDatum(e.target.value)} className={inputCls} required />
+              <input aria-label="Időszak kezdete" type="date" value={idoszakKezdet} onChange={(e) => setIdoszakKezdet(e.target.value)} className={inputCls} required />
               <input type="date" value={idoszakVeg} onChange={(e) => setIdoszakVeg(e.target.value)} className={inputCls} required />
               <input placeholder="Nettó (Ft)" value={netto} onChange={(e) => setNetto(e.target.value)} className={`${inputCls} w-32`} required />
               <select value={afaTipus} onChange={(e) => setAfaTipus(e.target.value)} className={inputCls}>

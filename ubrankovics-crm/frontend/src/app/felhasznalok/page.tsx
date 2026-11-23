@@ -120,7 +120,7 @@ export default function FelhasznalokPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
           />
-          <select
+          <select aria-label="Szerepkör"
             value={role}
             onChange={(e) => setRole(e.target.value)}
             className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
@@ -156,7 +156,7 @@ export default function FelhasznalokPage() {
                 <td className="px-3 py-2">{u.full_name}</td>
                 <td className="px-3 py-2 text-[var(--muted)]">{u.email}</td>
                 <td className="px-3 py-2">
-                  <select
+                  <select aria-label={`${u.full_name} szerepköre`}
                     value={u.role}
                     onChange={(e) => changeRole(u, e.target.value)}
                     className="rounded border border-[var(--border)] px-1 py-0.5 text-xs"
