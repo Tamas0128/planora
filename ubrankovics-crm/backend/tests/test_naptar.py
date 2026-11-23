@@ -41,3 +41,33 @@ def test_naptar_esemenyek_es_ics(client, admin_headers):
 def test_naptar_auth(client):
     assert client.get("/api/naptar").status_code == 401
     assert client.get("/api/naptar/export.ics").status_code == 401
+
+
+def test_naptar_utemezett_tetel_es_garancia_az_ics_ben(client, admin_headers):
+    from tests.test_crm_core import _seeded_munkanem_id
+    from tests.test_schedule_engine import _add_tetel
+
+    ma = date.today()
+    p = client.post(
+        "/api/projektek",
+        json={"projekt_nev": "Ütemezett ház", "utemezes_aktiv": True, "delivery_date": (ma + timedelta(days=20)).isoformat()},
+        headers=admin_headers,
+    ).json()
+    _add_tetel(client, admin_headers, p["id"], _seeded_munkanem_id(client, admin_headers), duration_days=5)
+    client.post(f"/api/projektek/{p['id']}/utemezes/recalculate", headers=admin_headers)
+
+    ev = client.get(f"/api/naptar?tol={ma}&ig={ma + timedelta(days=60)}", headers=admin_headers).json()
+    tetelek = [e for e in ev if e["tipus"] == "tetel"]
+    assert tetelek and tetelek[0]["kezdes"] <= tetelek[0]["vege"]
+    ics = client.get("/api/naptar/export.ics", headers=admin_headers)
+    assert ics.status_code == 200 and "Ütemezett ház" in ics.text
+
+    # aláírt átvétel garanciája is megjelenik
+    a = client.post(
+        f"/api/projektek/{p['id']}/atvetelek",
+        json={"datum": ma.isoformat(), "atado_nev": "A", "atvevo_nev": "B", "garancia_honap": 1},
+        headers=admin_headers,
+    ).json()
+    client.post(f"/api/atvetelek/{a['id']}/alairas", headers=admin_headers)
+    ev = client.get(f"/api/naptar?tol={ma}&ig={ma + timedelta(days=62)}", headers=admin_headers).json()
+    assert any(e["tipus"] == "garancia" for e in ev)

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useId, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { AjanlatAllapot, AjanlatSor, AjanlatVerzio, api, VevoiAjanlat } from "@/lib/api";
 
@@ -19,26 +19,27 @@ const ures = (): AjanlatSor => ({ megnevezes: "", mennyiseg: 1, egyseg: "", egys
 const osszeg = (sorok: AjanlatSor[]) => sorok.reduce((s, r) => s + Number(r.mennyiseg) * Number(r.egysegar), 0);
 
 function SorSzerkeszto({ sorok, onChange }: { sorok: AjanlatSor[]; onChange: (s: AjanlatSor[]) => void }) {
+  const uid = useId();
   const set = (i: number, patch: Partial<AjanlatSor>) => onChange(sorok.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   return (
     <div className="space-y-2">
       {sorok.map((s, i) => (
         <div key={i} className="grid grid-cols-[1fr_5rem_4rem_7rem_2.75rem] items-end gap-2 max-md:grid-cols-2">
           <div className="space-y-1 max-md:col-span-2">
-            <label htmlFor={`aj-nev-${i}`} className="text-xs font-medium">Megnevezés</label>
-            <input id={`aj-nev-${i}`} required className={INPUT} value={s.megnevezes} onChange={(e) => set(i, { megnevezes: e.target.value })} />
+            <label htmlFor={`${uid}-nev-${i}`} className="text-xs font-medium">Megnevezés</label>
+            <input id={`${uid}-nev-${i}`} required className={INPUT} value={s.megnevezes} onChange={(e) => set(i, { megnevezes: e.target.value })} />
           </div>
           <div className="space-y-1">
-            <label htmlFor={`aj-mny-${i}`} className="text-xs font-medium">Menny.</label>
-            <input id={`aj-mny-${i}`} type="number" min={0} step="any" className={INPUT} value={s.mennyiseg} onChange={(e) => set(i, { mennyiseg: e.target.value })} />
+            <label htmlFor={`${uid}-mny-${i}`} className="text-xs font-medium">Menny.</label>
+            <input id={`${uid}-mny-${i}`} type="number" min={0} step="any" className={INPUT} value={s.mennyiseg} onChange={(e) => set(i, { mennyiseg: e.target.value })} />
           </div>
           <div className="space-y-1">
-            <label htmlFor={`aj-egy-${i}`} className="text-xs font-medium">Egység</label>
-            <input id={`aj-egy-${i}`} className={INPUT} value={s.egyseg || ""} onChange={(e) => set(i, { egyseg: e.target.value })} />
+            <label htmlFor={`${uid}-egy-${i}`} className="text-xs font-medium">Egység</label>
+            <input id={`${uid}-egy-${i}`} className={INPUT} value={s.egyseg || ""} onChange={(e) => set(i, { egyseg: e.target.value })} />
           </div>
           <div className="space-y-1">
-            <label htmlFor={`aj-ar-${i}`} className="text-xs font-medium">Egységár (Ft)</label>
-            <input id={`aj-ar-${i}`} type="number" min={0} step="any" className={INPUT} value={s.egysegar} onChange={(e) => set(i, { egysegar: e.target.value })} />
+            <label htmlFor={`${uid}-ar-${i}`} className="text-xs font-medium">Egységár (Ft)</label>
+            <input id={`${uid}-ar-${i}`} type="number" min={0} step="any" className={INPUT} value={s.egysegar} onChange={(e) => set(i, { egysegar: e.target.value })} />
           </div>
           <button
             type="button"

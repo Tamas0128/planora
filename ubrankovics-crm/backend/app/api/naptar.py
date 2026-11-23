@@ -62,7 +62,6 @@ def _esemenyek(db: Session, tol: date, ig: date, projekt_id: int | None = None) 
                 kezdes=t.start_date,
                 vege=t.end_date,
                 projekt_id=t.projekt_id,
-                kesz=t.kesz,
             )
         )
 
