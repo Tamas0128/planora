@@ -122,7 +122,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 bg-[var(--sidebar)] text-[var(--sidebar-foreground)]">
-        <div className="flex h-14 items-center gap-2 px-2 md:gap-4 md:px-4">
+        <div className="flex h-14 items-center gap-2 px-2 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-4 md:px-4">
+          <div className="flex items-center gap-2">
           <button
             type="button"
             aria-label={menuOpen ? "Menü bezárása" : "Menü megnyitása"}
@@ -137,8 +138,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/ubrankovics-logo.svg" alt="" className="h-7 w-auto md:h-8" />
           </Link>
+          </div>
 
-          <nav aria-label="Főmenü" className="ml-2 hidden items-center gap-1 md:flex">
+          <nav aria-label="Főmenü" className="hidden items-center justify-center gap-1 md:flex">
             {SECTIONS.map((s) => {
               const active = aktivSzekcio?.id === s.id;
               return (
@@ -156,7 +158,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center justify-end gap-1">
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
@@ -187,7 +189,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {aktivSzekcio && (
           <nav
             aria-label={`${aktivSzekcio.label} almenü`}
-            className="hidden border-t border-white/10 bg-[var(--card)] px-2 text-[var(--foreground)] md:flex md:px-4"
+            className="hidden justify-center border-t border-white/10 bg-[var(--card)] px-2 text-[var(--foreground)] md:flex md:px-4"
           >
             {visibleItems(aktivSzekcio).map((it) => {
               const active = matches(pathname, [it.href]);

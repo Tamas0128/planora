@@ -108,10 +108,12 @@ button {
   }
 }
 
-/* Az oldalsáv görgetősávja a paletta színeit kapja a böngésző alapértelmezett helyett. */
-aside {
+/* A görgetősávok a paletta színeit kapják a böngésző alapértelmezett (világos, vastag) helyett. */
+aside,
+main,
+main * {
   scrollbar-width: thin;
-  scrollbar-color: var(--sidebar-hover) transparent;
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
 }
 
 /* Szövegmezők és legördülők flex sorban ne tolják ki a sort a saját alapszélességükkel. */
