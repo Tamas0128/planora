@@ -134,3 +134,15 @@ Backend 92/92 pytest zöld (7 új: `tests/test_leiratkozas_es_email_ertesites.py
 - Beállítás: `PUBLIC_BASE_URL` (docker-compose, alapérték `http://localhost:3101`) — a levelekbe kerülő linkek alapja; éles környezetben a valódi címre kell állítani.
 
 Még nincs: Playwright e2e a CRM-bővítésekre.
+
+## 13. Projekt-életciklus, naptár, fiók (2026-11-23)
+
+- **Átadás-átvétel**: jegyzőkönyv (tervezet → aláírva), nyomtatható HTML, garancia-határidő az aláírástól; garanciális hibabejelentés jegyként (csak érvényes garancia mellett).
+- **Építési napló**: napi bejegyzések (időjárás, létszám, munka), fotófeltöltés (mobilon kamera), fotótörlés.
+- **Verziózott vevői ajánlat**: minden módosítás új verzió, változás-összehasonlítás, állapotok (tervezet/elküldve/elfogadva/elutasítva).
+- **Naptár** (`/naptar`): feladat-határidők, átadások, ütemezett tételek, garancia-lejáratok; iCal (.ics) export.
+- **Elfelejtett jelszó**: e-mailes, 1 órás, egyszer használható token (csak hash tárolva); általános válasz (nem árul el fiókot).
+- **Kétlépcsős belépés (TOTP)**: `/fiok`, RFC 6238, újrajátszás-védelem, admin visszaállítás.
+- **Design**: címke-biztonsági háló, egységes fókusz/hiba/letiltott állapot, saját 404, reduced-motion, billentyűs húzás az ütemezésben.
+- **Nincs megvalósítva** (külső infrastruktúra kell): push/SMS értesítés, offline mód, QR-kód a 2FA beállításhoz.
+- Tesztek: 107 backend, e2e `14-crm-modulok`, `15-projekt-eletciklus`.
