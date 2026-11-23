@@ -171,7 +171,7 @@ export default function ProjektDetailPage() {
       </p>
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
 
-      <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
         {(
           projekt.utemezes_aktiv
             ? (["attekintes", "tetelek", "utemezes", "fazisok", "dokumentumok"] as const)
@@ -180,7 +180,7 @@ export default function ProjektDetailPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-3 py-2 text-sm font-medium ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium ${
               tab === t ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
             }`}
           >
@@ -243,7 +243,7 @@ function AttekintesTab({
   }
 
   return (
-    <div className="grid max-w-3xl gap-6">
+    <div className="grid max-w-3xl grid-cols-1 gap-6">
       <section className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
         <h2 className="mb-2 text-sm font-semibold">Ügyfelek / építési címek</h2>
         <ul className="space-y-1 text-sm">
@@ -470,7 +470,7 @@ function TetelDetail({
 
   return (
     <div className="border-t border-[var(--border)] p-3 text-sm">
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <div>
         <h3 className="mb-1 font-semibold">Szakasz</h3>
         <div className="flex gap-2">
@@ -814,7 +814,7 @@ function RendelesCard({
       </div>
 
       {open && (
-        <div className="mt-3 grid gap-3 border-t border-[var(--border)] pt-2 md:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[var(--border)] pt-2 md:grid-cols-2">
           <div>
             <h4 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">Ajánlatkérések</h4>
             <ul className="mb-2 space-y-2">
@@ -1622,7 +1622,7 @@ function EmailKuldesPanel({ projektId, tetelIds }: { projektId: number; tetelIds
         Jelöld ki a tétel(eke)t fent a listában, válaszd ki a sablont, és küldd el. Az e-mail dev módban
         Mailpit-re megy (nem valódi címre).
       </p>
-      <form onSubmit={kuldes} className="grid max-w-xl gap-2">
+      <form onSubmit={kuldes} className="grid max-w-xl grid-cols-1 gap-2">
         <select
           value={tipus}
           onChange={(e) => setTipus(e.target.value)}

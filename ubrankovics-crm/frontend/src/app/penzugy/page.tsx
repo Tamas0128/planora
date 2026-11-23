@@ -38,7 +38,7 @@ export default function PenzugyPage() {
   return (
     <AppLayout>
       <h1 className="mb-4 text-xl font-semibold">Pénzügy</h1>
-      <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
         {(
           [
             ["cashflow", "Cash flow előrejelzés"],
@@ -50,7 +50,7 @@ export default function PenzugyPage() {
           <button
             key={v}
             onClick={() => setTab(v)}
-            className={`px-3 py-2 text-sm font-medium ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium ${
               tab === v ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
             }`}
           >
@@ -186,7 +186,7 @@ function CashflowTab() {
       </form>
 
       {anyNegative && (
-        <div className="mb-4 rounded-[var(--radius)] border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="mb-4 rounded-[var(--radius)] border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">
           Likviditási kockázat: a horizonton belül legalább egy bucket záró egyenlege negatívra fordul.
         </div>
       )}
@@ -218,7 +218,7 @@ function CashflowTab() {
                   <tr
                     onClick={() => toggleBucket(b)}
                     className={`cursor-pointer border-b border-[var(--border)] last:border-b-0 hover:bg-black/5 ${
-                      b.negativ ? "bg-red-50" : ""
+                      b.negativ ? "bg-[var(--danger-bg)]" : ""
                     }`}
                   >
                     <td className="px-2 py-2">
@@ -228,11 +228,11 @@ function CashflowTab() {
                       {b.kezdo_datum} – {b.vege_datum}
                     </td>
                     <td className="px-2 py-2 text-right">{huf(b.nyito)}</td>
-                    <td className="px-2 py-2 text-right text-emerald-700">{huf(b.bevetel_teny)}</td>
-                    <td className="px-2 py-2 text-right text-emerald-500">{huf(b.bevetel_terv)}</td>
-                    <td className="px-2 py-2 text-right text-red-700">{huf(b.kiadas_teny)}</td>
-                    <td className="px-2 py-2 text-right text-red-400">{huf(b.kiadas_terv)}</td>
-                    <td className={`px-2 py-2 text-right font-semibold ${b.negativ ? "text-red-700" : ""}`}>
+                    <td className="px-2 py-2 text-right text-[var(--positive)]">{huf(b.bevetel_teny)}</td>
+                    <td className="px-2 py-2 text-right italic text-[var(--positive)]">{huf(b.bevetel_terv)}</td>
+                    <td className="px-2 py-2 text-right text-[var(--danger)]">{huf(b.kiadas_teny)}</td>
+                    <td className="px-2 py-2 text-right italic text-[var(--danger)]">{huf(b.kiadas_terv)}</td>
+                    <td className={`px-2 py-2 text-right font-semibold ${b.negativ ? "text-[var(--danger)]" : ""}`}>
                       {huf(b.zaro)}
                     </td>
                   </tr>
@@ -253,7 +253,7 @@ function CashflowTab() {
                                     {it.lejart ? ", lejárt" : ""})
                                   </span>
                                 </span>
-                                <span className={it.irany === "bevetel" ? "text-emerald-700" : "text-red-700"}>
+                                <span className={it.irany === "bevetel" ? "text-[var(--positive)]" : "text-[var(--danger)]"}>
                                   {huf(it.osszeg)} · {it.esedekesseg}
                                 </span>
                               </li>
@@ -410,7 +410,7 @@ function SzerzodesekTab() {
                       onChange={(e) => updateReszletRow(i, { esedekesseg: e.target.value })}
                       className={inputCls}
                     />
-                    <button type="button" onClick={() => removeReszletRow(i)} className="text-sm text-red-600">
+                    <button type="button" onClick={() => removeReszletRow(i)} className="text-sm text-[var(--danger)]">
                       Törlés
                     </button>
                   </div>
@@ -528,7 +528,7 @@ function ReszletRow({
         <div className="flex items-center gap-2">
           <span>{huf(reszlet.osszeg)}</span>
           {reszlet.kiallitott_szamla_id ? (
-            <span className="text-xs text-emerald-700">Számlázva (#{reszlet.kiallitott_szamla_id})</span>
+            <span className="text-xs text-[var(--positive)]">Számlázva (#{reszlet.kiallitott_szamla_id})</span>
           ) : (
             <button onClick={onOpenKiallitas} className="text-xs text-[var(--primary)]">
               Számla kiállítása

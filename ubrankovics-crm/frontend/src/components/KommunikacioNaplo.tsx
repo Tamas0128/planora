@@ -51,7 +51,7 @@ export default function KommunikacioNaplo({ ugyfelId, erdeklodesId }: { ugyfelId
     <div>
       <h2 className="mb-3 text-sm font-semibold">Kommunikációs napló</h2>
       {error && <div className="mb-2 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
-      <form onSubmit={add} className="mb-3 flex gap-2">
+      <form onSubmit={add} className="mb-3 flex flex-wrap gap-2">
         <select
           value={tipus}
           onChange={(e) => setTipus(e.target.value as KommunikacioTipus)}
@@ -69,7 +69,7 @@ export default function KommunikacioNaplo({ ugyfelId, erdeklodesId }: { ugyfelId
           placeholder="Mi történt?"
           value={tartalom}
           onChange={(e) => setTartalom(e.target.value)}
-          className="flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+          className="min-w-40 flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
         />
         <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]">
           Rögzít

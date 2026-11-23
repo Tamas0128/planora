@@ -8,23 +8,48 @@ import { api, clearTokens, isLoggedIn, UserResponse } from "@/lib/api";
 import GlobalSearch from "@/components/GlobalSearch";
 import NotificationBell from "@/components/NotificationBell";
 
-const NAV = [
-  { href: "/", label: "Kezdőlap", icon: Home },
-  { href: "/erdeklodok", label: "Érdeklődők", icon: Target },
-  { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
-  { href: "/projektek", label: "Projektek", icon: Building2 },
-  { href: "/feladatok", label: "Feladatok", icon: CheckSquare },
-  { href: "/jegyek", label: "Jegyek", icon: LifeBuoy },
-  { href: "/kampanyok", label: "Kampányok", icon: Mail },
-  { href: "/elorejelzes", label: "Előrejelzés", icon: TrendingUp },
-  { href: "/penzugy", label: "Pénzügy", icon: Wallet },
-  { href: "/riportok", label: "Riportok", icon: BarChart3 },
-  { href: "/torzsadatok", label: "Törzsadatok", icon: Wrench },
-];
+type NavItem = { href: string; label: string; icon: typeof Home; adminOnly?: boolean };
+type NavGroup = { id: string; label?: string; items: NavItem[] };
 
-const ADMIN_NAV = [
-  { href: "/felhasznalok", label: "Felhasználók", icon: UserCog },
-  { href: "/audit", label: "Auditnapló", icon: History },
+// A menü a munkafolyamat szerint csoportosított: az érdeklődőtől az átadásig és a pénzügyig.
+const NAV_GROUPS: NavGroup[] = [
+  { id: "kezdo", items: [{ href: "/", label: "Kezdőlap", icon: Home }] },
+  {
+    id: "ertekesites",
+    label: "Értékesítés",
+    items: [
+      { href: "/erdeklodok", label: "Érdeklődők", icon: Target },
+      { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
+      { href: "/kampanyok", label: "Kampányok", icon: Mail },
+      { href: "/elorejelzes", label: "Előrejelzés", icon: TrendingUp },
+    ],
+  },
+  {
+    id: "munka",
+    label: "Munkavégzés",
+    items: [
+      { href: "/projektek", label: "Projektek", icon: Building2 },
+      { href: "/feladatok", label: "Feladatok", icon: CheckSquare },
+      { href: "/jegyek", label: "Jegyek", icon: LifeBuoy },
+    ],
+  },
+  {
+    id: "penz",
+    label: "Pénzügy és elemzés",
+    items: [
+      { href: "/penzugy", label: "Pénzügy", icon: Wallet },
+      { href: "/riportok", label: "Riportok", icon: BarChart3 },
+    ],
+  },
+  {
+    id: "rendszer",
+    label: "Rendszer",
+    items: [
+      { href: "/torzsadatok", label: "Törzsadatok", icon: Wrench },
+      { href: "/felhasznalok", label: "Felhasználók", icon: UserCog, adminOnly: true },
+      { href: "/audit", label: "Auditnapló", icon: History, adminOnly: true },
+    ],
+  },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -54,9 +79,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Mobilon az oldalsáv off-canvas fiók: útvonalváltáskor és Esc-re bezárul.
-  useEffect(() => {
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
     setMenuOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -84,7 +111,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       <aside
         id="fo-menu"
-        className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-64 shrink-0 flex-col justify-between overflow-y-auto bg-[var(--sidebar)] py-4 text-[var(--sidebar-foreground)] transition-[transform,visibility] duration-200 ease-out motion-reduce:transition-none md:static md:z-auto md:h-auto md:min-h-screen md:w-60 md:translate-x-0 md:overflow-visible md:visible ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-64 shrink-0 flex-col justify-between overflow-y-auto bg-[var(--sidebar)] py-4 text-[var(--sidebar-foreground)] transition-[transform,visibility] duration-200 ease-out motion-reduce:transition-none md:sticky md:top-0 md:z-auto md:h-dvh md:w-60 md:self-start md:translate-x-0 md:overflow-y-auto md:visible ${
           menuOpen ? "translate-x-0" : "-translate-x-full invisible"
         }`}
       >
@@ -117,22 +144,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="mb-4">
             <NotificationBell />
           </div>
-          <nav className="space-y-1">
-            {[...NAV, ...(user?.role === "admin" ? ADMIN_NAV : [])].map(({ href, label, icon: Icon }) => {
-              const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
+          <nav aria-label="Főmenü">
+            {NAV_GROUPS.map((group) => {
+              const items = group.items.filter((it) => !it.adminOnly || user?.role === "admin");
+              if (items.length === 0) return null;
               return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors md:py-2 ${
-                    active
-                      ? "bg-[var(--sidebar-active)] font-medium text-white"
-                      : "hover:bg-[var(--sidebar-hover)]"
-                  }`}
-                >
-                  <Icon size={16} />
-                  {label}
-                </Link>
+                <div key={group.id} role="group" aria-labelledby={group.label ? `nav-${group.id}` : undefined} className="mt-5 first:mt-0">
+                  {group.label && (
+                    <p id={`nav-${group.id}`} className="px-4 pb-1 text-xs font-medium text-[var(--color-neutral-500)]">
+                      {group.label}
+                    </p>
+                  )}
+                  <div className="space-y-0.5">
+                    {items.map(({ href, label, icon: Icon }) => {
+                      const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          aria-current={active ? "page" : undefined}
+                          className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors md:py-2 ${
+                            active ? "bg-[var(--sidebar-active)] font-medium text-white" : "hover:bg-[var(--sidebar-hover)]"
+                          }`}
+                        >
+                          <Icon size={16} />
+                          {label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </nav>

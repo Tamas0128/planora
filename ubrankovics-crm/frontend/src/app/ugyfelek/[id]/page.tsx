@@ -82,7 +82,7 @@ export default function UgyfelDetailPage() {
         </div>
       )}
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
-      <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[20rem_1fr]">
         <div className="h-fit space-y-4">
         <div className="space-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
           <div className="space-y-1">

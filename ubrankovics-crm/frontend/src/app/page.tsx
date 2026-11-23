@@ -69,7 +69,7 @@ export default function DashboardPage() {
       <h1 className="mb-4 text-xl font-semibold">Kezdőlap{me ? ` — ${me.full_name}` : ""}</h1>
 
       {aktivBucket?.negativ && (
-        <div className="mb-4 rounded-[var(--radius)] border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="mb-4 rounded-[var(--radius)] border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">
           Likviditási kockázat: a folyó hét záró egyenlege negatívra fordul ({huf(aktivBucket.zaro)}).
         </div>
       )}
@@ -85,11 +85,11 @@ export default function DashboardPage() {
         </div>
         <div className={`${cardCls} p-3`}>
           <div className="text-xs text-[var(--muted)]">Lejárt bevétel (hátralék)</div>
-          <div className="text-xl font-semibold text-emerald-700">{osszesito ? huf(osszesito.lejart_bevetel_osszesen) : "—"}</div>
+          <div className="text-xl font-semibold text-[var(--positive)]">{osszesito ? huf(osszesito.lejart_bevetel_osszesen) : "—"}</div>
         </div>
         <div className={`${cardCls} p-3`}>
           <div className="text-xs text-[var(--muted)]">Lejárt kiadás (hátralék)</div>
-          <div className="text-xl font-semibold text-red-700">{osszesito ? huf(osszesito.lejart_kiadas_osszesen) : "—"}</div>
+          <div className="text-xl font-semibold text-[var(--danger)]">{osszesito ? huf(osszesito.lejart_kiadas_osszesen) : "—"}</div>
         </div>
       </div>
 
@@ -97,7 +97,7 @@ export default function DashboardPage() {
         <div className={`${cardCls} p-4`}>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Projektek állapot szerint</h2>
-            <Link href="/projektek" className="text-xs text-[var(--primary)] hover:underline">
+            <Link href="/projektek" className="inline-flex min-h-11 items-center text-xs text-[var(--primary)] hover:underline md:min-h-0">
               Mind megnyitása
             </Link>
           </div>
@@ -118,7 +118,7 @@ export default function DashboardPage() {
         <div className={`${cardCls} p-4`}>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Közelgő saját feladatok</h2>
-            <Link href="/feladatok" className="text-xs text-[var(--primary)] hover:underline">
+            <Link href="/feladatok" className="inline-flex min-h-11 items-center text-xs text-[var(--primary)] hover:underline md:min-h-0">
               Mind megnyitása
             </Link>
           </div>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
-        <Link href="/riportok" className="text-[var(--primary)] hover:underline">
+        <Link href="/riportok" className="inline-flex min-h-11 items-center text-[var(--primary)] hover:underline md:min-h-0">
           Teljes riportok →
         </Link>
         <span className="text-[var(--muted)]">·</span>

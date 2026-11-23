@@ -177,7 +177,7 @@ export default function BankkivonatImport({ onApplied }: { onApplied: () => void
                             />
                           </td>
                           <td className="whitespace-nowrap px-2 py-1.5">{s.datum}</td>
-                          <td className={`whitespace-nowrap px-2 py-1.5 text-right ${s.irany === "bevetel" ? "text-emerald-700" : "text-red-700"}`}>
+                          <td className={`whitespace-nowrap px-2 py-1.5 text-right ${s.irany === "bevetel" ? "text-[var(--positive)]" : "text-[var(--danger)]"}`}>
                             {huf(s.osszeg)}
                           </td>
                           <td className="max-w-[16rem] truncate px-2 py-1.5" title={s.kozlemeny}>

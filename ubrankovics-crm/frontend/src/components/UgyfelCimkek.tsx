@@ -55,18 +55,18 @@ export default function UgyfelCimkek({ ugyfelId }: { ugyfelId: number }) {
         {sajat.map((c) => (
           <span key={c.id} className="flex items-center gap-1 rounded-full bg-black/5 px-2 py-0.5 text-xs">
             {c.nev}
-            <button onClick={() => beallit(sajat.filter((x) => x.id !== c.id).map((x) => x.id))} aria-label={`${c.nev} címke eltávolítása`}>
+            <button className="-m-1 p-1" onClick={() => beallit(sajat.filter((x) => x.id !== c.id).map((x) => x.id))} aria-label={`${c.nev} címke eltávolítása`}>
               <X size={12} />
             </button>
           </span>
         ))}
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {hozzaadhato.length > 0 && (
           <select
             value=""
             onChange={(e) => e.target.value && beallit([...sajat.map((x) => x.id), Number(e.target.value)])}
-            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-xs"
+            className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
             aria-label="Címke hozzáadása"
           >
             <option value="">+ címke…</option>
@@ -82,9 +82,9 @@ export default function UgyfelCimkek({ ugyfelId }: { ugyfelId: number }) {
             placeholder="Új címke"
             value={uj}
             onChange={(e) => setUj(e.target.value)}
-            className="w-28 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-xs"
+            className="w-32 min-w-0 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
           />
-          <button type="submit" className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-xs">
+          <button type="submit" className="whitespace-nowrap rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm">
             Létrehoz
           </button>
         </form>

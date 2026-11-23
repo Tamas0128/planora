@@ -38,7 +38,6 @@ export default function KampanyokPage() {
       })
       .catch(() => setCimzettek(null));
     if (id) api.listSzegmensUgyfelek(id).then(setSzegmens).catch(() => setSzegmens([]));
-    else setSzegmens([]);
   }, [cimkeId]);
 
   async function ujCimke(e: FormEvent) {
@@ -87,7 +86,7 @@ export default function KampanyokPage() {
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
       {info && <div className="mb-4 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm">{info}</div>}
 
-      <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[20rem_1fr]">
         <div className="h-fit space-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
           <h2 className="text-sm font-semibold">Címkék (szegmensek)</h2>
           <ul className="divide-y divide-[var(--border)] text-sm">
@@ -125,7 +124,7 @@ export default function KampanyokPage() {
             <div className="text-xs text-[var(--muted)]" data-testid="cimzettek-szama">
               Címzettek (e-mail címmel): {cimzettek ?? "—"}
               {leiratkozott > 0 && ` (+${leiratkozott} leiratkozott, kihagyva)`}
-              {szegmens.length > 0 && (
+              {cimkeId && szegmens.length > 0 && (
                 <>
                   {" · "}
                   {szegmens.map((u, i) => (

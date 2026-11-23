@@ -12,7 +12,7 @@ export default function TorzsadatokPage() {
   return (
     <AppLayout>
       <h1 className="mb-4 text-xl font-semibold">Törzsadatok</h1>
-      <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
         {(
           [
             ["munkanem", "Munkanemek"],
@@ -24,7 +24,7 @@ export default function TorzsadatokPage() {
           <button
             key={v}
             onClick={() => setTab(v)}
-            className={`px-3 py-2 text-sm font-medium ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium ${
               tab === v ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
             }`}
           >
@@ -116,7 +116,7 @@ function TorzsadatTab() {
   }
 
   return (
-    <div className="grid max-w-3xl grid-cols-[18rem_1fr] gap-4">
+    <div className="grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-[18rem_1fr]">
       <div className="max-h-[32rem] overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
         {tipusok.map((t) => (
           <button

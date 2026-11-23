@@ -81,7 +81,7 @@ export default function NotificationBell() {
                 <li key={n}>
                   <Link href={i.link} onClick={() => setOpen(false)} className="block px-3 py-2 text-sm hover:bg-black/5">
                     <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${i.szint === "lejart" ? "bg-[var(--danger)]" : "bg-amber-500"}`} />
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${i.szint === "lejart" ? "bg-[var(--danger)]" : "bg-[var(--warning)]"}`} />
                       <span className="font-medium">{i.cim}</span>
                     </div>
                     <div className="pl-4 text-xs text-[var(--muted)]">

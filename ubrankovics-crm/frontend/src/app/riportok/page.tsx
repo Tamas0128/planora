@@ -84,11 +84,11 @@ export default function RiportokPage() {
             <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className={`${cardCls} p-3`}>
                 <div className="text-xs text-[var(--muted)]">Lejárt bevétel (hátralék)</div>
-                <div className="text-lg font-semibold text-emerald-700">{huf(osszesito.lejart_bevetel_osszesen)}</div>
+                <div className="text-lg font-semibold text-[var(--positive)]">{huf(osszesito.lejart_bevetel_osszesen)}</div>
               </div>
               <div className={`${cardCls} p-3`}>
                 <div className="text-xs text-[var(--muted)]">Lejárt kiadás (hátralék)</div>
-                <div className="text-lg font-semibold text-red-700">{huf(osszesito.lejart_kiadas_osszesen)}</div>
+                <div className="text-lg font-semibold text-[var(--danger)]">{huf(osszesito.lejart_kiadas_osszesen)}</div>
               </div>
               <div className={`${cardCls} p-3`}>
                 <div className="text-xs text-[var(--muted)]">Legutóbbi bankegyenleg</div>
@@ -121,7 +121,7 @@ export default function RiportokPage() {
                         · esedékes: {item.esedekesseg}
                       </div>
                     </div>
-                    <span className={item.forras_tipus === "ugyfel_szamla" ? "font-semibold text-emerald-700" : "font-semibold text-red-700"}>
+                    <span className={item.forras_tipus === "ugyfel_szamla" ? "font-semibold text-[var(--positive)]" : "font-semibold text-[var(--danger)]"}>
                       {huf(item.hatralek)}
                     </span>
                   </div>

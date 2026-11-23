@@ -3,17 +3,21 @@
 import { useMemo, useState } from "react";
 import { CashflowBucket } from "@/lib/api";
 
+// A diagram a rendszer meleg palettájából dolgozik: erdőzöld bevétel, agyag kiadás, kéreg-barna egyenleg.
+// A tervezett sávok világosabb kitöltést és saját színű keretet kapnak, így nem csak a színárnyalat különbözteti meg őket.
 const COLOR = {
-  bevetelTeny: "#0ca30c",
-  bevetelTerv: "#86d786",
-  kiadasTeny: "#d03b3b",
-  kiadasTerv: "#eca8a8",
-  zaro: "#2a78d6",
-  zaroNegativ: "#d03b3b",
-  grid: "#e1e0d9",
-  baseline: "#c3c2b7",
-  ink: "#52514e",
-  mutedInk: "#898781",
+  bevetelTeny: "#2f6b3b",
+  bevetelTerv: "#9cc0a1",
+  kiadasTeny: "#a24a33",
+  kiadasTerv: "#dba596",
+  bevetelText: "#22582b",
+  kiadasText: "#a24a33",
+  zaro: "#453d2e",
+  zaroNegativ: "#a24a33",
+  grid: "#e6dcc6",
+  baseline: "#c7bc9f",
+  ink: "#453d2e",
+  mutedInk: "#6b6049",
 };
 
 function huf(v: number) {
@@ -88,9 +92,9 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
     <div className={`rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4`}>
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--muted)]">
         <LegendSwatch color={COLOR.bevetelTeny} label="Bevétel (tényleges)" />
-        <LegendSwatch color={COLOR.bevetelTerv} label="Bevétel (tervezett)" />
+        <LegendSwatch color={COLOR.bevetelTerv} edge={COLOR.bevetelTeny} label="Bevétel (tervezett)" />
         <LegendSwatch color={COLOR.kiadasTeny} label="Kiadás (tényleges)" />
-        <LegendSwatch color={COLOR.kiadasTerv} label="Kiadás (tervezett)" />
+        <LegendSwatch color={COLOR.kiadasTerv} edge={COLOR.kiadasTeny} label="Kiadás (tervezett)" />
         <LegendSwatch color={COLOR.zaro} label="Záró egyenleg" line />
       </div>
 
@@ -144,6 +148,8 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                       height={flowY(bevTeny) - flowY(bevTeny + bevTerv) - (bevTeny > 0 ? 2 : 0)}
                       rx={3}
                       fill={COLOR.bevetelTerv}
+                      stroke={COLOR.bevetelTeny}
+                      strokeWidth={1}
                     />
                   )}
                   {kiaTeny > 0 && (
@@ -157,6 +163,8 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                       height={flowY(-kiaTeny - kiaTerv) - flowY(-kiaTeny) - (kiaTeny > 0 ? 2 : 0)}
                       rx={3}
                       fill={COLOR.kiadasTerv}
+                      stroke={COLOR.kiadasTeny}
+                      strokeWidth={1}
                     />
                   )}
                   {hoverIdx === i && (
@@ -238,10 +246,10 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
             <div className="mb-1 font-semibold">
               {hovered.kezdo_datum} – {hovered.vege_datum}
             </div>
-            <div style={{ color: COLOR.bevetelTeny }}>Bevétel (tény): {huf(Number(hovered.bevetel_teny))}</div>
-            <div style={{ color: COLOR.bevetelTerv }}>Bevétel (terv): {huf(Number(hovered.bevetel_terv))}</div>
-            <div style={{ color: COLOR.kiadasTeny }}>Kiadás (tény): {huf(Number(hovered.kiadas_teny))}</div>
-            <div style={{ color: COLOR.kiadasTerv }}>Kiadás (terv): {huf(Number(hovered.kiadas_terv))}</div>
+            <div style={{ color: COLOR.bevetelText }}>Bevétel (tény): {huf(Number(hovered.bevetel_teny))}</div>
+            <div style={{ color: COLOR.bevetelText }}>Bevétel (terv): {huf(Number(hovered.bevetel_terv))}</div>
+            <div style={{ color: COLOR.kiadasText }}>Kiadás (tény): {huf(Number(hovered.kiadas_teny))}</div>
+            <div style={{ color: COLOR.kiadasText }}>Kiadás (terv): {huf(Number(hovered.kiadas_terv))}</div>
             <div className="mt-1 font-semibold" style={{ color: hovered.negativ ? COLOR.zaroNegativ : COLOR.zaro }}>
               Záró: {huf(Number(hovered.zaro))}
             </div>
@@ -252,7 +260,7 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
   );
 }
 
-function LegendSwatch({ color, label, line }: { color: string; label: string; line?: boolean }) {
+function LegendSwatch({ color, label, line, edge }: { color: string; label: string; line?: boolean; edge?: string }) {
   return (
     <span className="flex items-center gap-1.5">
       {line ? (
@@ -261,7 +269,7 @@ function LegendSwatch({ color, label, line }: { color: string; label: string; li
           <circle cx={7} cy={5} r={3} fill={color} />
         </svg>
       ) : (
-        <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
+        <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color, border: edge ? `1px solid ${edge}` : undefined }} />
       )}
       {label}
     </span>

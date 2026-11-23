@@ -101,20 +101,20 @@ export default function EgyediMezok({
         </form>
       )}
       {isAdmin && (
-        <form onSubmit={ujMezo} className="mt-3 flex gap-2 border-t border-[var(--border)] pt-3">
+        <form onSubmit={ujMezo} className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
           <input
             required
             placeholder="Új mező neve"
             value={ujNev}
             onChange={(e) => setUjNev(e.target.value)}
-            className="flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+            className="min-w-40 flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
           />
           <select value={ujTipus} onChange={(e) => setUjTipus(e.target.value)} className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm" aria-label="Mező típusa">
             <option value="szoveg">Szöveg</option>
             <option value="szam">Szám</option>
             <option value="datum">Dátum</option>
           </select>
-          <button type="submit" className="rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm">
+          <button type="submit" className="whitespace-nowrap rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm">
             Mező felvétele
           </button>
         </form>

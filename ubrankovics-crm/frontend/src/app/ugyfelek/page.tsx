@@ -80,9 +80,9 @@ export default function UgyfelekPage() {
 
   return (
     <AppLayout>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Ügyfelek</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => exportal("csv")} className="flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm">
             <Download size={14} /> CSV
           </button>

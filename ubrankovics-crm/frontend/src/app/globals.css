@@ -25,19 +25,22 @@
 
   --warning: #b8873a;
   --warning-bg: #f7ecd6;
-  --critical: #ae523a;
+  --critical: #a24a33;
   --critical-bg: #f6e4dc;
 
   --background: var(--color-neutral-200);
   --foreground: #2b271f;
   --card: #fdf6ee;
   --border: var(--color-neutral-300);
-  --muted: var(--color-neutral-600);
+  /* Másodlagos szöveg: AA kontraszt a kártyán (5,7:1), az oldalháttéren (5,1:1) és a színezett oszlopokon (4,8:1). */
+  --muted: var(--color-neutral-700);
+  --placeholder: #756a52;
   --muted-bg: var(--color-neutral-100);
 
   --primary: var(--color-accent-600);
   --primary-hover: var(--color-accent-700);
   --primary-foreground: #faf6ee;
+  --positive: var(--color-accent-600);
   --danger: var(--critical);
   --danger-bg: var(--critical-bg);
 
@@ -103,4 +106,24 @@ button {
     display: inline-block;
     padding-block: 0.75rem;
   }
+}
+
+/* Az oldalsáv görgetősávja a paletta színeit kapja a böngésző alapértelmezett helyett. */
+aside {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-hover) transparent;
+}
+
+/* Szövegmezők és legördülők flex sorban ne tolják ki a sort a saját alapszélességükkel. */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select {
+    min-width: 0;
+  }
+}
+
+/* A böngésző alap placeholder-színe (~3:1) helyett a paletta saját, AA kontrasztú tónusa. */
+::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
 }
