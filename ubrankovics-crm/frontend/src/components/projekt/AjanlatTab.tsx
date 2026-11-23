@@ -226,9 +226,11 @@ export default function AjanlatTab({ projektId }: { projektId: number }) {
   const [error, setError] = useState("");
   const [cim, setCim] = useState("");
   const [sorok, setSorok] = useState<AjanlatSor[]>([ures()]);
+  const [urlapNyitva, setUrlapNyitva] = useState<boolean | null>(null); // null: az első betöltés dönt
+  const [betoltve, setBetoltve] = useState(false);
 
   const load = useCallback(() => {
-    api.listAjanlatok(projektId).then(setLista).catch((e) => setError(e.message));
+    api.listAjanlatok(projektId).then((l) => { setLista(l); setBetoltve(true); }).catch((e) => setError(e.message));
   }, [projektId]);
   useEffect(load, [load]);
 
@@ -239,26 +241,45 @@ export default function AjanlatTab({ projektId }: { projektId: number }) {
       await api.createAjanlat(projektId, { cim, sorok });
       setCim("");
       setSorok([ures()]);
+      setUrlapNyitva(false);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Hiba");
     }
   }
 
+  // Az ajánlatok vezetnek; az új ajánlat űrlapja csak akkor van nyitva, ha még nincs ajánlat, vagy kérik.
+  const nyitva = urlapNyitva ?? (betoltve && lista.length === 0);
+
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,32rem)_1fr]">
-      {error && <div role="alert" className="rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)] xl:col-span-2">{error}</div>}
-      <form onSubmit={create} className={`${CARD} h-fit space-y-3`} aria-label="Új ajánlat">
-        <h2 className="text-sm font-semibold">Új vevői ajánlat</h2>
-        <div className="space-y-1">
-          <label htmlFor="aj-cim" className="text-sm font-medium">Ajánlat címe</label>
-          <input id="aj-cim" required className={INPUT} value={cim} onChange={(e) => setCim(e.target.value)} />
-        </div>
-        <SorSzerkeszto sorok={sorok} onChange={setSorok} />
-        <button className="rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]">Ajánlat létrehozása (v1)</button>
-      </form>
+    <div className="max-w-3xl space-y-4">
+      {error && <div role="alert" className="rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Vevői ajánlatok</h2>
+        {!nyitva && (
+          <button onClick={() => setUrlapNyitva(true)} aria-expanded={false} className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]">
+            <Plus size={14} /> Új ajánlat
+          </button>
+        )}
+      </div>
+      {nyitva && (
+        <form onSubmit={create} className={`${CARD} space-y-3`} aria-label="Új ajánlat">
+          <h3 className="text-sm font-semibold">Új vevői ajánlat</h3>
+          <div className="space-y-1">
+            <label htmlFor="aj-cim" className="text-sm font-medium">Ajánlat címe</label>
+            <input id="aj-cim" required className={INPUT} value={cim} onChange={(e) => setCim(e.target.value)} />
+          </div>
+          <SorSzerkeszto sorok={sorok} onChange={setSorok} />
+          <div className="flex gap-2">
+            <button className="rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]">Ajánlat létrehozása (v1)</button>
+            {lista.length > 0 && (
+              <button type="button" onClick={() => setUrlapNyitva(false)} className="px-3 py-1.5 text-sm text-[var(--muted)]">Mégse</button>
+            )}
+          </div>
+        </form>
+      )}
       <section className="space-y-3" aria-label="Ajánlatok" data-testid="ajanlat-lista">
-        {lista.length === 0 ? (
+        {betoltve && lista.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">Még nincs ajánlat ehhez a projekthez.</p>
         ) : (
           lista.map((a) => <AjanlatKartya key={a.id} a={a} onChange={load} />)

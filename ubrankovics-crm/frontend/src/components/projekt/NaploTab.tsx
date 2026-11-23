@@ -96,7 +96,7 @@ export default function NaploTab({ projektId }: { projektId: number }) {
           {error}
         </div>
       )}
-      <form onSubmit={create} className={`${CARD} h-fit space-y-3`} aria-label="Új naplóbejegyzés">
+      <form onSubmit={create} className={`${CARD} h-fit space-y-3 lg:sticky lg:top-4`} aria-label="Új naplóbejegyzés">
         <h2 className="text-sm font-semibold">Új bejegyzés</h2>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
