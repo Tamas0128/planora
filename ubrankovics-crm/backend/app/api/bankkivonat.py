@@ -11,7 +11,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.services import storage
 from app.database import get_db
 from app.dependencies import get_current_user, require_roles
 from app.models import Dokumentum, Projekt, User, UserRole
@@ -118,14 +118,12 @@ async def jovahagyas(
 
     content = await file.read()
     if erintett_projektek:
-        os.makedirs(settings.upload_dir, exist_ok=True)
         ext = os.path.splitext(file.filename or "")[1].lower() or ".xlsx"
         for projekt_id in erintett_projektek:
             if not db.query(Projekt).get(projekt_id):
                 continue
             stored_name = f"{uuid.uuid4()}{ext}"
-            with open(os.path.join(settings.upload_dir, stored_name), "wb") as f:
-                f.write(content)
+            storage.save(stored_name, content, file.content_type)
             db.add(
                 Dokumentum(
                     projekt_id=projekt_id,

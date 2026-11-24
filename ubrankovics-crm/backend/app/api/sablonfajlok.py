@@ -10,11 +10,11 @@ from typing import Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
-from app.config import settings
+from app.services import storage
 from app.database import get_db
 from app.dependencies import get_current_user, require_roles
 from app.models import DokumentumSablonTipus, Projekt, ProjektTetel, User, UserRole
@@ -94,16 +94,11 @@ async def feltoltes(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=f"A sablon nem tölthető ki: {exc}") from exc
 
-    os.makedirs(settings.upload_dir, exist_ok=True)
     stored = f"sablon-{tipus}-{uuid.uuid4()}.docx"
-    with open(os.path.join(settings.upload_dir, stored), "wb") as fh:
-        fh.write(content)
+    storage.save(stored, content, DOCX_MIME)
     regi = db.query(SablonFajl).filter(SablonFajl.tipus == tipus).first()
     if regi:
-        try:
-            os.remove(os.path.join(settings.upload_dir, regi.utvonal))
-        except OSError:
-            pass
+        storage.delete(regi.utvonal)
         db.delete(regi)
         db.flush()
     s = SablonFajl(tipus=tipus, utvonal=stored, eredeti_nev=file.filename, meret=len(content), feltolto_id=user.id)
@@ -120,10 +115,11 @@ def letoltes(tipus: str, db: Session = Depends(get_db), _: User = Depends(get_cu
     s = db.query(SablonFajl).filter(SablonFajl.tipus == tipus).first()
     if not s:
         raise HTTPException(status_code=404, detail="Ehhez a típushoz nincs feltöltött sablon")
-    path = os.path.join(settings.upload_dir, s.utvonal)
-    if not os.path.exists(path):
+    try:
+        data = storage.read(s.utvonal)
+    except FileNotFoundError:
         raise HTTPException(status_code=404, detail="A sablonfájl nem található")
-    return FileResponse(path, media_type=DOCX_MIME, headers={"Content-Disposition": _content_disposition(s.eredeti_nev)})
+    return Response(data, media_type=DOCX_MIME, headers={"Content-Disposition": _content_disposition(s.eredeti_nev)})
 
 
 @router.delete("/sablonfajlok/{tipus}", status_code=204)
@@ -136,10 +132,7 @@ def torles(
     s = db.query(SablonFajl).filter(SablonFajl.tipus == tipus).first()
     if not s:
         raise HTTPException(status_code=404, detail="Ehhez a típushoz nincs feltöltött sablon")
-    try:
-        os.remove(os.path.join(settings.upload_dir, s.utvonal))
-    except OSError:
-        pass
+    storage.delete(s.utvonal)
     log_audit(db, user, "sablon", None, "torles", tipus)
     db.delete(s)
     db.commit()
@@ -167,11 +160,12 @@ def dokumentum_generalas(
     if body.tetel_ids:
         q = q.filter(ProjektTetel.id.in_(body.tetel_ids))
     tetelek = q.order_by(ProjektTetel.sorrend, ProjektTetel.id).all()
-    path = os.path.join(settings.upload_dir, s.utvonal)
-    if not os.path.exists(path):
+    try:
+        sablon_bajt = storage.read(s.utvonal)
+    except FileNotFoundError:
         raise HTTPException(status_code=409, detail="A sablonfájl hiányzik a tárolóból, töltsd fel újra")
     try:
-        data = render_docx(path, build_context(projekt, tetelek, body.uzenet))
+        data = render_docx(sablon_bajt, build_context(projekt, tetelek, body.uzenet))
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=422, detail=f"A sablon kitöltése sikertelen: {exc}") from exc
     log_audit(db, user, "projekt", projekt.id, "dokumentum_generalas", body.tipus.value)

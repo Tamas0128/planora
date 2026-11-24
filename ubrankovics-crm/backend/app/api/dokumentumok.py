@@ -11,10 +11,10 @@ import uuid
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.services import storage
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Dokumentum, Projekt, User
@@ -87,10 +87,8 @@ async def upload_dokumentum(
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="A fájl túl nagy (max 25 MB)")
 
-    os.makedirs(settings.upload_dir, exist_ok=True)
     stored_name = f"{uuid.uuid4()}{ext}"
-    with open(os.path.join(settings.upload_dir, stored_name), "wb") as f:
-        f.write(content)
+    storage.save(stored_name, content, file.content_type)
 
     dok = Dokumentum(
         projekt_id=projekt_id,
@@ -116,11 +114,12 @@ def download_dokumentum(
     _: User = Depends(get_current_user),
 ):
     dok = _get_dokumentum_or_404(db, projekt_id, dokumentum_id)
-    path = os.path.join(settings.upload_dir, dok.utvonal)
-    if not os.path.isfile(path):
+    try:
+        data = storage.read(dok.utvonal)
+    except FileNotFoundError:
         raise HTTPException(status_code=404, detail="A fájl nem található a tárolóban")
-    return FileResponse(
-        path,
+    return Response(
+        data,
         media_type=dok.tartalom_tipus or "application/octet-stream",
         headers={"Content-Disposition": _content_disposition(dok.eredeti_nev or dok.utvonal)},
     )
@@ -134,8 +133,6 @@ def delete_dokumentum(
     _: User = Depends(get_current_user),
 ):
     dok = _get_dokumentum_or_404(db, projekt_id, dokumentum_id)
-    path = os.path.join(settings.upload_dir, dok.utvonal)
-    if os.path.isfile(path):
-        os.remove(path)
+    storage.delete(dok.utvonal)
     db.delete(dok)
     db.commit()

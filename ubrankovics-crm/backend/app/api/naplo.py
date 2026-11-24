@@ -5,11 +5,11 @@ import os
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from PIL import Image, ImageOps
 from sqlalchemy.orm import Session, joinedload
 
-from app.config import settings
+from app.services import storage
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Projekt, User
@@ -94,10 +94,7 @@ def _thumb_name(name: str) -> str:
 
 def _remove_file(name: str) -> None:
     for n in (name, _thumb_name(name)):
-        try:
-            os.remove(os.path.join(settings.upload_dir, n))
-        except OSError:
-            pass
+        storage.delete(n)
 
 
 def _make_thumb(content: bytes, stored: str) -> None:
@@ -106,7 +103,9 @@ def _make_thumb(content: bytes, stored: str) -> None:
         with Image.open(io.BytesIO(content)) as im:
             im = ImageOps.exif_transpose(im).convert("RGB")
             im.thumbnail((320, 320))
-            im.save(os.path.join(settings.upload_dir, _thumb_name(stored)), "JPEG", quality=78)
+            buf = io.BytesIO()
+            im.save(buf, "JPEG", quality=78)
+        storage.save(_thumb_name(stored), buf.getvalue(), "image/jpeg")
     except Exception:  # noqa: BLE001 — a miniatűr csak optimalizáció
         pass
 
@@ -125,10 +124,8 @@ async def upload_foto(
     content = await file.read()
     if len(content) > MAX_FOTO_BYTES:
         raise HTTPException(status_code=413, detail="A fotó túl nagy (max 15 MB)")
-    os.makedirs(settings.upload_dir, exist_ok=True)
     stored = f"naplo-{uuid.uuid4()}{ext}"
-    with open(os.path.join(settings.upload_dir, stored), "wb") as fh:
-        fh.write(content)
+    storage.save(stored, content, file.content_type)
     _make_thumb(content, stored)
     db.add(
         NaploFoto(
@@ -151,13 +148,15 @@ def get_foto(foto_id: int, thumb: bool = False, db: Session = Depends(get_db), _
     if not f:
         raise HTTPException(status_code=404, detail="Fotó not found")
     if thumb:
-        tpath = os.path.join(settings.upload_dir, _thumb_name(f.utvonal))
-        if os.path.exists(tpath):
-            return FileResponse(tpath, media_type="image/jpeg")
-    path = os.path.join(settings.upload_dir, f.utvonal)
-    if not os.path.exists(path):
+        try:
+            return Response(storage.read(_thumb_name(f.utvonal)), media_type="image/jpeg")
+        except FileNotFoundError:
+            pass
+    try:
+        data = storage.read(f.utvonal)
+    except FileNotFoundError:
         raise HTTPException(status_code=404, detail="A fájl nem található")
-    return FileResponse(path, media_type=f.tartalom_tipus or "image/jpeg")
+    return Response(data, media_type=f.tartalom_tipus or "image/jpeg")
 
 
 @router.delete("/naplo-fotok/{foto_id}", status_code=204)

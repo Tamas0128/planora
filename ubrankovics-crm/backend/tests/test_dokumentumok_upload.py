@@ -5,7 +5,8 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _isolated_upload_dir(tmp_path, monkeypatch):
-    monkeypatch.setattr("app.api.dokumentumok.settings.upload_dir", str(tmp_path))
+    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path))
+    monkeypatch.setattr("app.config.settings.storage_backend", "local")
 
 
 def _create_projekt(client, headers):

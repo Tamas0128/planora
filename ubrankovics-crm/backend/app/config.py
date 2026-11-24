@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     email_digest_hour: int = 8
 
     upload_dir: str = "/app/uploads"
+    # Fájltárolás: "local" (upload_dir) vagy "s3" (MinIO / S3-kompatibilis).
+    storage_backend: str = "local"
+    s3_endpoint: str = "http://minio:9000"
+    s3_access_key: str = "minioadmin"
+    s3_secret_key: str = "minioadmin"
+    s3_bucket: str = "ubrankovics-docs"
 
     @model_validator(mode="after")
     def _warn_insecure_defaults(self) -> "Settings":
