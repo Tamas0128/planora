@@ -1434,6 +1434,8 @@ export const api = {
     request<VevoiAjanlat>(`/projektek/${projektId}/ajanlatok`, { method: "POST", body: JSON.stringify(body) }),
   ujAjanlatVerzio: (ajanlatId: number, body: AjanlatVerzioInput) =>
     request<VevoiAjanlat>(`/ajanlatok/${ajanlatId}/verziok`, { method: "POST", body: JSON.stringify(body) }),
+  atemelAjanlat: (verzioId: number, body: { sorok: { sor_id: number; munkanem_id: number }[]; afa_tipus: string }) =>
+    request<{ uj_tetelek: number; uj_igenyek: number; kihagyva: number }>(`/ajanlat-verziok/${verzioId}/atemeles`, { method: "POST", body: JSON.stringify(body) }),
   setAjanlatAllapot: (verzioId: number, allapot: AjanlatAllapot) =>
     request<VevoiAjanlat>(`/ajanlat-verziok/${verzioId}/allapot`, { method: "PATCH", body: JSON.stringify({ allapot }) }),
   deleteAjanlat: (id: number) => request<void>(`/ajanlatok/${id}`, { method: "DELETE" }),

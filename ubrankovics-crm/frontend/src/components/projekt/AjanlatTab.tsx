@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useId, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { AjanlatAllapot, AjanlatSor, AjanlatVerzio, api, VevoiAjanlat } from "@/lib/api";
+import { AjanlatAllapot, AjanlatSor, AjanlatVerzio, api, Munkanem, VevoiAjanlat } from "@/lib/api";
 
 const INPUT = "w-full rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm";
 const CARD = "rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4";
@@ -92,10 +92,69 @@ function VerzioDiff({ elozo, mostani }: { elozo: AjanlatVerzio; mostani: Ajanlat
   );
 }
 
+function Atemeles({ verzio, onKesz }: { verzio: AjanlatVerzio; onKesz: (uzenet: string) => void }) {
+  const [munkanemek, setMunkanemek] = useState<Munkanem[]>([]);
+  const [valasz, setValasz] = useState<Record<number, string>>({});
+  const [afa, setAfa] = useState("afa_27");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    api.listMunkanemek().then((m) => {
+      setMunkanemek(m);
+      // a megnevezés alapján előre kiválasztjuk a legvalószínűbb munkanemet
+      const elo: Record<number, string> = {};
+      for (const s of verzio.sorok) {
+        const nev = s.megnevezes.toLowerCase();
+        const t = m.find((x) => nev.includes(x.nev.toLowerCase()) || x.nev.toLowerCase().includes(nev));
+        if (t && s.id) elo[s.id] = String(t.id);
+      }
+      setValasz(elo);
+    }).catch(() => {});
+  }, [verzio]);
+  const kesz = verzio.sorok.filter((s) => s.id && valasz[s.id]);
+  async function atemel() {
+    setError("");
+    try {
+      const r = await api.atemelAjanlat(verzio.id, { sorok: kesz.map((s) => ({ sor_id: s.id as number, munkanem_id: Number(valasz[s.id as number]) })), afa_tipus: afa });
+      onKesz(`Átemelve: ${r.uj_igenyek} beszerzési igény, ${r.uj_tetelek} új tétel${r.kihagyva ? `, ${r.kihagyva} már korábban átemelve` : ""}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hiba");
+    }
+  }
+  return (
+    <div className="space-y-2 rounded-[var(--radius)] border border-[var(--border)] p-3" role="group" aria-label="Átemelés a Tételekbe">
+      <p className="text-sm">Válassza ki, melyik munkanem Tételéhez tartozzon az ajánlat egy-egy sora. A sor beszerzési igény lesz, az ügyfélár az ajánlati nettó összeg. Munkanem nélküli sor kimarad.</p>
+      {error && <div role="alert" className="text-sm text-[var(--danger)]">{error}</div>}
+      <ul className="space-y-2">
+        {verzio.sorok.map((s) => (
+          <li key={s.id} className="grid grid-cols-[1fr_12rem] items-center gap-2 text-sm max-md:grid-cols-1">
+            <span>{s.megnevezes} <span className="text-[var(--muted)]">· {ft(Number(s.mennyiseg) * Number(s.egysegar))}</span></span>
+            <select aria-label={`${s.megnevezes} munkanem`} className={INPUT} value={valasz[s.id as number] || ""} onChange={(e) => setValasz({ ...valasz, [s.id as number]: e.target.value })}>
+              <option value="">Nem emelem át</option>
+              {munkanemek.map((m) => <option key={m.id} value={m.id}>{m.nev}</option>)}
+            </select>
+          </li>
+        ))}
+      </ul>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="text-sm">ÁFA:{" "}
+          <select className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-sm" value={afa} onChange={(e) => setAfa(e.target.value)}>
+            <option value="afa_27">27%</option><option value="afa_5">5%</option><option value="afa_0">0%</option><option value="forditott">Fordított</option>
+          </select>
+        </label>
+        <button type="button" disabled={kesz.length === 0} onClick={atemel} className="rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)] disabled:opacity-40">
+          Átemelés ({kesz.length} sor)
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AjanlatKartya({ a, onChange }: { a: VevoiAjanlat; onChange: () => void }) {
   const [szerk, setSzerk] = useState<AjanlatSor[] | null>(null);
   const [megj, setMegj] = useState("");
   const [error, setError] = useState("");
+  const [atemelNyitva, setAtemelNyitva] = useState(false);
+  const [atemelUzenet, setAtemelUzenet] = useState("");
   const utolso = a.verziok[a.verziok.length - 1];
 
   async function run(fn: () => Promise<unknown>) {
@@ -189,6 +248,11 @@ function AjanlatKartya({ a, onChange }: { a: VevoiAjanlat; onChange: () => void 
                         Új verzió készítése
                       </button>
                     )}
+                    {v.allapot === "elfogadva" && (
+                      <button onClick={() => setAtemelNyitva((x) => !x)} aria-expanded={atemelNyitva} className="rounded-[var(--radius)] border border-[var(--primary)] px-2 py-1 text-xs text-[var(--primary)]">
+                        Átemelés a Tételekbe
+                      </button>
+                    )}
                     <button
                       onClick={() => confirm("Törlöd az ajánlatot az összes verziójával?") && run(() => api.deleteAjanlat(a.id))}
                       className="ml-auto rounded-[var(--radius)] px-2 py-1 text-xs text-[var(--danger)]"
@@ -196,6 +260,10 @@ function AjanlatKartya({ a, onChange }: { a: VevoiAjanlat; onChange: () => void 
                       Törlés
                     </button>
                   </div>
+                  {atemelUzenet && <p role="status" className="text-sm text-[var(--positive)]">{atemelUzenet}</p>}
+                  {atemelNyitva && v.allapot === "elfogadva" && (
+                    <Atemeles verzio={v} onKesz={(u) => { setAtemelUzenet(u); setAtemelNyitva(false); }} />
+                  )}
                 </>
               )}
             </li>

@@ -51,6 +51,22 @@ test.describe("Projekten belüli munka: feladatok, naptár, ütemező-admin", ()
     await expect(page.getByTestId("projekt-feladatok").getByText(cim)).toBeVisible();
   });
 
+  test("Elfogadott ajánlat soraiból beszerzési igény lesz a Tételek között (átemelés)", async ({ page, request }) => {
+    const headers = await auth(request);
+    const p = await (await request.post("/api/projektek", { data: { projekt_nev: `E2E Átemelés ${uniqueSuffix()}` }, headers })).json();
+    const a = await (await request.post(`/api/projektek/${p.id}/ajanlatok`, {
+      data: { cim: "Fürdő", sorok: [{ megnevezes: "Egyedi csempézés", mennyiseg: 10, egyseg: "m2", egysegar: 5000 }] },
+      headers,
+    })).json();
+    await request.patch(`/api/ajanlat-verziok/${a.verziok[0].id}/allapot`, { data: { allapot: "elfogadva" }, headers });
+    await page.goto(`/projektek/${p.id}`);
+    await page.getByRole("button", { name: "Ajánlat", exact: true }).click();
+    await page.getByRole("button", { name: "Átemelés a Tételekbe" }).click();
+    await page.getByLabel("Egyedi csempézés munkanem").selectOption({ index: 1 });
+    await page.getByRole("button", { name: "Átemelés (1 sor)" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "1 beszerzési igény" })).toBeVisible();
+  });
+
   test("Az ütemező be-/kikapcsolható a Beállítások fülön, az alapadatok menthetők", async ({ page, request }) => {
     const headers = await auth(request);
     const nev = `E2E Beállítás ${uniqueSuffix()}`;
