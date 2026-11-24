@@ -45,4 +45,21 @@ test.describe("Újratervezett felület: morzsamenü, Ütemterv, Törzsadat › �
     await expect(page).toHaveURL(`/penzugy?projekt=${p.id}`);
     await expect(page.getByRole("navigation", { name: "Morzsamenü" })).toContainText("Teljes cash flow");
   });
+
+  test("Partnerek fül: partner felvétele és szerkesztése", async ({ page, request }) => {
+    const headers = await auth(request);
+    const p = await (await request.post("/api/projektek", { data: { projekt_nev: `E2E Partner ${uniqueSuffix()}` }, headers })).json();
+    await page.goto(`/projektek/${p.id}`);
+    await page.getByRole("button", { name: "Partnerek", exact: true }).click();
+    const nev = `E2E Kivitelező ${uniqueSuffix()}`;
+    await page.getByLabel("Partner neve").first().fill(nev);
+    await page.getByLabel("Kapcsolattartó, telefon").fill("Kiss Pál +36 1");
+    await page.getByRole("button", { name: "Partner felvétele" }).click();
+    const sor = page.getByRole("listitem").filter({ hasText: nev });
+    await expect(sor).toContainText("Kiss Pál");
+    await sor.getByRole("button", { name: "Szerkesztés" }).click();
+    await page.getByLabel("Kapcsolat", { exact: true }).fill("Nagy Béla");
+    await page.getByRole("button", { name: "Mentés" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: nev })).toContainText("Nagy Béla");
+  });
 });

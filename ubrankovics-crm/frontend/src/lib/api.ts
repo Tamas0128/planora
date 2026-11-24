@@ -69,7 +69,7 @@ export interface ExcelImportEredmeny {
   projekt_id: number | null;
   projekt_nev: string;
   dry_run: boolean;
-  statisztika: { tetelek: number; esemenyek: number; uj_munkanem: number; cr: number; szerepek: number; kihagyva: Record<string, number> };
+  statisztika: { tetelek: number; esemenyek: number; uj_munkanem: number; cr: number; szerepek: number; partnerek?: number; specifikaciok?: number; szamlak?: number; kihagyva: Record<string, number> };
   figyelmeztetesek: string[];
 }
 

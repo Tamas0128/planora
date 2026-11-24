@@ -131,6 +131,29 @@ test("Képernyőképek", async ({ page, request, browser }) => {
   await page.screenshot({ path: path.join(KEP_DIR, "25-kereses.png") });
   await page.keyboard.press("Escape");
 
+  // 26b. Újratervezett felület: Szerződés (MVP/CR), Folyamat, Partnerek, Bevétel, Ütemterv, Törzsadat-Ütemezés, Excel-átvétel
+  const PELDA = projektek.find((p) => p.projekt_nev.includes("Fenyves"));
+  if (PELDA) {
+    await page.goto(`/projektek/${PELDA.id}`);
+    await page.getByRole("button", { name: "Szerződés", exact: true }).click();
+    await shot(page, "31-szerzodes-mvp-cr", { full: true });
+    await page.getByRole("button", { name: "Tételek", exact: true }).click();
+    await shot(page, "32-tetelek-folyamat", { full: true });
+    await page.getByRole("button", { name: "Partnerek", exact: true }).click();
+    await shot(page, "33-projekt-partnerek", { full: true });
+    await page.getByRole("button", { name: "Bevétel", exact: true }).click();
+    await shot(page, "34-projekt-bevetel");
+  }
+  await page.goto("/utemterv");
+  await shot(page, "35-utemterv");
+  await page.goto("/torzsadatok?tab=utemezes");
+  await shot(page, "36-torzsadat-utemezes");
+  await page.goto("/projektek/import");
+  await page.locator('input[type="file"]').setInputFiles(path.resolve(__dirname, "../../docs/excel-sablon/Ubrankovics_projekt_kitoltott_pelda.xlsx"));
+  await page.getByRole("button", { name: "Előnézet" }).click();
+  await page.getByTestId("import-elonezet").waitFor();
+  await shot(page, "37-excel-atvetel");
+
   // 27. Mobil nézet
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/projektek/${KOVACS}`);

@@ -467,4 +467,14 @@ for ugyfel_nev, hrsz_, engedely_, honnan_ in [
             "ertekek": {str(mezo_ugyfel["Helyrajzi szám"]): hrsz_, str(mezo_ugyfel["Építési engedély száma"]): engedely_, str(mezo_ugyfel["Hogyan talált ránk"]): honnan_},
         })
 
+# ---------------------------------------------------------------- Excel-átvétel példa (CR-ekkel, számlákkal)
+PELDA = os.path.join(args.docs, "Ubrankovics_projekt_kitoltott_pelda.xlsx")
+if os.path.exists(PELDA):
+    with open(PELDA, "rb") as fh:
+        resp = client.post("/projektek-import/excel", params={"dry_run": "false"}, files={"file": ("pelda.xlsx", fh)})
+    if resp.status_code != 200:
+        print("Excel-átvétel példa hiba:", resp.status_code, resp.text[:200], file=sys.stderr)
+else:
+    print("kihagyva (nincs fájl):", PELDA)
+
 print("Kész. Projektek:", [p["projekt_nev"] for p in call("GET", "/projektek")])

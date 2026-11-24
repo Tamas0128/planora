@@ -115,7 +115,7 @@ export default function RiportokPage() {
                       <span className="font-medium">{item.szamlaszam}</span>{" "}
                       <span className="text-[var(--muted)]">— {item.partner_nev}</span>
                       <div className="text-xs text-[var(--muted)]">
-                        <Link href={`/projektek/${item.projekt_id}`} className="text-[var(--primary)] hover:underline">
+                        <Link href={`/projektek/${item.projekt_id}`} className="text-[var(--primary)] underline">
                           {item.projekt_nev}
                         </Link>{" "}
                         · esedékes: {item.esedekesseg}

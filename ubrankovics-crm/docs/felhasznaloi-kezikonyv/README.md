@@ -70,7 +70,7 @@ Ha egy projekthez még nincs térképi pozíció, az oldal alján megjelenik a *
 
 ### 3.4 Egy projekt részletei
 
-A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, Fázisok, Feladatok, Naptár, Szerződés, Átadás, Dokumentumok, Beállítások**. A leggyakrabban használtak:
+A projekt oldalán a fülek a projekt életútja szerint vannak csoportosítva: **Áttekintés** · **Vállalás** (Szerződés, Tételek) · **Kivitelezés** (Ütemezés, Fázisok, Feladatok, Naptár, Partnerek) · **Pénz** (Bevétel, Kiadás) · **Lezárás** (Dokumentumok, Átadás, Beállítások). A fejléc fölött morzsamenü mutatja, hol jársz (Projektek › projekt › fül). A leggyakrabban használtak:
 
 **Áttekintés** – az ügyfél és az építési cím, a projekt szerepkörei (építésvezető, projektfelelős), alapadatok.
 
@@ -84,7 +84,23 @@ A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, F�
 
 ![Projekt ütemezés](kepek/08-projekt-utemezes.png)
 
-**Ajánlat** – vevői ajánlatok verziókkal. Az új verzió összehasonlítja magát az előzővel, és megmutatja, mi változott és mennyivel. Az ajánlat állapotai: tervezet → elküldve → elfogadva / elutasítva. Elfogadás után a szerződés létrehozható.
+**Szerződés** – itt látszik, hogy mit vállaltunk az ügyfélnek: az **alapszerződés (MVP)**, az utólag kért **pótmunkák (CR-1, CR-2…)** és a teljes szerződéses érték. A pótmunka ajánlata külön azonosítót kap; elfogadás után az összege hozzáadódik a szerződéses értékhez, a függőben lévők külön látszanak.
+
+![Szerződés: MVP és CR](kepek/31-szerzodes-mvp-cr.png)
+
+A **Tételek** fülön a **Folyamat** nézet az Excel oszlopait követi: ajánlatkérés → ajánlat beérkezett → ajánlat az ügyfélnek → aláírta → szerződtünk → anyagot rendeltünk → megjött → elvégezve. Egy cellára kattintva az állapot lép (üres → folyamatban → igen → nem releváns). A tételek három csoportban jelennek meg: alapszerződés, ajánlati szakasz, pótmunka (CR).
+
+![Tételek folyamat-nézetben](kepek/32-tetelek-folyamat.png)
+
+**Partnerek** – ki végzi a munkákat (saját brigád, alvállalkozók, gyártók), és a partnertörzs kezelése: új partner felvétele és szerkesztése helyben.
+
+![Partnerek](kepek/33-projekt-partnerek.png)
+
+**Bevétel / Kiadás** – a projekt számlázott és tervezett pénzmozgásai egy listában, a teljes cash flow-ra mutató linkkel.
+
+![Bevétel](kepek/34-projekt-bevetel.png)
+
+**Szerződés (vevői ajánlatok)** – vevői ajánlatok verziókkal. Az új verzió összehasonlítja magát az előzővel, és megmutatja, mi változott és mennyivel. Az ajánlat állapotai: tervezet → elküldve → elfogadva / elutasítva. Elfogadás után a szerződés létrehozható.
 
 ![Ajánlat](kepek/09-projekt-ajanlat.png)
 
@@ -107,6 +123,20 @@ A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, F�
 **Dokumentumok** – a projekthez feltöltött fájlok. Itt található a **DOCX generálása** gomb is: a feltöltött sablonból a projekt adataival kitöltött Word-dokumentumot készít (lásd 7.2).
 
 ![Dokumentumok](kepek/12-projekt-dokumentumok.png)
+
+### 3.5 Ütemterv és átfutási idők
+
+Az **Ütemterv** menüpont az összes ütemezett projekt Gantt-nézete; a **Csak a késők** szűrő a határidőn túlra csúszókat mutatja. A tételek alapértelmezett átfutási idejét a **Törzsadatok › Ütemezés** fülön lehet beállítani.
+
+![Ütemterv](kepek/35-utemterv.png)
+
+![Törzsadatok: Ütemezés](kepek/36-torzsadat-utemezes.png)
+
+### 3.6 Projekt átvétele Excelből
+
+A **Projektek › Átvétel Excelből** oldalon a kitöltött alap-sablon (`docs/excel-sablon/Ubrankovics_projekt_alap.xlsx`; kitöltött példa: `Ubrankovics_projekt_kitoltott_pelda.xlsx`) feltölthető. Az **Előnézet** megmutatja, mi jön létre (tételek, folyamat-állapotok, pótmunkák, partnerek, specifikációk, számlák) és milyen figyelmeztetések vannak; a projekt csak az **Átvétel jóváhagyása** gombra jön létre. A Dokumentumok lap fájljait a projekt Dokumentumok fülén kell feltölteni.
+
+![Excel-átvétel előnézete](kepek/37-excel-atvetel.png)
 
 ## 4. Pénzügy
 

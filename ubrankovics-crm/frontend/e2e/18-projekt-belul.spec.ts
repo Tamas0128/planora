@@ -133,4 +133,17 @@ test.describe("Folyamat-nézet, Szerződés fül, Excel-átvétel", () => {
     // a sablonban nincs projektnév: érthető hibát várunk
     await expect(page.getByRole("alert").filter({ hasText: "kötelező" })).toBeVisible();
   });
+
+  test("Excel-átvétel: előnézet, jóváhagyás, kész projekt", async ({ page }) => {
+    await page.goto("/projektek/import");
+    await page.locator('input[type="file"]').setInputFiles("e2e/fixtures/import-teszt.xlsx");
+    await page.getByRole("button", { name: "Előnézet" }).click();
+    const elonezet = page.getByTestId("import-elonezet");
+    await expect(elonezet).toContainText("E2E Átvétel Ház");
+    await expect(elonezet).toContainText("1 számla");
+    await expect(elonezet).toContainText("pótmunka (CR)");
+    await page.getByRole("button", { name: "Átvétel jóváhagyása" }).click();
+    await expect(page).toHaveURL(new RegExp("/projektek/[0-9]+$"));
+    await expect(page.getByRole("heading", { name: /E2E Átvétel Ház/ }).first()).toBeVisible();
+  });
 });

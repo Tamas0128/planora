@@ -379,7 +379,7 @@ def importal(db: Session, fajl: bytes) -> dict:
         if n:
             stat["kihagyva"]["Dokumentumok (a fájlokat a projekt Dokumentumok fülén kell feltölteni)"] = n
     if stat["kihagyva"]:
-        figy.append("Ezeket a lapokat az átvétel még nem dolgozza fel (kihagyva): " + ", ".join(f"{k} ({v} sor)" for k, v in stat["kihagyva"].items()) + ".")
+        figy.append("Ezek a lapok nem kerülnek át (a fájlokat külön kell feltölteni): " + ", ".join(f"{k} ({v} sor)" for k, v in stat["kihagyva"].items()) + ".")
     if stat["tetelek"] == 0:
         figy.append("A Tételek lapon nincs kitöltött sor.")
 

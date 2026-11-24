@@ -68,6 +68,7 @@ export default function ProjektImportPage() {
           <ul className="space-y-1 text-sm">
             <li>{s.tetelek} tétel, {s.esemenyek} folyamat-állapot</li>
             <li>{s.cr} pótmunka (CR), {s.szerepek} szerepkör</li>
+            <li>{s.partnerek ?? 0} új partner, {s.specifikaciok ?? 0} specifikáció, {s.szamlak ?? 0} számla</li>
             {s.uj_munkanem > 0 && <li>{s.uj_munkanem} új munkanem jön létre a törzsadatban</li>}
           </ul>
           {elonezet.figyelmeztetesek.map((f) => (

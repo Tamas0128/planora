@@ -121,7 +121,7 @@ export default function DashboardPage() {
                   <span>
                     <span className="font-medium">{s.szamlaszam}</span>
                     <span className="text-[var(--muted)]"> — {s.partner_nev} · </span>
-                    <Link href={`/projektek/${s.projekt_id}`} className="text-[var(--primary)] hover:underline">
+                    <Link href={`/projektek/${s.projekt_id}`} className="text-[var(--primary)] underline">
                       {s.projekt_nev}
                     </Link>
                     <span className="block text-xs text-[var(--muted)]">
