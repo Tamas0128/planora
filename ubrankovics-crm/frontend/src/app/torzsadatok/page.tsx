@@ -5,20 +5,23 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import SablonFajlok from "@/components/SablonFajlok";
+import TorzsadatUtemezes from "@/components/TorzsadatUtemezes";
+import Morzsa from "@/components/Morzsa";
 import { Alvallalkozo, Munkanem, Szemely, Torzsadat, api } from "@/lib/api";
 
 export default function TorzsadatokPage() {
-  const [tab, setTab] = useState<"munkanem" | "torzsadat" | "alvallalkozo" | "szemely" | "sablon">("munkanem");
+  const [tab, setTab] = useState<"munkanem" | "torzsadat" | "alvallalkozo" | "szemely" | "sablon" | "utemezes">("munkanem");
 
   // Közvetlen link egy fülre: /torzsadatok?tab=alvallalkozo (kliensen olvassuk, hogy az oldal statikus maradjon).
   useEffect(() => {
     const v = new URLSearchParams(window.location.search).get("tab");
     // eslint-disable-next-line react-hooks/set-state-in-effect -- az URL csak kliensen olvasható
-    if (v === "munkanem" || v === "torzsadat" || v === "alvallalkozo" || v === "szemely" || v === "sablon") setTab(v);
+    if (v === "munkanem" || v === "torzsadat" || v === "alvallalkozo" || v === "szemely" || v === "sablon" || v === "utemezes") setTab(v);
   }, []);
 
   return (
     <AppLayout>
+      <Morzsa elemek={[{ cimke: "Rendszer beállítások" }, { cimke: "Törzsadatok" }]} />
       <h1 className="mb-4 text-xl font-semibold">Törzsadatok</h1>
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
         {(
@@ -27,6 +30,7 @@ export default function TorzsadatokPage() {
             ["torzsadat", "Legördülő listák"],
             ["alvallalkozo", "Alvállalkozók"],
             ["szemely", "Személyek"],
+            ["utemezes", "Ütemezés"],
             ["sablon", "Dokumentumsablonok"],
           ] as const
         ).map(([v, l]) => (
@@ -46,6 +50,7 @@ export default function TorzsadatokPage() {
       {tab === "alvallalkozo" && <AlvallalkozokTab />}
       {tab === "szemely" && <SzemelyekTab />}
       {tab === "sablon" && <SablonFajlok />}
+      {tab === "utemezes" && <TorzsadatUtemezes />}
     </AppLayout>
   );
 }

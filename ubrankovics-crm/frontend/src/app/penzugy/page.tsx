@@ -3,6 +3,7 @@
 import { Fragment, FormEvent, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import Morzsa from "@/components/Morzsa";
 import CashflowChart from "@/components/CashflowChart";
 import BankkivonatImport from "@/components/BankkivonatImport";
 import {
@@ -37,6 +38,7 @@ export default function PenzugyPage() {
 
   return (
     <AppLayout>
+      <Morzsa elemek={[{ cimke: "Pénzügy", href: "/penzugy" }, { cimke: { cashflow: "Teljes cash flow", szerzodesek: "Szerződések", szamlak: "TIG + számlák", berkoltseg: "Bérköltség" }[tab] }]} />
       <h1 className="mb-4 text-xl font-semibold">Pénzügy</h1>
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
         {(
@@ -105,6 +107,11 @@ function CashflowTab() {
   const [ig, setIg] = useState(() => isoDate(addDays(new Date(), 13 * 7 - 1)));
   const [projektId, setProjektId] = useState<number | "">("");
   const [data, setData] = useState<CashflowRolling | null>(null);
+  useEffect(() => {
+    const v = Number(new URLSearchParams(window.location.search).get("projekt"));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- az URL csak kliensen olvasható
+    if (Number.isFinite(v) && v > 0) setProjektId(v);
+  }, []);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [items, setItems] = useState<CashflowItem[]>([]);
   const [snapshots, setSnapshots] = useState<BankEgyenleg[]>([]);

@@ -29,6 +29,7 @@ from app.api import (
     naptar,
     vevoi_ajanlat,
     projekt_import,
+    utemterv,
     projektek,
     riportok,
     sablonfajlok,
@@ -118,6 +119,7 @@ app.include_router(sablonfajlok.router, prefix="/api")
 app.include_router(naptar.router, prefix="/api")
 app.include_router(vevoi_ajanlat.router, prefix="/api")
 app.include_router(projekt_import.router, prefix="/api")
+app.include_router(utemterv.router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -35,6 +35,26 @@ export interface Ugyfel {
   created_at: string;
 }
 
+export interface SablonTetel {
+  id: number;
+  munkanem_id: number;
+  munkanem_nev: string;
+  sorrend: number;
+  duration_days: number;
+  prep_days: number;
+  include_by_default: boolean;
+}
+
+export interface UtemProjekt {
+  projekt_id: number;
+  projekt_nev: string;
+  allapot: string;
+  kezdes: string | null;
+  vege: string | null;
+  keso: boolean;
+  szakaszok: { tetel_id: number; nev: string; kezdes: string; vege: string; szakasz: string }[];
+}
+
 export interface SzerzodesOsszkep {
   alap_netto: string | number;
   alap_ajanlat_id: number | null;
@@ -1456,6 +1476,12 @@ export const api = {
     request<VevoiAjanlat>(`/ajanlatok/${ajanlatId}/verziok`, { method: "POST", body: JSON.stringify(body) }),
   atemelAjanlat: (verzioId: number, body: { sorok: { sor_id: number; munkanem_id: number }[]; afa_tipus: string }) =>
     request<{ uj_tetelek: number; uj_igenyek: number; kihagyva: number }>(`/ajanlat-verziok/${verzioId}/atemeles`, { method: "POST", body: JSON.stringify(body) }),
+  listTetelSablonok: (tipusId: number) => request<SablonTetel[]>(`/projekt-tipusok/${tipusId}/tetel-sablonok`),
+  updateTetelSablon: (id: number, body: Partial<Pick<SablonTetel, "duration_days" | "prep_days" | "include_by_default">>) =>
+    request<SablonTetel>(`/projekt-tipusok/tetel-sablonok/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  listProjektPenzmozgasok: (projektId: number, irany: "bevetel" | "kiadas") =>
+    request<CashflowItem[]>(`/projektek/${projektId}/penzmozgasok?irany=${irany}`),
+  getUtemterv: () => request<UtemProjekt[]>("/utemterv"),
   getSzerzodesOsszkep: (projektId: number) => request<SzerzodesOsszkep>(`/projektek/${projektId}/szerzodes-osszkep`),
   importExcel: (file: File, dryRun: boolean) => {
     const fd = new FormData();

@@ -31,9 +31,10 @@ const SECTIONS: NavSection[] = [
     id: "projektek",
     label: "Projektek",
     href: "/projektek",
-    prefixes: ["/projektek", "/feladatok", "/naptar", "/jegyek"],
+    prefixes: ["/projektek", "/utemterv", "/feladatok", "/naptar", "/jegyek"],
     items: [
       { href: "/projektek", label: "Projektek" },
+      { href: "/utemterv", label: "Ütemterv" },
       { href: "/feladatok", label: "Feladatok" },
       { href: "/naptar", label: "Naptár" },
       { href: "/jegyek", label: "Jegyek" },

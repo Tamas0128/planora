@@ -454,3 +454,24 @@ def get_rolling_cashflow_items(
         if summary.kezdo_datum == kezdo_datum:
             return items
     raise HTTPException(status_code=404, detail="Nincs ilyen kezdő dátumú bucket a horizonton")
+
+
+@router.get("/projektek/{projekt_id}/penzmozgasok")
+def projekt_penzmozgasok(
+    projekt_id: int,
+    irany: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Egy projekt bevételi és kiadási tételei egy listában (az elmúlt 12 hónaptól 24 hónapra előre),
+    a Projekt › Bevétel / Kiadás fülek forrása. irany: 'bevetel' vagy 'kiadas', üresen mindkettő."""
+    from datetime import timedelta
+
+    if not db.query(Projekt).get(projekt_id):
+        raise HTTPException(status_code=404, detail="Projekt not found")
+    tol = date.today() - timedelta(days=365)
+    _summ, listak, _nyito = rolling_forecast(db, bucket_meret="honap", horizont=36, projekt_id=projekt_id, today=tol)
+    out = [i for lista in listak for i in lista]
+    if irany:
+        out = [i for i in out if str(getattr(i, "irany", "")).lower().startswith(irany[:4].lower())]
+    return sorted(out, key=lambda i: i.esedekesseg)

@@ -1,10 +1,15 @@
 import { test, expect, APIRequestContext } from "@playwright/test";
 import { ADMIN_PASSWORD, ADMIN_USER, uniqueSuffix } from "./helpers";
 
+let cachedAuth: { Authorization: string } | null = null;
+
+// Egyszer lépünk be API-n át, hogy ne fussunk a belépési rate limitbe.
 async function auth(request: APIRequestContext) {
+  if (cachedAuth) return cachedAuth;
   const r = await request.post("/api/auth/login/json", { data: { username: ADMIN_USER, password: ADMIN_PASSWORD } });
   const { access_token } = await r.json();
-  return { Authorization: `Bearer ${access_token}` };
+  cachedAuth = { Authorization: `Bearer ${access_token}` };
+  return cachedAuth;
 }
 
 test.describe("Projekten belüli munka: feladatok, naptár, ütemező-admin", () => {

@@ -23,6 +23,9 @@ import AppLayout from "@/components/AppLayout";
 import Modal from "@/components/Modal";
 import AllapotPill from "@/components/AllapotPill";
 import Skeleton from "@/components/Skeleton";
+import Morzsa from "@/components/Morzsa";
+import ProjektPenz from "@/components/projekt/ProjektPenz";
+import PartnerekTab from "@/components/projekt/PartnerekTab";
 import TetelFolyamat from "@/components/projekt/TetelFolyamat";
 import GyorsFeladat from "@/components/projekt/GyorsFeladat";
 import MiKellMost from "@/components/projekt/MiKellMost";
@@ -143,24 +146,21 @@ const SZEREP_LABEL: Record<string, string> = {
   gyartastervezo: "Gyártástervező",
 };
 
-type FulId = "attekintes" | "tetelek" | "utemezes" | "fazisok" | "feladatok" | "naptar" | "ajanlat" | "atadas" | "dokumentumok" | "beallitasok";
-const FULEK: [FulId, string][] = [
-  ["attekintes", "Áttekintés"],
-  ["tetelek", "Tételek"],
-  ["utemezes", "Ütemezés"],
-  ["fazisok", "Fázisok"],
-  ["feladatok", "Feladatok"],
-  ["naptar", "Naptár"],
-  ["ajanlat", "Szerződés"],
-  ["atadas", "Átadás"],
-  ["dokumentumok", "Dokumentumok"],
-  ["beallitasok", "Beállítások"],
+type FulId = "attekintes" | "ajanlat" | "tetelek" | "utemezes" | "fazisok" | "feladatok" | "naptar" | "partnerek" | "bevetel" | "kiadas" | "dokumentumok" | "atadas" | "beallitasok";
+// A fülek a projekt életútja szerint csoportosítva: áttekintés, vállalás, kivitelezés, pénz, lezárás.
+const FUL_CSOPORTOK: { cimke: string; fulek: [FulId, string][] }[] = [
+  { cimke: "Áttekintés", fulek: [["attekintes", "Áttekintés"]] },
+  { cimke: "Vállalás", fulek: [["ajanlat", "Szerződés"], ["tetelek", "Tételek"]] },
+  { cimke: "Kivitelezés", fulek: [["utemezes", "Ütemezés"], ["fazisok", "Fázisok"], ["feladatok", "Feladatok"], ["naptar", "Naptár"], ["partnerek", "Partnerek"]] },
+  { cimke: "Pénz", fulek: [["bevetel", "Bevétel"], ["kiadas", "Kiadás"]] },
+  { cimke: "Lezárás", fulek: [["dokumentumok", "Dokumentumok"], ["atadas", "Átadás"], ["beallitasok", "Beállítások"]] },
 ];
+const FULEK: [FulId, string][] = FUL_CSOPORTOK.flatMap((g) => g.fulek);
 
 export default function ProjektDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projektId = Number(id);
-  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok" | "dokumentumok" | "ajanlat" | "atadas" | "feladatok" | "naptar" | "beallitasok">("attekintes");
+  const [tab, setTab] = useState<FulId>("attekintes");
   const [projekt, setProjekt] = useState<ProjektDetail | null>(null);
   const [tetelek, setTetelek] = useState<ProjektTetel[]>([]);
   const [munkanemek, setMunkanemek] = useState<Munkanem[]>([]);
@@ -213,6 +213,7 @@ export default function ProjektDetailPage() {
 
   return (
     <AppLayout>
+      <Morzsa elemek={[{ cimke: "Projektek", href: "/projektek" }, { cimke: projekt.projekt_nev, href: `/projektek/${projektId}` }, { cimke: FULEK.find(([t]) => t === tab)?.[1] ?? "" }]} />
       <h1 className="mb-2 text-xl font-semibold">{projekt.projekt_nev}</h1>
       <ProjektFejlec projekt={projekt} tetelek={tetelek} />
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
@@ -222,17 +223,22 @@ export default function ProjektDetailPage() {
         aria-label="Projekt szakaszai"
         className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)] [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] md:[mask-image:none]"
       >
-        {FULEK.map(([t, label]) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            aria-pressed={tab === t}
-            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium ${
-              tab === t ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
-            }`}
-          >
-            {label}
-          </button>
+        {FUL_CSOPORTOK.map((g) => (
+          <div key={g.cimke} className="flex shrink-0 gap-1 border-l border-[var(--border)] pl-1 first:border-l-0 first:pl-0">
+            {g.fulek.map(([t, label]) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                aria-pressed={tab === t}
+                title={g.cimke}
+                className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium ${
+                  tab === t ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         ))}
       </div>
 
@@ -265,6 +271,9 @@ export default function ProjektDetailPage() {
             </button>
           </div>
         ))}
+      {tab === "partnerek" && <PartnerekTab tetelek={tetelek} onMegnyit={() => setTab("tetelek")} />}
+      {tab === "bevetel" && <ProjektPenz projektId={projektId} irany="bevetel" />}
+      {tab === "kiadas" && <ProjektPenz projektId={projektId} irany="kiadas" />}
       {tab === "feladatok" && <FeladatokTab key={feladatVerzio} projektId={projektId} />}
       {tab === "naptar" && <NaptarNezet projektId={projektId} />}
       {tab === "beallitasok" && <BeallitasokTab projekt={projekt} onChange={loadProjekt} />}
