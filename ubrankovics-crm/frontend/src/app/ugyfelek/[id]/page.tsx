@@ -8,15 +8,10 @@ import Skeleton from "@/components/Skeleton";
 import EgyediMezok from "@/components/EgyediMezok";
 import KommunikacioNaplo from "@/components/KommunikacioNaplo";
 import UgyfelCimkek from "@/components/UgyfelCimkek";
+import UgyfelDokumentumok from "@/components/UgyfelDokumentumok";
+import AllapotPill from "@/components/AllapotPill";
+import { MailX } from "lucide-react";
 import { api, Ugyfel, UgyfelProjektLink, UserResponse } from "@/lib/api";
-
-const ALLAPOT_LABEL: Record<string, string> = {
-  uj: "Új",
-  ajanlat: "Ajánlat",
-  szerzodott: "Szerződött",
-  kivitelezes: "Kivitelezés",
-  lezart: "Lezárt",
-};
 
 export default function UgyfelDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -75,9 +70,22 @@ export default function UgyfelDetailPage() {
     <AppLayout>
       <h1 className="mb-4 text-xl font-semibold">{ugyfel.nev}</h1>
       {ugyfel.leiratkozott && (
-        <div className="mb-4 flex items-center justify-between rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm" data-testid="leiratkozott-jelzes">
-          <span>Leiratkozott a kampányokról — nem kap kampányleveleket.</span>
-          <button onClick={leiratkozasValtas} className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-xs">
+        <div
+          role="status"
+          className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[var(--radius)] border-2 border-[var(--warning)] bg-[var(--warning-bg)] p-4"
+          data-testid="leiratkozott-jelzes"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--warning)] text-white">
+            <MailX size={22} aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-heading text-base font-semibold">Leiratkozott a kampányokról</p>
+            <p className="text-sm">Nem kap kampányleveleket. Az egyedi, projekthez kötött levelek továbbra is elküldhetők neki.</p>
+          </div>
+          <button
+            onClick={leiratkozasValtas}
+            className="min-h-11 rounded-[var(--radius)] border border-[var(--foreground)] bg-[var(--card)] px-4 text-sm font-medium hover:bg-white md:min-h-9"
+          >
             Újra feliratkoztat
           </button>
         </div>
@@ -150,14 +158,13 @@ export default function UgyfelDetailPage() {
                       {p.szerep ? ` · ${p.szerep}` : ""}
                     </div>
                   </div>
-                  <span className="shrink-0 rounded-[var(--radius)] bg-black/5 px-2 py-0.5 text-xs">
-                    {ALLAPOT_LABEL[p.allapot] || p.allapot}
-                  </span>
+                  <AllapotPill allapot={p.allapot} />
                 </li>
               ))}
             </ul>
           )}
         </div>
+        <UgyfelDokumentumok ugyfelId={ugyfel.id} />
         <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
           <KommunikacioNaplo ugyfelId={ugyfel.id} />
         </div>

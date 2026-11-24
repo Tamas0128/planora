@@ -199,6 +199,19 @@ class ProjektUgyfelResponse(BaseModel):
     model_config = _from_attrs
 
 
+class UgyfelDokumentumResponse(BaseModel):
+    """Az ügyfél projektjeihez feltöltött dokumentum az ügyfél kártyáján (a fájl a projekthez tartozik)."""
+
+    id: int
+    projekt_id: int
+    projekt_nev: str
+    tipus: str
+    eredeti_nev: Optional[str]
+    meret: Optional[int]
+    megjegyzes: Optional[str]
+    created_at: datetime
+
+
 class UgyfelProjektLinkResponse(BaseModel):
     """Egy ügyfél kártyáján megjelenő, kapcsolódó projekt — a fordított
     irány a ProjektUgyfelResponse-hoz képest (ott a projekt oldaláról,

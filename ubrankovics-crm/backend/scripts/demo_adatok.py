@@ -447,4 +447,24 @@ post("/cashflow/bankegyenleg", {"datum": d(-1), "egyenleg": 24_650_000})
 for i, (honap, osszeg) in enumerate([(d(7), 2_850_000), (d(37), 2_850_000), (d(67), 2_950_000)]):
     post("/berkoltsegek", {"honap": date.fromisoformat(honap).replace(day=1).isoformat(), "osszeg": osszeg, "megjegyzes": "Belső munkatársak bére és járulékai"})
 
+# ---------------------------------------------------------------- egyedi mezők (saját adatmezők ügyfélhez / érdeklődőhöz)
+mezo_ugyfel = {
+    nev_: post("/egyedi-mezok", {"entitas": "ugyfel", "nev": nev_, "tipus": tipus_})["id"]
+    for nev_, tipus_ in [("Helyrajzi szám", "szoveg"), ("Építési engedély száma", "szoveg"), ("Hogyan talált ránk", "szoveg")]
+}
+mezo_erdeklodes = {
+    nev_: post("/egyedi-mezok", {"entitas": "erdeklodes", "nev": nev_, "tipus": tipus_})["id"]
+    for nev_, tipus_ in [("Telek mérete (m²)", "szam"), ("Tervezett kezdés", "datum"), ("Finanszírozás", "szoveg")]
+}
+ugyfelek_lista = {u["nev"]: u["id"] for u in call("GET", "/ugyfelek")}
+for ugyfel_nev, hrsz_, engedely_, honnan_ in [
+    ("Wallace Wellness Kft.", "Visegrád 1243/7", "ÉE-2026/0412", "Ajánlás"),
+    ("Ana Stelline", "Szeged 5521/3", "ÉE-2026/0188", "Weboldal"),
+]:
+    if ugyfel_nev in ugyfelek_lista:
+        call("PUT", "/egyedi-mezok/ertekek", json={
+            "entitas": "ugyfel", "entitas_id": ugyfelek_lista[ugyfel_nev],
+            "ertekek": {str(mezo_ugyfel["Helyrajzi szám"]): hrsz_, str(mezo_ugyfel["Építési engedély száma"]): engedely_, str(mezo_ugyfel["Hogyan talált ránk"]): honnan_},
+        })
+
 print("Kész. Projektek:", [p["projekt_nev"] for p in call("GET", "/projektek")])

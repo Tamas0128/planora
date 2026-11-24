@@ -74,7 +74,7 @@ export default function EgyediMezok({
       <h2 className="mb-3 text-sm font-semibold">Egyedi mezők</h2>
       {error && <div className="mb-2 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
       {mezok.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">Nincs egyedi mező definiálva{isAdmin ? "" : " (az admin vehet fel újat)"}.</p>
+        <p className="text-sm text-[var(--muted)]">Itt saját adatmezőket vehetsz fel, például helyrajzi számot vagy engedélyszámot. Minden érdeklődőnél és ügyfélnél kitölthetők{isAdmin ? "." : ". Új mezőt az admin vehet fel."}</p>
       ) : (
         <form onSubmit={save} className="space-y-2">
           {mezok.map((m) => (

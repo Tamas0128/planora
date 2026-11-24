@@ -36,7 +36,7 @@ Az oldal tetején egy **felső keret** található, ez minden oldalon ugyanott v
 
 A keret jobb oldalán találod a **Keresés** gombot (Ctrl+K, az egész rendszerben keres), az **Értesítések** harangot (a rád váró teendők és figyelmeztetések száma a harangon látszik; kattintásra lenyílik a lista, itt kapcsolható be a napi összefoglaló e-mail is), a saját nevedet (fiókbeállítások) és a kijelentkezés gombot. A bal felső logóra kattintva a **Kezdőlapra** jutsz. Telefonon a keret összecsukódik: a bal felső gombbal nyílik a teljes menü.
 
-**A munka a projekten belül történik.** Egy projekt oldalán minden megtalálható, amire szükséged van: tételek, ütemezés, feladatok, naptár, ajánlat, napló, átadás, dokumentumok és a beállítások (3.4). A Feladatok, Naptár és Jegyek menüpontok csak összesítő nézetek az összes projektről.
+**A munka a projekten belül történik.** Egy projekt oldalán minden megtalálható, amire szükséged van: tételek, ütemezés, feladatok, naptár, ajánlat, átadás, dokumentumok és a beállítások (3.4). A Feladatok, Naptár és Jegyek menüpontok csak összesítő nézetek az összes projektről.
 
 ## 2. Kezdőlap
 
@@ -70,7 +70,7 @@ Ha egy projekthez még nincs térképi pozíció, az oldal alján megjelenik a *
 
 ### 3.4 Egy projekt részletei
 
-A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, Fázisok, Feladatok, Naptár, Ajánlat, Építési napló, Átadás, Dokumentumok, Beállítások**. A leggyakrabban használtak:
+A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, Fázisok, Feladatok, Naptár, Ajánlat, Átadás, Dokumentumok, Beállítások**. A leggyakrabban használtak:
 
 **Áttekintés** – az ügyfél és az építési cím, a projekt szerepkörei (építésvezető, projektfelelős), alapadatok.
 
@@ -87,10 +87,6 @@ A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, F�
 **Ajánlat** – vevői ajánlatok verziókkal. Az új verzió összehasonlítja magát az előzővel, és megmutatja, mi változott és mennyivel. Az ajánlat állapotai: tervezet → elküldve → elfogadva / elutasítva. Elfogadás után a szerződés létrehozható.
 
 ![Ajánlat](kepek/09-projekt-ajanlat.png)
-
-**Építési napló** – napi bejegyzések, időjárással, létszámmal, fotókkal.
-
-![Építési napló](kepek/10-projekt-naplo.png)
 
 **Átadás** – az átadás-átvételi jegyzőkönyv, hibalista és jótállási határidők.
 

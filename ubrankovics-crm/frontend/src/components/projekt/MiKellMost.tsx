@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
-import { Feladat, LejartSzamlaItem, NaploBejegyzes, ProjektTetel, api } from "@/lib/api";
+import { Feladat, LejartSzamlaItem, ProjektTetel, api } from "@/lib/api";
 
 const huf = (v: string | number) => `${Number(v).toLocaleString("hu-HU")} Ft`;
 const ma = () => new Date().toISOString().slice(0, 10);
@@ -16,16 +16,14 @@ export default function MiKellMost({
 }: {
   projektId: number;
   tetelek: ProjektTetel[];
-  onNavigate: (ful: "tetelek" | "feladatok" | "naplo") => void;
+  onNavigate: (ful: "tetelek" | "feladatok") => void;
 }) {
   const [szamlak, setSzamlak] = useState<LejartSzamlaItem[] | null>(null);
   const [feladatok, setFeladatok] = useState<Feladat[] | null>(null);
-  const [naplo, setNaplo] = useState<NaploBejegyzes | null | undefined>(undefined);
 
   useEffect(() => {
     api.getPenzugyiOsszesito().then((o) => setSzamlak(o.lejart_szamlak.filter((s) => s.projekt_id === projektId))).catch(() => setSzamlak([]));
     api.listFeladatok({ projekt_id: projektId, kesz: false }).then(setFeladatok).catch(() => setFeladatok([]));
-    api.listNaplo(projektId).then((l) => setNaplo([...l].sort((a, b) => b.datum.localeCompare(a.datum))[0] ?? null)).catch(() => setNaplo(null));
   }, [projektId]);
 
   // Csak a ténylegesen folyamatban lévő, határidőn túli tétel késik; az ajánlati fázisú tétel még nem indult el.
@@ -98,21 +96,6 @@ export default function MiKellMost({
         )}
         <button type="button" onClick={() => onNavigate("feladatok")} className="mt-1 min-h-9 text-xs text-[var(--primary)] hover:underline">
           Összes feladat
-        </button>
-      </div>
-      <div>
-        <h3 className="mb-1 text-sm font-semibold">Utolsó építési napló</h3>
-        {naplo === undefined ? (
-          <p className="text-sm text-[var(--muted)]">Betöltés…</p>
-        ) : naplo === null ? (
-          <p className="text-sm text-[var(--muted)]">Még nincs bejegyzés.</p>
-        ) : (
-          <p className="text-sm">
-            <span className="tabular-nums text-[var(--muted)]">{naplo.datum}</span> · {naplo.munka}
-          </p>
-        )}
-        <button type="button" onClick={() => onNavigate("naplo")} className="mt-1 min-h-9 text-xs text-[var(--primary)] hover:underline">
-          Építési napló megnyitása
         </button>
       </div>
       <p className="mt-2 text-xs text-[var(--muted)]">

@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import ProjektUgyfel, Ugyfel, User
+from app.models import Dokumentum, Projekt, ProjektUgyfel, Ugyfel, User
 from app.services.audit import log_audit
-from app.schemas_crm import UgyfelCreate, UgyfelProjektLinkResponse, UgyfelResponse, UgyfelUpdate
+from app.schemas_crm import UgyfelCreate, UgyfelDokumentumResponse, UgyfelProjektLinkResponse, UgyfelResponse, UgyfelUpdate
 
 router = APIRouter(prefix="/ugyfelek", tags=["ugyfelek"])
 
@@ -73,6 +73,38 @@ def list_ugyfel_projektek(
             szerep=link.szerep,
         )
         for link in linkek
+    ]
+
+
+@router.get("/{ugyfel_id}/dokumentumok", response_model=list[UgyfelDokumentumResponse])
+def list_ugyfel_dokumentumok(
+    ugyfel_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Az ügyfél összes projektjéhez feltöltött dokumentum (szerződés, tervrajz, engedély, fénykép, egyéb), legújabb elöl."""
+    if not db.query(Ugyfel).get(ugyfel_id):
+        raise HTTPException(status_code=404, detail="Ügyfél not found")
+    rows = (
+        db.query(Dokumentum, Projekt.projekt_nev)
+        .join(Projekt, Projekt.id == Dokumentum.projekt_id)
+        .join(ProjektUgyfel, ProjektUgyfel.projekt_id == Projekt.id)
+        .filter(ProjektUgyfel.ugyfel_id == ugyfel_id)
+        .order_by(Dokumentum.created_at.desc())
+        .all()
+    )
+    return [
+        UgyfelDokumentumResponse(
+            id=d.id,
+            projekt_id=d.projekt_id,
+            projekt_nev=nev,
+            tipus=d.tipus,
+            eredeti_nev=d.eredeti_nev,
+            meret=d.meret,
+            megjegyzes=d.megjegyzes,
+            created_at=d.created_at,
+        )
+        for d, nev in rows
     ]
 
 

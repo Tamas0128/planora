@@ -23,9 +23,9 @@ import AppLayout from "@/components/AppLayout";
 import Modal from "@/components/Modal";
 import AllapotPill from "@/components/AllapotPill";
 import Skeleton from "@/components/Skeleton";
+import GyorsFeladat from "@/components/projekt/GyorsFeladat";
 import MiKellMost from "@/components/projekt/MiKellMost";
 import AtvetelTab from "@/components/projekt/AtvetelTab";
-import NaploTab from "@/components/projekt/NaploTab";
 import AjanlatTab from "@/components/projekt/AjanlatTab";
 import FeladatokTab from "@/components/projekt/FeladatokTab";
 import BeallitasokTab from "@/components/projekt/BeallitasokTab";
@@ -142,7 +142,7 @@ const SZEREP_LABEL: Record<string, string> = {
   gyartastervezo: "Gyártástervező",
 };
 
-type FulId = "attekintes" | "tetelek" | "utemezes" | "fazisok" | "feladatok" | "naptar" | "ajanlat" | "naplo" | "atadas" | "dokumentumok" | "beallitasok";
+type FulId = "attekintes" | "tetelek" | "utemezes" | "fazisok" | "feladatok" | "naptar" | "ajanlat" | "atadas" | "dokumentumok" | "beallitasok";
 const FULEK: [FulId, string][] = [
   ["attekintes", "Áttekintés"],
   ["tetelek", "Tételek"],
@@ -151,7 +151,6 @@ const FULEK: [FulId, string][] = [
   ["feladatok", "Feladatok"],
   ["naptar", "Naptár"],
   ["ajanlat", "Ajánlat"],
-  ["naplo", "Építési napló"],
   ["atadas", "Átadás"],
   ["dokumentumok", "Dokumentumok"],
   ["beallitasok", "Beállítások"],
@@ -160,7 +159,7 @@ const FULEK: [FulId, string][] = [
 export default function ProjektDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projektId = Number(id);
-  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok" | "dokumentumok" | "ajanlat" | "naplo" | "atadas" | "feladatok" | "naptar" | "beallitasok">("attekintes");
+  const [tab, setTab] = useState<"attekintes" | "tetelek" | "utemezes" | "fazisok" | "dokumentumok" | "ajanlat" | "atadas" | "feladatok" | "naptar" | "beallitasok">("attekintes");
   const [projekt, setProjekt] = useState<ProjektDetail | null>(null);
   const [tetelek, setTetelek] = useState<ProjektTetel[]>([]);
   const [munkanemek, setMunkanemek] = useState<Munkanem[]>([]);
@@ -169,6 +168,7 @@ export default function ProjektDetailPage() {
   const [fazisok, setFazisok] = useState<ProjektFazis[]>([]);
   const [dokumentumok, setDokumentumok] = useState<Dokumentum[]>([]);
   const [error, setError] = useState("");
+  const [feladatVerzio, setFeladatVerzio] = useState(0);
 
   function loadProjekt() {
     api.getProjekt(projektId).then(setProjekt).catch((e) => setError(e.message));
@@ -236,7 +236,7 @@ export default function ProjektDetailPage() {
       </div>
 
       {tab === "attekintes" && (
-        <AttekintesTab projekt={projekt} tetelek={tetelek} szemelyek={szemelyek} onChange={loadProjekt} onNavigate={setTab} />
+        <AttekintesTab key={feladatVerzio} projekt={projekt} tetelek={tetelek} szemelyek={szemelyek} onChange={loadProjekt} onNavigate={setTab} />
       )}
       {tab === "tetelek" && (
         <TetelekTab
@@ -264,18 +264,18 @@ export default function ProjektDetailPage() {
             </button>
           </div>
         ))}
-      {tab === "feladatok" && <FeladatokTab projektId={projektId} />}
+      {tab === "feladatok" && <FeladatokTab key={feladatVerzio} projektId={projektId} />}
       {tab === "naptar" && <NaptarNezet projektId={projektId} />}
       {tab === "beallitasok" && <BeallitasokTab projekt={projekt} onChange={loadProjekt} />}
       {tab === "fazisok" && (
         <FazisokTab projektId={projektId} fazisok={fazisok} onChange={loadFazisok} />
       )}
       {tab === "ajanlat" && <AjanlatTab projektId={projektId} />}
-      {tab === "naplo" && <NaploTab projektId={projektId} />}
       {tab === "atadas" && <AtvetelTab projektId={projektId} />}
       {tab === "dokumentumok" && (
         <DokumentumokTab projektId={projektId} dokumentumok={dokumentumok} onChange={loadDokumentumok} />
       )}
+      <GyorsFeladat projektId={projektId} onCreated={() => setFeladatVerzio((v) => v + 1)} />
     </AppLayout>
   );
 }
@@ -324,7 +324,7 @@ function AttekintesTab({
   tetelek: ProjektTetel[];
   szemelyek: Szemely[];
   onChange: () => void;
-  onNavigate: (ful: "tetelek" | "feladatok" | "naplo") => void;
+  onNavigate: (ful: "tetelek" | "feladatok") => void;
 }) {
   const [szerep, setSzerep] = useState<string>("epitesvezeto");
   const [szemelyId, setSzemelyId] = useState<string>("");

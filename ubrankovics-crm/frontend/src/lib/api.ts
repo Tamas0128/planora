@@ -35,6 +35,17 @@ export interface Ugyfel {
   created_at: string;
 }
 
+export interface UgyfelDokumentum {
+  id: number;
+  projekt_id: number;
+  projekt_nev: string;
+  tipus: string;
+  eredeti_nev?: string | null;
+  meret?: number | null;
+  megjegyzes?: string | null;
+  created_at: string;
+}
+
 export interface UgyfelProjektLink {
   id: number;
   projekt_id: number;
@@ -947,6 +958,7 @@ export const api = {
     request<Ugyfel>(`/ugyfelek/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteUgyfel: (id: number) => request<void>(`/ugyfelek/${id}`, { method: "DELETE" }),
   listUgyfelProjektek: (id: number) => request<UgyfelProjektLink[]>(`/ugyfelek/${id}/projektek`),
+  listUgyfelDokumentumok: (id: number) => request<UgyfelDokumentum[]>(`/ugyfelek/${id}/dokumentumok`),
 
   listProjektek: () => request<ProjektListItem[]>("/projektek"),
   getProjekt: (id: number) => request<ProjektDetail>(`/projektek/${id}`),

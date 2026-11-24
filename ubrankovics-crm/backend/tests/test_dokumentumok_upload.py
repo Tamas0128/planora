@@ -96,3 +96,29 @@ def test_dokumentum_other_projekt_is_404(client, admin_headers):
     assert resp.status_code == 404
     resp = client.delete(f"/api/projektek/{projekt2}/dokumentumok/{dok_id}", headers=admin_headers)
     assert resp.status_code == 404
+
+
+def test_ugyfel_dokumentumai_a_projektjeibol(client, admin_headers):
+    ugyfel_id = client.post("/api/ugyfelek", json={"nev": "Dok Ügyfél"}, headers=admin_headers).json()["id"]
+    masik_id = client.post("/api/ugyfelek", json={"nev": "Másik Ügyfél"}, headers=admin_headers).json()["id"]
+    projekt_id = _create_projekt(client, admin_headers)
+    r = client.post(f"/api/projektek/{projekt_id}/ugyfelek", json={"ugyfel_id": ugyfel_id}, headers=admin_headers)
+    assert r.status_code == 201, r.text
+    up = client.post(
+        f"/api/projektek/{projekt_id}/dokumentumok",
+        data={"tipus": "tervrajz"},
+        files={"file": ("terv.pdf", io.BytesIO(b"%PDF-1.4 x"), "application/pdf")},
+        headers=admin_headers,
+    )
+    assert up.status_code == 201, up.text
+
+    lista = client.get(f"/api/ugyfelek/{ugyfel_id}/dokumentumok", headers=admin_headers)
+    assert lista.status_code == 200
+    sorok = lista.json()
+    assert len(sorok) == 1
+    assert sorok[0]["tipus"] == "tervrajz"
+    assert sorok[0]["projekt_id"] == projekt_id
+    assert sorok[0]["projekt_nev"] == "Dokumentum teszt projekt"
+
+    assert client.get(f"/api/ugyfelek/{masik_id}/dokumentumok", headers=admin_headers).json() == []
+    assert client.get("/api/ugyfelek/999999/dokumentumok", headers=admin_headers).status_code == 404

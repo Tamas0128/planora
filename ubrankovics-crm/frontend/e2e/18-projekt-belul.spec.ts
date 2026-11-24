@@ -37,6 +37,20 @@ test.describe("Projekten belüli munka: feladatok, naptár, ütemező-admin", ()
     await expect(page.getByLabel(`${cim} kész`)).toBeChecked();
   });
 
+  test("Gyors feladatrögzítés a lebegő gombbal, bármelyik fülről", async ({ page, request }) => {
+    const headers = await auth(request);
+    const p = await (await request.post("/api/projektek", { data: { projekt_nev: `E2E Gyors ${uniqueSuffix()}` }, headers })).json();
+    await page.goto(`/projektek/${p.id}`);
+    await page.getByRole("button", { name: "Tételek", exact: true }).click();
+    await page.getByRole("button", { name: "Új feladat" }).click();
+    const cim = `Helyszíni feladat ${uniqueSuffix()}`;
+    await page.getByLabel("Mit kell megcsinálni?").fill(cim);
+    await page.getByRole("button", { name: "Feladat rögzítése" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Feladat rögzítve" })).toBeVisible();
+    await page.getByRole("button", { name: "Feladatok", exact: true }).click();
+    await expect(page.getByTestId("projekt-feladatok").getByText(cim)).toBeVisible();
+  });
+
   test("Az ütemező be-/kikapcsolható a Beállítások fülön, az alapadatok menthetők", async ({ page, request }) => {
     const headers = await auth(request);
     const nev = `E2E Beállítás ${uniqueSuffix()}`;

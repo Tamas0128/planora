@@ -55,27 +55,6 @@ test.describe("Projekt életciklus", () => {
     await shot(page, "projekt-atadas-garancia");
   });
 
-  test("Építési napló: bejegyzés fotóval, törlés", async ({ page, request }) => {
-    const p = await ujProjekt(request);
-    await page.goto(`/projektek/${p.id}`);
-    await page.getByRole("button", { name: "Építési napló" }).click();
-
-    const munka = `Falazás ${uniqueSuffix()}`;
-    await page.getByLabel("Elvégzett munka").fill(munka);
-    await page.getByLabel("Időjárás").fill("napos, 18 fok");
-    await page.getByLabel(/^Fotók/).setInputFiles({ name: "fal.png", mimeType: "image/png", buffer: PNG });
-    await page.getByRole("button", { name: "Bejegyzés mentése" }).click();
-
-    const bejegyzes = page.getByTestId("naplo-lista").getByRole("article").filter({ hasText: munka });
-    await expect(bejegyzes).toBeVisible();
-    await expect(bejegyzes.getByRole("img", { name: "fal.png" })).toBeVisible();
-    await shot(page, "projekt-epitesi-naplo");
-
-    page.once("dialog", (d) => d.accept());
-    await bejegyzes.getByRole("button", { name: "Törlés", exact: true }).click();
-    await expect(bejegyzes).toHaveCount(0);
-  });
-
   test("Vevői ajánlat: új verzió és változás-összehasonlítás", async ({ page, request }) => {
     const p = await ujProjekt(request);
     await page.goto(`/projektek/${p.id}`);

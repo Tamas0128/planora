@@ -68,8 +68,6 @@ test("Képernyőképek", async ({ page, request, browser }) => {
     await utemezes.click();
     await shot(page, "08-projekt-utemezes");
   }
-  await page.getByRole("button", { name: "Építési napló" }).click();
-  await shot(page, "10-projekt-naplo");
   await page.getByRole("button", { name: "Dokumentumok" }).click();
   await shot(page, "12-projekt-dokumentumok");
   await page.getByRole("button", { name: "Feladatok", exact: true }).click();
