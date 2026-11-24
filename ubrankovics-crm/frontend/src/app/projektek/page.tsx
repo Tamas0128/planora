@@ -51,6 +51,12 @@ export default function ProjektekPage() {
   const [lejart, setLejart] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("allapot");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- az URL csak kliensen olvasható
+    if (v) setAllapotSzuro(v);
+  }, []);
+
+  useEffect(() => {
     api.getPenzugyiOsszesito().then((o) => {
       const m = new Map<number, number>();
       for (const sz of o.lejart_szamlak) m.set(sz.projekt_id, (m.get(sz.projekt_id) || 0) + 1);

@@ -1449,9 +1449,9 @@ function UtemezesTab({
 
       {minDate && maxDate && totalDays > 0 && <GanttDiagram tetelek={scheduled} minDate={minDate} maxDate={maxDate} totalDays={totalDays} />}
 
-      <div tabIndex={0} className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
-        <table className="w-full text-sm">
-          <thead className="bg-black/5 text-left">
+      <div tabIndex={0} className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] max-md:overflow-visible max-md:border-0 max-md:bg-transparent">
+        <table className="w-full text-sm max-md:block">
+          <thead className="bg-black/5 text-left max-md:hidden">
             <tr>
               <th className="px-3 py-2"></th>
               <th className="px-3 py-2">Tétel</th>
@@ -1465,7 +1465,7 @@ function UtemezesTab({
               <th className="px-3 py-2">Függőségek</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="max-md:block max-md:space-y-3">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={tetelek.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 {tetelek.map((t) => (
@@ -1534,15 +1534,15 @@ function TetelUtemezesRow({
     <tr
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
-      className="border-t border-[var(--border)] align-top"
+      className="border-t border-[var(--border)] align-top max-md:grid max-md:grid-cols-2 max-md:gap-x-3 max-md:gap-y-2 max-md:rounded-[var(--radius)] max-md:border max-md:bg-[var(--card)] max-md:p-3"
     >
-      <td className="px-2 py-2">
+      <td className="px-2 py-2 max-md:order-last max-md:col-span-2 max-md:p-0">
         <button type="button" aria-label="Tétel áthelyezése (húzás, vagy Szóköz + nyilak)" {...attributes} {...listeners} className="cursor-grab touch-none text-[var(--muted)]">
           <GripVertical size={14} />
         </button>
       </td>
-      <td className="sticky left-0 z-10 bg-[var(--card)] px-3 py-2 whitespace-nowrap md:static">{tetel.munkanem.nev}</td>
-      <td className="px-3 py-2">
+      <td className="px-3 py-2 whitespace-nowrap max-md:col-span-2 max-md:p-0 max-md:text-base max-md:font-semibold">{tetel.munkanem.nev}</td>
+      <td data-label="Felelős" className="px-3 py-2 max-md:p-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:text-[var(--muted)] max-md:before:content-[attr(data-label)]">
         <select
           aria-label={`${tetel.munkanem.nev}: felelős szerep`}
           value={tetel.felelos_szerep || ""}
@@ -1560,7 +1560,7 @@ function TetelUtemezesRow({
           ))}
         </select>
       </td>
-      <td className="px-3 py-2">
+      <td data-label="Kijelölve" className="px-3 py-2 max-md:p-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:text-[var(--muted)] max-md:before:content-[attr(data-label)]">
         <select
           aria-label={`${tetel.munkanem.nev}: kijelölt személy`}
           value={tetel.kijelolt_id || ""}
@@ -1580,7 +1580,7 @@ function TetelUtemezesRow({
           ))}
         </select>
       </td>
-      <td className="px-3 py-2">
+      <td data-label="Időtartam (nap)" className="px-3 py-2 max-md:p-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:text-[var(--muted)] max-md:before:content-[attr(data-label)]">
         <input
           type="number"
           min={0}
@@ -1591,7 +1591,7 @@ function TetelUtemezesRow({
           className="w-16 rounded border border-[var(--border)] px-1 py-0.5"
         />
       </td>
-      <td className="px-3 py-2">
+      <td data-label="Előkészítés (nap)" className="px-3 py-2 max-md:p-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:text-[var(--muted)] max-md:before:content-[attr(data-label)]">
         <input
           type="number"
           min={0}
@@ -1602,13 +1602,13 @@ function TetelUtemezesRow({
           className="w-16 rounded border border-[var(--border)] px-1 py-0.5"
         />
       </td>
-      <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">
+      <td data-label="Terv" className="px-3 py-2 whitespace-nowrap text-[var(--muted)] max-md:p-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:text-[var(--muted)] max-md:before:content-[attr(data-label)]">
         {tetel.terv_kezdes && tetel.terv_befejezes ? `${tetel.terv_kezdes} – ${tetel.terv_befejezes}` : "—"}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">
+      <td data-label="Várható" className="px-3 py-2 whitespace-nowrap text-[var(--muted)] max-md:p-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:text-[var(--muted)] max-md:before:content-[attr(data-label)]">
         {tetel.start_date && tetel.end_date ? `${tetel.start_date} – ${tetel.end_date}` : "—"}
       </td>
-      <td className="px-3 py-2">
+      <td data-label="Tényleges" className="px-3 py-2 max-md:p-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:text-[var(--muted)] max-md:before:content-[attr(data-label)]">
         <div className="flex flex-col gap-1">
           <input
             type="date"
@@ -1628,7 +1628,7 @@ function TetelUtemezesRow({
           />
         </div>
       </td>
-      <td className="px-3 py-2">
+      <td data-label="Függőségek" className="px-3 py-2 max-md:p-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:text-[var(--muted)] max-md:before:content-[attr(data-label)] max-md:col-span-2">
         <ul className="mb-1 space-y-0.5">
           {tetel.fuggosegek.map((f) => (
             <li key={f.id} className="flex items-center justify-between gap-2 text-xs">

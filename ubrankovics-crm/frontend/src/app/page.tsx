@@ -6,7 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { huDatum } from "@/lib/datum";
 import { ALLAPOT_LABEL, ALLAPOT_SZIN } from "@/components/AllapotPill";
-import RadialAllapotDiagram from "@/components/RadialAllapotDiagram";
+import AllapotSav from "@/components/AllapotSav";
 import {
   CashflowRolling,
   Feladat,
@@ -83,7 +83,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <h1 className="text-xl font-semibold">Kezdőlap</h1>
-      {me && <p className="mb-2 text-sm text-[var(--muted)]">Üdv, {me.full_name}.</p>}
+      {me && <p className="mb-4 text-sm text-[var(--muted)]">Üdv, {me.full_name}.</p>}
 
       {aktivBucket?.negativ && (
         <div className="mb-4 rounded-[var(--radius)] border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">
@@ -148,7 +148,7 @@ export default function DashboardPage() {
           {!projektMegoszlas ? (
             <p className="text-sm text-[var(--muted)]">Betöltés…</p>
           ) : (
-            <RadialAllapotDiagram
+            <AllapotSav
               osszes={projektek?.length || 0}
               sorok={Object.entries(ALLAPOT_LABEL).map(([v, l]) => ({
                 kulcs: v,
