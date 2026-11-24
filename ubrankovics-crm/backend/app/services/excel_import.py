@@ -4,6 +4,7 @@ A feldolgozás egy tranzakcióban fut; előnézetnél (dry_run) a hívó visszag
 """
 
 import re
+from datetime import date
 import unicodedata
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
@@ -17,6 +18,7 @@ from app.models import (
     MunkanemCsoport,
     Projekt,
     ProjektSzerep,
+    Specifikacio,
     ProjektSzerepTipus,
     ProjektTetel,
     ProjektTetelVallalas,
@@ -29,6 +31,9 @@ from app.models import (
     Ugyfel,
     VallalasTipus,
 )
+from app.models_finance import AlvallalkozoiSzamla, AlvallalkozoiSzamlaAllapot, UgyfelSzamla, UgyfelSzamlaAllapot
+from app.models import VatTipus
+from app.services.afa import compute_afa
 from app.models_projekt import AjanlatAllapot, AjanlatSor, AjanlatVerzio, VevoiAjanlat
 
 
@@ -282,13 +287,97 @@ def importal(db: Session, fajl: bytes) -> dict:
             _ajanlat(db, projekt.id, _txt(row[1]), _txt(row[0]), _szam(row[6]) or Decimal(0), allapot)
             stat["cr"] += 1
 
-    # ---- amit az első verzió még nem vesz át
-    for lap, oszlopok in (("Szakági specifikáció", (1, 2, 4)), ("Partnerek", (0,)), ("Dokumentumok", (0,)), ("Számlák", (1,))):
-        if lap not in wb.sheetnames:
-            continue
-        n = sum(1 for r in wb[lap].iter_rows(min_row=2, values_only=True) if r and any(_txt(r[i]) for i in oszlopok if i < len(r)))
+    # ---- Partnerek
+    stat["partnerek"] = 0
+    if "Partnerek" in wb.sheetnames:
+        for row in wb["Partnerek"].iter_rows(min_row=2, values_only=True):
+            p_nev = _txt(row[0]) if row else None
+            if not p_nev:
+                continue
+            if not db.query(Alvallalkozo).filter(Alvallalkozo.nev == p_nev).first():
+                kapcs = ", ".join(x for x in (_txt(row[3]), _txt(row[4]), _txt(row[5])) if x) or None
+                db.add(Alvallalkozo(nev=p_nev, kapcsolat=kapcs))
+                stat["partnerek"] += 1
+        db.flush()
+
+    # ---- Szakági specifikáció: a paraméterek a szakághoz tartozó tételre kerülnek
+    stat["specifikaciok"] = 0
+    if "Szakági specifikáció" in wb.sheetnames:
+        tetelek_db = db.query(ProjektTetel).filter(ProjektTetel.projekt_id == projekt.id).all()
+        nev_szerint = {_norm(t.munkanem.nev): t for t in tetelek_db}
+        nincs_tetel: set[str] = set()
+        for row in wb["Szakági specifikáció"].iter_rows(min_row=2, values_only=True):
+            if not row or not _txt(row[0]):
+                continue
+            szakag = _txt(row[0])
+            gyarto, param, ertek, megj = _txt(row[2]), _txt(row[3]), _txt(row[4]), _txt(row[5])
+            if param and param.startswith("(szakági"):
+                param = None
+            if not (gyarto or (param and ertek)):
+                continue
+            kulcs = _norm(szakag)
+            tetel = nev_szerint.get(kulcs) or next((t for k, t in nev_szerint.items() if k and (k in kulcs or kulcs in k)), None)
+            if not tetel:
+                nincs_tetel.add(szakag)
+                continue
+            if gyarto:
+                db.add(Specifikacio(tetel_id=tetel.id, csoport=szakag, kulcs="Gyártó", ertek=gyarto))
+                stat["specifikaciok"] += 1
+            if param and ertek:
+                db.add(Specifikacio(tetel_id=tetel.id, csoport=szakag, kulcs=param, ertek=ertek, megjegyzes=megj))
+                stat["specifikaciok"] += 1
+        if nincs_tetel:
+            figy.append("Nincs hozzájuk illő tétel, a specifikáció kimaradt: " + ", ".join(sorted(nincs_tetel)) + ".")
+
+    # ---- Számlák: bevétel -> ügyfélszámla, kiadás -> alvállalkozói számla
+    stat["szamlak"] = 0
+    if "Számlák" in wb.sheetnames:
+        szamlazott_ugyfel = ugyfel if megrendelo else None
+        for row in wb["Számlák"].iter_rows(min_row=2, values_only=True):
+            if not row or not _txt(row[1]):
+                continue
+            irany, szam, partner = _norm(row[0]), _txt(row[1]), _txt(row[2])
+            kiall = _datum(row[4]) or date.today()
+            telj = _datum(row[5]) or kiall
+            esed = _datum(row[6]) or kiall
+            netto = _szam(row[7])
+            if netto is None:
+                figy.append(f"Számla {szam}: nincs nettó összeg, kimaradt.")
+                continue
+            afa_t = {"27": VatTipus.AFA_27, "5": VatTipus.AFA_5, "0": VatTipus.AFA_0, "forditott": VatTipus.FORDITOTT}.get(_norm(row[8]).split(" ")[0], VatTipus.AFA_27)
+            afa, brutto = compute_afa(netto, afa_t)
+            fizetve = _norm(row[10]) == "igen"
+            fiz_datum = _datum(row[11]) if fizetve else None
+            if irany == "bevetel":
+                if not szamlazott_ugyfel:
+                    figy.append(f"Számla {szam}: nincs megrendelő, a bevételi számla kimaradt.")
+                    continue
+                if db.query(UgyfelSzamla).filter(UgyfelSzamla.szamlaszam == szam).first():
+                    figy.append(f"Számla {szam}: már létezik, kimaradt.")
+                    continue
+                db.add(UgyfelSzamla(projekt_id=projekt.id, ugyfel_id=szamlazott_ugyfel.id, szamlaszam=szam, kiallitas_datum=kiall,
+                                    teljesites_datum=telj, esedekesseg=esed, fizetes_datum=fiz_datum, netto=netto, afa_tipus=afa_t, afa=afa,
+                                    brutto=brutto, fizetett_osszeg=brutto if fizetve else None,
+                                    allapot=UgyfelSzamlaAllapot.KIFIZETVE if fizetve else UgyfelSzamlaAllapot.KIALLITVA, megjegyzes=_txt(row[12])))
+            elif irany == "kiadas":
+                av = db.query(Alvallalkozo).filter(Alvallalkozo.nev == partner).first() if partner else None
+                if not av:
+                    figy.append(f"Számla {szam}: a partner ({partner or 'nincs megadva'}) nem szerepel a Partnerek lapon, kimaradt.")
+                    continue
+                db.add(AlvallalkozoiSzamla(projekt_id=projekt.id, alvallalkozo_id=av.id, szamlaszam=szam, kiallitas_datum=kiall,
+                                           teljesites_datum=telj, esedekesseg=esed, fizetes_datum=fiz_datum, netto=netto, afa_tipus=afa_t, afa=afa,
+                                           brutto=brutto, fizetett_osszeg=brutto if fizetve else None,
+                                           allapot=AlvallalkozoiSzamlaAllapot.KIFIZETVE if fizetve else AlvallalkozoiSzamlaAllapot.BEERKEZETT, megjegyzes=_txt(row[12])))
+            else:
+                figy.append(f"Számla {szam}: az Irány Bevétel vagy Kiadás legyen, kimaradt.")
+                continue
+            stat["szamlak"] += 1
+
+    # ---- amit az átvétel nem dolgoz fel
+    if "Dokumentumok" in wb.sheetnames:
+        n = sum(1 for r in wb["Dokumentumok"].iter_rows(min_row=2, values_only=True) if r and _txt(r[0]))
         if n:
-            stat["kihagyva"][lap] = n
+            stat["kihagyva"]["Dokumentumok (a fájlokat a projekt Dokumentumok fülén kell feltölteni)"] = n
     if stat["kihagyva"]:
         figy.append("Ezeket a lapokat az átvétel még nem dolgozza fel (kihagyva): " + ", ".join(f"{k} ({v} sor)" for k, v in stat["kihagyva"].items()) + ".")
     if stat["tetelek"] == 0:

@@ -18,6 +18,12 @@ def _fajl(tmp_path):
     t["A4"], t["C4"], t["D4"], t["T4"] = "Eclisse tolóajtó", "Pótmunka", "CR-1", 250000
     c = wb["Pótmunkák (CR)"]
     c["B2"], c["E2"], c["G2"] = "Teraszburkolat", "Elfogadva", 400000
+    wb["Partnerek"].append(["Villany Kft", "Alvállalkozó", "Villany", "Kiss Pál", "+36 1", "v@e.hu"])
+    sp = wb["Szakági specifikáció"]
+    sp.append(["Alapozás", None, "Holcim", "Beton osztály", "C25", "teszt"])
+    sz = wb["Számlák"]
+    sz.append(["Bevétel", "TESZT-B-1", None, None, "2026-01-10", "2026-01-10", "2026-01-20", 100000, "27%", None, "igen", "2026-01-15"])
+    sz.append(["Kiadás", "TESZT-K-1", "Villany Kft", None, "2026-01-11", "2026-01-11", "2026-01-25", 50000, "27%", None, "nem", None])
     out = tmp_path / "t.xlsx"
     wb.save(out)
     return out
@@ -36,6 +42,7 @@ def test_import_elonezet_es_mentes(client, admin_headers, tmp_path):
     assert pid
     t = client.get(f"/api/projektek/{pid}/tetelek", headers=admin_headers).json()
     assert len(t) >= 45
+    assert r["statisztika"]["partnerek"] == 1 and r["statisztika"]["szamlak"] == 2 and r["statisztika"]["specifikaciok"] >= 2
     assert any(x["potmunka"] and x["cr_azonosito"] == "CR-1" for x in t)
     o = client.get(f"/api/projektek/{pid}/szerzodes-osszkep", headers=admin_headers).json()
     assert float(o["alap_netto"]) == 1000000 and float(o["cr_elfogadott_netto"]) == 400000
