@@ -10,6 +10,13 @@ import { Alvallalkozo, Munkanem, Szemely, Torzsadat, api } from "@/lib/api";
 export default function TorzsadatokPage() {
   const [tab, setTab] = useState<"munkanem" | "torzsadat" | "alvallalkozo" | "szemely" | "sablon">("munkanem");
 
+  // Közvetlen link egy fülre: /torzsadatok?tab=alvallalkozo (kliensen olvassuk, hogy az oldal statikus maradjon).
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("tab");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- az URL csak kliensen olvasható
+    if (v === "munkanem" || v === "torzsadat" || v === "alvallalkozo" || v === "szemely" || v === "sablon") setTab(v);
+  }, []);
+
   return (
     <AppLayout>
       <h1 className="mb-4 text-xl font-semibold">Törzsadatok</h1>
@@ -73,7 +80,7 @@ function MunkanemekTab() {
   return (
     <div className="max-w-xl">
       <p className="mb-2 text-sm text-[var(--muted)]">
-        A teljes, ~45 elemes munkanem-törzs a projekt excel-elemzéséből (ütem+info lap).
+        A munkanemek a projektek tételeinek alapjai: ezekből választhatsz, amikor új tételt veszel fel.
       </p>
       {[...groups.entries()].map(([csoport, list]) => (
         <div key={csoport} className="mb-3">

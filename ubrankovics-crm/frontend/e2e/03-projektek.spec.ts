@@ -18,8 +18,8 @@ test.describe("Projektek", () => {
     await shot(page, "projekt-letrehozva-attekintes");
 
     await page.getByRole("button", { name: "Tételek" }).click();
-    await expect(page.locator("text=Ajánlat").first()).toBeVisible();
-    const tetelSorok = page.locator("text=Ajánlat");
+    await expect(page.getByRole("region", { name: "Ajánlat" })).toBeVisible(); // a tételek szakaszonként csoportosítva
+    const tetelSorok = page.getByTitle("Kijelölés levélhez");
     expect(await tetelSorok.count()).toBeGreaterThan(15); // ~20 core + 3 type-specific
     await shot(page, "projekt-tetelek-auto-generalt");
   });

@@ -85,5 +85,5 @@ test("Cash flow: időszak megadása és gyors választó", async ({ page }) => {
   await expect(page.getByRole("img", { name: /cash-flow diagram/ })).toBeVisible();
   await expect(page.locator("tbody tr").first()).toContainText("2027-01-04");
   await page.getByRole("button", { name: "Idén" }).click();
-  await expect(page.getByLabel("Bucket méret")).toHaveValue("honap");
+  await expect(page.getByLabel("Időszak beosztása")).toHaveValue("honap");
 });

@@ -51,7 +51,7 @@ export default function UgyfelCimkek({ ugyfelId }: { ugyfelId: number }) {
       <h2 className="text-sm font-semibold">Címkék</h2>
       {error && <div className="rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
       <div className="flex flex-wrap gap-1">
-        {sajat.length === 0 && <span className="text-sm text-[var(--muted)]">Nincs címke.</span>}
+        {sajat.length === 0 && <span className="text-sm text-[var(--muted)]">Még nincs címke ezen az ügyfélen. Válassz vagy hozz létre egyet alább.</span>}
         {sajat.map((c) => (
           <span key={c.id} className="flex items-center gap-1 rounded-full bg-black/5 px-2 py-0.5 text-xs">
             {c.nev}

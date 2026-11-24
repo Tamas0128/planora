@@ -177,7 +177,7 @@ export default function FelhasznalokPage() {
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
                   <button onClick={() => resetPassword(u)} className="mr-3 text-xs text-[var(--primary)] hover:underline">
-                    Jelszó reset
+                    Jelszó visszaállítása
                   </button>
                   <button onClick={() => toggleActive(u)} className="text-xs text-[var(--primary)] hover:underline">
                     {u.is_active ? "Letiltás" : "Aktiválás"}

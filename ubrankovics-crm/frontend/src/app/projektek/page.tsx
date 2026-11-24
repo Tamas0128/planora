@@ -5,15 +5,8 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { LayoutGrid, List, MapPin, Plus, Search } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import AllapotPill from "@/components/AllapotPill";
 import { api, ProjektListItem, ProjektTipus, Ugyfel } from "@/lib/api";
-
-const ALLAPOT_LABEL: Record<string, string> = {
-  uj: "Új",
-  ajanlat: "Ajánlat",
-  szerzodott: "Szerződött",
-  kivitelezes: "Kivitelezés",
-  lezart: "Lezárt",
-};
 
 const ProjektekTerkep = dynamic(() => import("@/components/ProjektekTerkep"), {
   ssr: false,
@@ -255,9 +248,7 @@ export default function ProjektekPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <h2 className="font-heading text-base font-semibold leading-snug">{p.projekt_nev}</h2>
-                    <span className="shrink-0 rounded-full bg-[#e8f0e9] px-2 py-0.5 text-xs font-medium text-[var(--primary)]">
-                      {ALLAPOT_LABEL[p.allapot] || p.allapot}
-                    </span>
+                    <AllapotPill allapot={p.allapot} />
                   </div>
                   <div className="space-y-0.5 text-sm">
                     {p.ugyfel_nev && <div>{p.ugyfel_nev}</div>}
@@ -293,8 +284,10 @@ export default function ProjektekPage() {
           <thead className="bg-black/5 text-left">
             <tr>
               <th className="px-3 py-2">Projekt</th>
+              <th className="px-3 py-2">Ügyfél</th>
               <th className="px-3 py-2">Állapot</th>
-              <th className="px-3 py-2">Ütemező</th>
+              <th className="px-3 py-2">Készültség</th>
+              <th className="px-3 py-2">Átadás</th>
             </tr>
           </thead>
           <tbody>
@@ -305,14 +298,23 @@ export default function ProjektekPage() {
                     {p.projekt_nev}
                   </Link>
                 </td>
-                <td className="px-3 py-2">{ALLAPOT_LABEL[p.allapot] || p.allapot}</td>
-                <td className="px-3 py-2">{p.utemezes_aktiv ? "Aktív" : "—"}</td>
+                <td className="px-3 py-2 text-[var(--muted)]">{p.ugyfel_nev || "—"}</td>
+                <td className="px-3 py-2"><AllapotPill allapot={p.allapot} /></td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-20 rounded-full bg-[var(--border)]" aria-hidden="true">
+                      <div className="h-full rounded-full bg-[var(--primary)]" style={{ width: `${Math.max(0, Math.min(100, Number(p.completion_percent ?? 0)))}%` }} />
+                    </div>
+                    <span className="tabular-nums text-xs text-[var(--muted)]">{Math.round(Number(p.completion_percent ?? 0))}%</span>
+                  </div>
+                </td>
+                <td className="px-3 py-2 tabular-nums text-[var(--muted)]">{huDatum(p.delivery_date) || "—"}</td>
               </tr>
             ))}
             {szurt.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-3 py-6 text-center text-[var(--muted)]">
-                  Nincs még projekt.
+                <td colSpan={5} className="px-3 py-6 text-center text-[var(--muted)]">
+                  Nincs a keresésnek megfelelő projekt. Új projektet a fenti gombbal indíthatsz.
                 </td>
               </tr>
             )}

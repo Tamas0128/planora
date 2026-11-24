@@ -56,7 +56,6 @@ const SECTIONS: NavSection[] = [
     prefixes: ["/torzsadatok", "/felhasznalok", "/audit", "/alvallalkozok", "/szemelyek"],
     items: [
       { href: "/torzsadatok", label: "Törzsadatok" },
-      { href: "/alvallalkozok", label: "Alvállalkozók" },
       { href: "/felhasznalok", label: "Felhasználók", adminOnly: true },
       { href: "/audit", label: "Auditnapló", adminOnly: true },
     ],

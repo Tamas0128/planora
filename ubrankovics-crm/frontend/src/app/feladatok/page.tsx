@@ -84,11 +84,11 @@ export default function FeladatokPage() {
 
       <div className="mb-4 flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={csakEnyem} onChange={(e) => setCsakEnyem(e.target.checked)} />
+          <input type="checkbox" className="h-5 w-5" checked={csakEnyem} onChange={(e) => setCsakEnyem(e.target.checked)} />
           Csak az enyém
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={mutatKeszeket} onChange={(e) => setMutatKeszeket(e.target.checked)} />
+          <input type="checkbox" className="h-5 w-5" checked={mutatKeszeket} onChange={(e) => setMutatKeszeket(e.target.checked)} />
           Kész feladatok is
         </label>
         <button onClick={() => setShowForm((s) => !s)} className={`${btnCls} ml-auto`}>
@@ -142,7 +142,7 @@ export default function FeladatokPage() {
       <ul className={`${cardCls} divide-y divide-[var(--border)]`}>
         {lathato.map((f) => (
           <li key={f.id} className="flex items-start gap-3 px-3 py-2 text-sm">
-            <input type="checkbox" aria-label={`${f.cim} kész`} checked={f.kesz} onChange={() => toggleKesz(f)} className="mt-1" />
+            <input type="checkbox" aria-label={`${f.cim} kész`} checked={f.kesz} onChange={() => toggleKesz(f)} className="mt-1 h-5 w-5" />
             <div className="flex-1">
               <div className={f.kesz ? "text-[var(--muted)] line-through" : ""}>{f.cim}</div>
               {f.leiras && <div className="text-xs text-[var(--muted)]">{f.leiras}</div>}
@@ -160,8 +160,8 @@ export default function FeladatokPage() {
                 )}
               </div>
             </div>
-            <button onClick={() => remove(f)} aria-label={`${f.cim} törlése`} className="text-[var(--danger)]">
-              <Trash2 size={14} />
+            <button onClick={() => remove(f)} aria-label={`${f.cim} törlése`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--danger)] hover:bg-[var(--danger-bg)] md:h-8 md:w-8">
+              <Trash2 size={16} />
             </button>
           </li>
         ))}

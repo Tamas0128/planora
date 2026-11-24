@@ -85,7 +85,7 @@ export default function FeladatokTab({ projektId }: { projektId: number }) {
       <div className="flex items-center justify-between text-sm">
         <span className="text-[var(--muted)]">{nyitott} nyitott feladat</span>
         <label className="flex items-center gap-2">
-          <input type="checkbox" checked={mutatKeszeket} onChange={(e) => setMutatKeszeket(e.target.checked)} />
+          <input type="checkbox" className="h-5 w-5" checked={mutatKeszeket} onChange={(e) => setMutatKeszeket(e.target.checked)} />
           Kész feladatok is
         </label>
       </div>
@@ -118,9 +118,9 @@ export default function FeladatokTab({ projektId }: { projektId: number }) {
                 await api.deleteFeladat(f.id);
                 load();
               }}
-              className="text-[var(--danger)]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--danger)] hover:bg-[var(--danger-bg)] md:h-8 md:w-8"
             >
-              <Trash2 size={14} />
+              <Trash2 size={16} />
             </button>
           </li>
         ))}

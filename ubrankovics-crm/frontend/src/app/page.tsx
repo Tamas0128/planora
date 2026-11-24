@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import { ALLAPOT_LABEL, ALLAPOT_SZIN } from "@/components/AllapotPill";
 import RadialAllapotDiagram from "@/components/RadialAllapotDiagram";
 import {
   CashflowRolling,
@@ -15,22 +17,6 @@ import {
 
 const cardCls = "rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]";
 
-const ALLAPOT_LABEL: Record<string, string> = {
-  uj: "Új",
-  ajanlat: "Ajánlat",
-  szerzodott: "Szerződött",
-  kivitelezes: "Kivitelezés",
-  lezart: "Lezárt",
-};
-
-const ALLAPOT_SZIN: Record<string, string> = {
-  uj: "#3a5668",
-  ajanlat: "var(--warning)",
-  szerzodott: "var(--critical)",
-  kivitelezes: "var(--primary)",
-  lezart: "var(--muted)",
-};
-
 function huf(v: string | number | null | undefined) {
   if (v === null || v === undefined) return "—";
   return `${Number(v).toLocaleString("hu-HU")} Ft`;
@@ -39,6 +25,26 @@ function huf(v: string | number | null | undefined) {
 function isOverdue(hatarido: string | null | undefined): boolean {
   if (!hatarido) return false;
   return new Date(hatarido) < new Date(new Date().toDateString());
+}
+
+function LejartKartya({ cimke, osszeg }: { cimke: string; osszeg: string | undefined }) {
+  const van = osszeg !== undefined && Number(osszeg) > 0;
+  return (
+    <Link
+      href="/riportok"
+      className={`block rounded-[var(--radius)] border p-4 hover:border-[var(--primary)] ${
+        van ? "border-[var(--danger)]/40 bg-[var(--danger-bg)]" : "border-[var(--border)] bg-[var(--card)]"
+      }`}
+    >
+      <div className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+        {van && <AlertTriangle size={13} className="text-[var(--danger)]" aria-hidden="true" />}
+        {cimke}
+      </div>
+      <div className={`font-heading text-3xl font-bold leading-tight tabular-nums ${van ? "text-[var(--danger)]" : "text-[var(--positive)]"}`}>
+        {osszeg === undefined ? "—" : van ? huf(osszeg) : "Nincs lejárt"}
+      </div>
+    </Link>
+  );
 }
 
 export default function DashboardPage() {
@@ -92,15 +98,42 @@ export default function DashboardPage() {
           <div className="text-xs text-[var(--muted)]">Nyitott saját feladat</div>
           <div className="font-heading text-4xl font-bold leading-tight">{sajatFeladatok.length}</div>
         </div>
-        <div className={`${cardCls} p-4`}>
-          <div className="text-xs text-[var(--muted)]">Lejárt bevétel (hátralék)</div>
-          <div className="font-heading text-3xl font-bold leading-tight text-[var(--positive)]">{osszesito ? huf(osszesito.lejart_bevetel_osszesen) : "—"}</div>
-        </div>
-        <div className={`${cardCls} p-4`}>
-          <div className="text-xs text-[var(--muted)]">Lejárt kiadás (hátralék)</div>
-          <div className="font-heading text-3xl font-bold leading-tight text-[var(--danger)]">{osszesito ? huf(osszesito.lejart_kiadas_osszesen) : "—"}</div>
-        </div>
+        <LejartKartya cimke="Lejárt bevétel (ügyfelek tartoznak)" osszeg={osszesito?.lejart_bevetel_osszesen} />
+        <LejartKartya cimke="Lejárt kiadás (mi tartozunk)" osszeg={osszesito?.lejart_kiadas_osszesen} />
       </div>
+
+      {osszesito && osszesito.lejart_szamlak.length > 0 && (
+        <div className={`${cardCls} mt-4 p-4`}>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--danger)]">
+              <AlertTriangle size={16} aria-hidden="true" /> Lejárt számlák ({osszesito.lejart_szamlak.length})
+            </h2>
+            <Link href="/riportok" className="inline-flex min-h-11 items-center text-xs text-[var(--primary)] hover:underline md:min-h-0">
+              Mind a riportokban
+            </Link>
+          </div>
+          <ul className="divide-y divide-[var(--border)] text-sm">
+            {[...osszesito.lejart_szamlak]
+              .sort((a, b) => Number(b.hatralek) - Number(a.hatralek))
+              .slice(0, 3)
+              .map((s) => (
+                <li key={`${s.forras_tipus}-${s.forras_id}`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
+                  <span>
+                    <span className="font-medium">{s.szamlaszam}</span>
+                    <span className="text-[var(--muted)]"> — {s.partner_nev} · </span>
+                    <Link href={`/projektek/${s.projekt_id}`} className="text-[var(--primary)] hover:underline">
+                      {s.projekt_nev}
+                    </Link>
+                    <span className="block text-xs text-[var(--muted)]">
+                      {s.forras_tipus === "ugyfel_szamla" ? "Bevétel" : "Kiadás"} · esedékes: {s.esedekesseg}
+                    </span>
+                  </span>
+                  <span className="font-semibold tabular-nums text-[var(--danger)]">{huf(s.hatralek)}</span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <div className={`${cardCls} p-4`}>

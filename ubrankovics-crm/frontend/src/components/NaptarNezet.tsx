@@ -17,10 +17,10 @@ const TIPUS_LABEL: Record<NaptarEsemeny["tipus"], string> = {
 };
 // A típust a címke szövege és a jelölő forma is hordozza, nem csak a szín.
 const TIPUS_STIL: Record<NaptarEsemeny["tipus"], string> = {
-  feladat: "border-[var(--border)] bg-[var(--card)]",
-  atadas: "border-[var(--primary)] bg-[var(--card)] font-medium",
-  tetel: "border-transparent bg-black/5",
-  garancia: "border-dashed border-[var(--critical)] bg-[var(--card)]",
+  feladat: "border-[var(--color-neutral-500)] bg-[var(--card)]",
+  atadas: "border-[var(--primary)] bg-[var(--color-accent-100)] font-semibold",
+  tetel: "border-transparent bg-[var(--color-neutral-300)]",
+  garancia: "border-dashed border-[var(--critical)] bg-[var(--critical-bg)]",
 };
 
 // A többnapos tétel a rácsban folytonos sávként látszik: a szöveg csak az első napon és hétfőnként jelenik meg.
@@ -124,10 +124,10 @@ export default function NaptarNezet({ projektId }: { projektId?: number }) {
           >
             Ma
           </button>
-          <button aria-label="Előző hónap" onClick={() => lepes(-1)} className="flex h-9 w-9 items-center justify-center rounded-[var(--radius)] hover:bg-black/5">
+          <button aria-label="Előző hónap" onClick={() => lepes(-1)} className="flex h-11 w-11 items-center justify-center rounded-[var(--radius)] hover:bg-black/5 md:h-9 md:w-9">
             <ChevronLeft size={16} />
           </button>
-          <button aria-label="Következő hónap" onClick={() => lepes(1)} className="flex h-9 w-9 items-center justify-center rounded-[var(--radius)] hover:bg-black/5">
+          <button aria-label="Következő hónap" onClick={() => lepes(1)} className="flex h-11 w-11 items-center justify-center rounded-[var(--radius)] hover:bg-black/5 md:h-9 md:w-9">
             <ChevronRight size={16} />
           </button>
           {!projektId && (

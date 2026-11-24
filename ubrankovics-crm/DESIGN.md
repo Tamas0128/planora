@@ -157,9 +157,11 @@ Meleg, földszínű paletta: krém és zab neutrálisok, kéreg-barna oldalsáv,
 
 ## Layout
 
-Fix 15rem (w-60) széles bal oldalsáv és egy `flex-1` főterület 2rem (p-8) belső margóval. A tartalom kártyákban és táblázatokban él; a ritmus Tailwind-skála (4/8/12/16px), szekciók között 12–16px, a főterület kerete 32px.
+Sticky felső sáv (Kéreg #25221d): bal oldalon a logó (krém lapon), középen a négy fő terület (Értékesítés, Projektek, Pénzügy, Rendszer beállítások), jobb oldalon a Ctrl+K keresés, az értesítés-csengő, a felhasználó neve és a kijelentkezés. Alatta, krém színű második sorban az aktív terület oldalai. A főterület `flex-1`, 2rem (md:p-8) belső margóval, mobilon 1rem. A tartalom kártyákban és táblázatokban él; a ritmus Tailwind-skála (4/8/12/16px), szekciók között 12–16px.
 
-Megfigyelés: a jelenlegi kód nem tartalmaz érdemi reszponzív viselkedést (a komponensekben csak elvétve van töréspont), az oldalsáv mobilon sem csukódik össze. A PRODUCT.md szerint az építésvezetők mobilon dolgoznak, ezért ez a rendszer ismert hiánya, nem szándékos döntése.
+Mobilon (md alatt) a fő- és almenü egyetlen hamburger-panelbe kerül (Esc zárja, útvonalváltáskor bezárul). A projektlap fülsora vízszintesen görgethető, a jobb szélén elhalványodó maszk jelzi, hogy van tovább. Az érintési célok mobilon legalább 44px-esek (md-től 32–36px).
+
+Két navigációs szintnél több nem lehet egy oldalon: a felső sáv és az almenü után a lapon belüli fülsor a harmadik, ezt csak ott használjuk, ahol az oldal valódi részekre bomlik (Törzsadatok, projektlap).
 
 ## Elevation & Depth
 
@@ -180,6 +182,8 @@ Lekerekített, de visszafogott: a fő sugár 0.85rem (kártyák, gombok, mezők)
 - **Hover:** mélyebb zöld (#1a4521). Másodlagos és szellem gombok keret nélküli vagy kerettel jelölt szövegek, `--muted` színnel.
 
 ### Chips / Jelvények
+- **Állapotjelvény (AllapotPill, SzakaszJelveny):** a szöveg mindig Alapszöveg színű, az állapotot egy színes pont és a 14%-os színtónus háttér hordozza; a szín soha nem az egyetlen jelzés. Projekt: Új (#3a5668), Ajánlat (borostyán), Szerződött (agyag), Kivitelezés (erdőzöld), Lezárt (szürkebarna).
+- **Lejárt pénz:** agyag (--danger) színű összeg figyelmeztető ikonnal és agyag-tónusú kártyával; ha nincs lejárt tétel, erdőzöld "Nincs lejárt" felirat.
 - **Style:** pill alakú, 12px; állapotjelvény: halványzöld háttér (#e8f0e9), mély zöld szöveg; semleges: halvány fekete 5% átfedés, néma barna szöveg; számláló: agyag háttér, fehér szöveg.
 
 ### Cards / Containers
@@ -194,8 +198,8 @@ Lekerekített, de visszafogott: a fő sugár 0.85rem (kártyák, gombok, mezők)
 - **Focus / Error / Disabled:** nincs egységesen definiálva a kódban; kitűzendő tisztázás.
 
 ### Navigation
-- **Style:** Kéreg Oldalsáv (#25221d), 14px, ikon (lucide, 16px) + felirat. Alapállapot: Kéreg Szöveg (#d9d2c0); hover: #34302a; aktív: erdőzöld háttér, fehér, 500 vastagság.
-- A logó krém kártyán ül az oldalsáv tetején; alatta Ctrl+K keresőgomb és értesítés-csengő.
+- **Style:** Kéreg felső sáv (#25221d), 14px. Alapállapot: Kéreg Szöveg (#d9d2c0); hover: #34302a; aktív terület: erdőzöld pirula, fehér, 500 vastagság. Az almenü krém sávon fut, az aktív oldal erdőzöld szöveg + 2px alsó vonal.
+- A logó krém lapon ül a sáv bal szélén; a Ctrl+K keresőgomb és az értesítés-csengő jobbra.
 
 ### Modal
 - Kártya-stílusú doboz 0.85rem sugárral, 16px belső margóval, `shadow-lg`, 30%-os fekete háttér; keskeny (max-w-md) vagy széles (max-w-3xl) változat.

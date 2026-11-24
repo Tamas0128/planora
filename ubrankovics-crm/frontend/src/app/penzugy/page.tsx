@@ -170,7 +170,7 @@ function CashflowTab() {
     <div>
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <label className="text-sm">
-          <span className="mb-1 block text-[var(--muted)]">Bucket méret</span>
+          <span className="mb-1 block text-[var(--muted)]">Időszak beosztása</span>
           <select value={bucket} onChange={(e) => setBucket(e.target.value as "het" | "honap")} className={inputCls}>
             <option value="het">Hét</option>
             <option value="honap">Hónap</option>

@@ -21,6 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import Modal from "@/components/Modal";
+import AllapotPill from "@/components/AllapotPill";
 import AtvetelTab from "@/components/projekt/AtvetelTab";
 import NaploTab from "@/components/projekt/NaploTab";
 import AjanlatTab from "@/components/projekt/AjanlatTab";
@@ -43,14 +44,6 @@ import {
   downloadFile,
 } from "@/lib/api";
 
-const ALLAPOT_LABEL: Record<string, string> = {
-  uj: "Új",
-  ajanlat: "Ajánlat",
-  szerzodott: "Szerződött",
-  kivitelezes: "Kivitelezés",
-  lezart: "Lezárt",
-};
-
 const SZAKASZ_LABEL: Record<string, string> = {
   ajanlat: "Ajánlat",
   szerzodes: "Szerződés",
@@ -58,6 +51,31 @@ const SZAKASZ_LABEL: Record<string, string> = {
   kivitelezes: "Kivitelezés",
   kesz: "Kész",
 };
+
+const SZAKASZ_SZIN: Record<string, string> = {
+  ajanlat: "var(--warning)",
+  szerzodes: "#3a5668",
+  beszerzes: "var(--color-neutral-600)",
+  kivitelezes: "var(--primary)",
+  kesz: "var(--color-accent-400)",
+};
+
+function SzakaszJelveny({ szakasz }: { szakasz: string }) {
+  const szin = SZAKASZ_SZIN[szakasz] || "var(--muted)";
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
+      style={{ color: "var(--foreground)", backgroundColor: `color-mix(in srgb, ${szin} 14%, var(--card))` }}
+    >
+      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: szin }} />
+      {SZAKASZ_LABEL[szakasz] || szakasz}
+    </span>
+  );
+}
+
+function ma() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 const VALLALAS_LABEL: Record<string, string> = {
   sajat: "Saját",
@@ -181,20 +199,30 @@ export default function ProjektDetailPage() {
   if (!projekt) {
     return (
       <AppLayout>
-        <p className="text-[var(--muted)]">{error || "Betöltés..."}</p>
+        error ? (
+          <p role="alert" className="text-[var(--danger)]">{error}</p>
+        ) : (
+          <div role="status" aria-label="Projekt betöltése" className="space-y-3">
+            <div className="h-7 w-72 max-w-full animate-pulse rounded bg-[var(--border)]" />
+            <div className="h-16 animate-pulse rounded-[var(--radius)] bg-[var(--border)]" />
+            <div className="h-40 animate-pulse rounded-[var(--radius)] bg-[var(--border)]" />
+          </div>
+        )
       </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <h1 className="mb-1 text-xl font-semibold">{projekt.projekt_nev}</h1>
-      <p className="mb-4 text-sm text-[var(--muted)]">
-        {ALLAPOT_LABEL[projekt.allapot]} · {projekt.utemezes_aktiv ? "Ütemező aktív" : "Ütemező kikapcsolva"}
-      </p>
+      <h1 className="mb-2 text-xl font-semibold">{projekt.projekt_nev}</h1>
+      <ProjektFejlec projekt={projekt} tetelek={tetelek} />
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
 
-      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
+      <div
+        role="group"
+        aria-label="Projekt szakaszai"
+        className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)] [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] md:[mask-image:none]"
+      >
         {FULEK.map(([t, label]) => (
           <button
             key={t}
@@ -254,6 +282,39 @@ export default function ProjektDetailPage() {
   );
 }
 
+function ProjektFejlec({ projekt, tetelek }: { projekt: ProjektDetail; tetelek: ProjektTetel[] }) {
+  const szazalek = Math.max(0, Math.min(100, Number(projekt.completion_percent ?? 0)));
+  const keso = tetelek.filter((t) => t.end_date && t.end_date < ma() && t.szakasz !== "kesz").length;
+  const kesz = tetelek.filter((t) => t.szakasz === "kesz").length;
+  return (
+    <div className="mb-4 grid gap-x-8 gap-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center">
+      <div className="flex flex-wrap items-center gap-2">
+        <AllapotPill allapot={projekt.allapot} />
+        <span className="text-xs text-[var(--muted)]">{projekt.utemezes_aktiv ? "Ütemező aktív" : "Ütemező kikapcsolva"}</span>
+      </div>
+      <div className="min-w-0">
+        <div className="mb-1 flex justify-between text-xs text-[var(--muted)]">
+          <span>Készültség · {kesz}/{tetelek.length} tétel kész</span>
+          <span className="tabular-nums">{Math.round(szazalek)}%</span>
+        </div>
+        <div className="h-2 rounded-full bg-[var(--border)]" role="img" aria-label={`Készültség: ${Math.round(szazalek)} százalék`}>
+          <div className="h-full rounded-full bg-[var(--primary)]" style={{ width: `${szazalek}%` }} />
+        </div>
+      </div>
+      <div className="text-sm">
+        <div className="text-xs text-[var(--muted)]">Átadás</div>
+        <div className="tabular-nums">{projekt.delivery_date ? projekt.delivery_date.replaceAll("-", ".") + "." : "—"}</div>
+      </div>
+      <div className="text-sm">
+        <div className="text-xs text-[var(--muted)]">Késő tétel</div>
+        <div className={`font-semibold tabular-nums ${keso > 0 ? "text-[var(--danger)]" : "text-[var(--positive)]"}`}>
+          {keso > 0 ? `${keso} db késik` : "Nincs"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AttekintesTab({
   projekt,
   szemelyek,
@@ -287,6 +348,9 @@ function AttekintesTab({
                 {link.szerep ? ` (${link.szerep})` : ""}
               </span>
               <button
+                type="button"
+                aria-label={`${link.ugyfel.nev} eltávolítása a projektről`}
+                className="flex h-9 w-9 shrink-0 items-center justify-center md:h-6 md:w-6"
                 onClick={async () => {
                   await api.removeProjektUgyfel(projekt.id, link.id);
                   onChange();
@@ -309,6 +373,9 @@ function AttekintesTab({
                 {SZEREP_LABEL[s.szerep] || s.szerep}: {s.szemely.nev}
               </span>
               <button
+                type="button"
+                aria-label={`${SZEREP_LABEL[s.szerep] || s.szerep}: ${s.szemely.nev} eltávolítása`}
+                className="flex h-9 w-9 shrink-0 items-center justify-center md:h-6 md:w-6"
                 onClick={async () => {
                   await api.removeProjektSzerep(projekt.id, s.id);
                   onChange();
@@ -320,7 +387,7 @@ function AttekintesTab({
           ))}
           {projekt.szerepek.length === 0 && <li className="text-[var(--muted)]">Nincs még megadva.</li>}
         </ul>
-        <form onSubmit={addSzerep} className="flex gap-2">
+        <form onSubmit={addSzerep} className="flex flex-wrap gap-2">
           <select
             value={szerep}
             onChange={(e) => setSzerep(e.target.value)}
@@ -335,7 +402,7 @@ function AttekintesTab({
           <select
             value={szemelyId}
             onChange={(e) => setSzemelyId(e.target.value)}
-            className="flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-sm"
+            className="min-w-[10rem] flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1 text-sm"
           >
             <option value="">Személy...</option>
             {szemelyek.map((sz) => (
@@ -408,7 +475,13 @@ function TetelekTab({
       </form>
 
       <div className="space-y-2">
-        {tetelek.map((t) => (
+        {Object.keys(SZAKASZ_LABEL).filter((k) => tetelek.some((t) => t.szakasz === k)).map((k) => (
+          <section key={k} aria-label={SZAKASZ_LABEL[k]} className="space-y-2 pb-2">
+            <h2 className="flex items-center gap-2 pt-2 text-sm font-semibold">
+              <SzakaszJelveny szakasz={k} />
+              <span className="font-normal text-[var(--muted)]">{tetelek.filter((t) => t.szakasz === k).length} tétel</span>
+            </h2>
+        {tetelek.filter((t) => t.szakasz === k).map((t) => (
           <div key={t.id} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
             <div className="flex w-full items-center gap-2 px-3 py-2">
               <input
@@ -425,7 +498,11 @@ function TetelekTab({
                   {expanded === t.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   {t.munkanem.nev}
                 </span>
-                <span className="text-xs text-[var(--muted)]">{SZAKASZ_LABEL[t.szakasz] || t.szakasz}</span>
+                {t.end_date && t.end_date < ma() && t.szakasz !== "kesz" ? (
+                  <span className="text-xs font-medium text-[var(--danger)]">Késik · {t.end_date}</span>
+                ) : (
+                  t.end_date && <span className="text-xs text-[var(--muted)]">{t.end_date}</span>
+                )}
               </button>
             </div>
             {expanded === t.id && (
@@ -438,7 +515,9 @@ function TetelekTab({
             )}
           </div>
         ))}
-        {tetelek.length === 0 && <p className="text-sm text-[var(--muted)]">Nincs még tétel ezen a projekten.</p>}
+          </section>
+        ))}
+        {tetelek.length === 0 && <p className="text-sm text-[var(--muted)]">Nincs még tétel ezen a projekten. Válassz fent egy munkanemet, és add hozzá az első tételt.</p>}
       </div>
 
       <EmailKuldesPanel projektId={projektId} tetelIds={[...kivalasztott]} />
@@ -1126,6 +1205,82 @@ function dayDiff(a: string, b: string) {
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
 }
 
+const HONAP_ROVID = ["jan", "feb", "már", "ápr", "máj", "jún", "júl", "aug", "szep", "okt", "nov", "dec"];
+
+function rovidDatum(d: string) {
+  const [, m, nap] = d.split("-");
+  return `${Number(m)}.${nap}.`;
+}
+
+// Időtengelyes Gantt-diagram: hónaphatárok, "ma" vonal, a sáv színe az állapotot jelzi (kész / késik / folyamatban).
+function GanttDiagram({ tetelek, minDate, maxDate, totalDays }: { tetelek: ProjektTetel[]; minDate: string; maxDate: string; totalDays: number }) {
+  const mai = ma();
+  const pct = (d: string) => (dayDiff(minDate, d) / totalDays) * 100;
+  const honapok: { datum: string; cimke: string }[] = [];
+  const kezdet = new Date(minDate);
+  const cursor = new Date(Date.UTC(kezdet.getUTCFullYear(), kezdet.getUTCMonth() + 1, 1));
+  while (cursor.toISOString().slice(0, 10) <= maxDate) {
+    honapok.push({ datum: cursor.toISOString().slice(0, 10), cimke: HONAP_ROVID[cursor.getUTCMonth()] + (cursor.getUTCMonth() === 0 ? " " + cursor.getUTCFullYear() : "") });
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  const maBenne = mai >= minDate && mai <= maxDate;
+  return (
+    <div className="mb-4 overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3" tabIndex={0} role="group" aria-label="Ütemterv Gantt-diagram">
+      <div className="min-w-[640px]">
+        <div className="mb-1 flex items-end gap-2 text-xs text-[var(--muted)]">
+          <div className="w-36 shrink-0 md:w-44">Időszak: {minDate.replaceAll("-", ".")} – {maxDate.replaceAll("-", ".")}</div>
+          <div className="relative h-5 flex-1">
+            {honapok.map((h) => (
+              <span key={h.datum} className="absolute bottom-0 -translate-x-px border-l border-[var(--border)] pl-1 leading-5" style={{ left: `${pct(h.datum)}%` }}>
+                {h.cimke}
+              </span>
+            ))}
+          </div>
+          <div className="hidden w-28 shrink-0 sm:block" />
+        </div>
+        <div className="space-y-1">
+          {tetelek.map((t) => {
+            const kezd = t.start_date as string;
+            const veg = t.end_date as string;
+            const span = dayDiff(kezd, veg) + 1;
+            const kesz = t.szakasz === "kesz";
+            const keso = !kesz && veg < mai;
+            const szin = kesz ? "var(--color-accent-400)" : keso ? "var(--danger)" : "var(--primary)";
+            const allapot = kesz ? "kész" : keso ? "késik" : "folyamatban";
+            return (
+              <div key={t.id} className="flex items-center gap-2 text-xs">
+                <div className="w-36 shrink-0 truncate md:w-44" title={t.munkanem.nev}>{t.munkanem.nev}</div>
+                <div className="relative h-6 flex-1 rounded bg-[var(--muted-bg)]">
+                  {honapok.map((h) => (
+                    <span key={h.datum} aria-hidden="true" className="absolute inset-y-0 border-l border-[var(--border)]" style={{ left: `${pct(h.datum)}%` }} />
+                  ))}
+                  {maBenne && <span aria-hidden="true" className="absolute inset-y-0 z-10 border-l-2 border-[var(--foreground)]" style={{ left: `${pct(mai)}%` }} />}
+                  <div
+                    role="img"
+                    aria-label={`${t.munkanem.nev}: ${kezd} – ${veg}, ${allapot}`}
+                    className="absolute top-1 h-4 rounded"
+                    style={{ left: `${pct(kezd)}%`, width: `${Math.max((span / totalDays) * 100, 1.2)}%`, backgroundColor: szin }}
+                    title={`${kezd} – ${veg} (${allapot})`}
+                  />
+                </div>
+                <div className="hidden w-28 shrink-0 whitespace-nowrap text-right tabular-nums text-[var(--muted)] sm:block">
+                  {rovidDatum(kezd)} – {rovidDatum(veg)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--muted)]">
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-4 rounded" style={{ backgroundColor: "var(--primary)" }} /> Folyamatban</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-4 rounded" style={{ backgroundColor: "var(--color-accent-400)" }} /> Kész</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-4 rounded" style={{ backgroundColor: "var(--danger)" }} /> Késik</span>
+          {maBenne && <span className="flex items-center gap-1.5"><span className="h-3 border-l-2 border-[var(--foreground)]" /> Ma</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UtemezesTab({
   projekt,
   projektId,
@@ -1222,32 +1377,7 @@ function UtemezesTab({
       </div>
       {error && <div className="mb-3 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
 
-      {minDate && maxDate && totalDays > 0 && (
-        <div className="mb-4 space-y-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3">
-          {scheduled.map((t) => {
-            const offset = dayDiff(minDate, t.start_date as string);
-            const span = dayDiff(t.start_date as string, t.end_date as string) + 1;
-            return (
-              <div key={t.id} className="flex items-center gap-2 text-xs">
-                <div className="w-40 shrink-0 truncate">{t.munkanem.nev}</div>
-                <div className="relative h-5 flex-1 rounded bg-black/5">
-                  <div
-                    className="absolute top-0 h-5 rounded bg-[var(--primary)]"
-                    style={{
-                      left: `${(offset / totalDays) * 100}%`,
-                      width: `${Math.max((span / totalDays) * 100, 1.5)}%`,
-                    }}
-                    title={`${t.start_date} – ${t.end_date}`}
-                  />
-                </div>
-                <div className="w-32 shrink-0 text-right text-[var(--muted)]">
-                  {t.start_date} – {t.end_date}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {minDate && maxDate && totalDays > 0 && <GanttDiagram tetelek={scheduled} minDate={minDate} maxDate={maxDate} totalDays={totalDays} />}
 
       <div tabIndex={0} className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
         <table className="w-full text-sm">
@@ -1428,6 +1558,9 @@ function TetelUtemezesRow({
             <li key={f.id} className="flex items-center justify-between gap-2 text-xs">
               <span>{f.prerequisite_nev}</span>
               <button
+                type="button"
+                aria-label={`${f.prerequisite_nev} függőség törlése`}
+                className="flex h-8 w-8 items-center justify-center md:h-5 md:w-5"
                 onClick={async () => {
                   await api.removeFuggoseg(projektId, tetel.id, f.id);
                   onChange();
@@ -1453,7 +1586,7 @@ function TetelUtemezesRow({
                 </option>
               ))}
           </select>
-          <button onClick={addDep} className="text-[var(--primary)]">
+          <button type="button" onClick={addDep} aria-label="Függőség hozzáadása" className="flex h-8 w-8 items-center justify-center text-[var(--primary)] md:h-6 md:w-6">
             <Plus size={14} />
           </button>
         </div>
