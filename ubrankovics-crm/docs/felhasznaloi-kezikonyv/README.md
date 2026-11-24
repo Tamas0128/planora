@@ -181,7 +181,7 @@ Az ügyfél oldalán időrendben látod a kapcsolattartás történetét (hívá
 
 ![Alvállalkozók](kepek/21-alvallalkozok.png)
 
-Az alvállalkozók (például a tetőfedő Mecsek-Tető Zrt., vagy a betonozást végző Zala-Beton Kft.) adatai, elérhetőségei és szakterületei. A TIG-ek és a beérkező számlák ide kapcsolódnak.
+Az alvállalkozók (például a tetőfedő Tyrell Tető Zrt., vagy a betonozást végző Off-World Beton Kft.) adatai, elérhetőségei és szakterületei. A TIG-ek és a beérkező számlák ide kapcsolódnak.
 
 ### 7.2 Dokumentumsablonok
 

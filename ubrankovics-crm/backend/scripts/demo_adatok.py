@@ -61,6 +61,22 @@ if call("GET", "/projektek") and not args.force:
 
 # ---------------------------------------------------------------- törzsadatok lekérdezése
 munkanem = {m["kod"]: m["id"] for m in call("GET", "/munkanemek")}
+# A belső munkatársak a seedből jönnek; a bemutatóhoz kitalált nevekre és elérhetőségekre cseréljük őket.
+_ATNEVEZES = {
+    "Novák Péter": ("Rick Deckard", "30/555-0201", "deckard@ubrankovics.example"),
+    "Bori István": ("Dave Holden", "30/555-0202", "holden@ubrankovics.example"),
+    "Jelencsics Áron": ("Leon Kowalski", "30/555-0203", "kowalski@ubrankovics.example"),
+    "Ubrankovics Márton": ("Eldon Tyrell", "30/555-0204", "tyrell@ubrankovics.example"),
+    "Varga Erzsébet": ("Rachael Rosen", "30/555-0205", "rosen@ubrankovics.example"),
+    "Csapó-Foki Zsuzsanna": ("Joanna Zora", "30/555-0206", "zora@ubrankovics.example"),
+    "Vadkerti Tóth Balázs": ("Iris Webb", "30/555-0207", "webb@ubrankovics.example"),
+    "Hajós Márió": ("Harry Bryant", "30/555-0208", "bryant@ubrankovics.example"),
+    "Nemes Péter": ("Edward Gaff", None, "gaff@ubrankovics.example"),
+}
+for s in call("GET", "/szemelyek"):
+    if s["nev"] in _ATNEVEZES:
+        uj, tel, mail = _ATNEVEZES[s["nev"]]
+        patch(f"/szemelyek/{s['id']}", {"nev": uj, "telefon": tel, "email": mail})
 szemely = {s["nev"]: s["id"] for s in call("GET", "/szemelyek")}
 tipusok = {t["nev"]: t["id"] for t in call("GET", "/projekt-tipusok")}
 KESZHAZ = tipusok["Könnyűszerkezetes, üzemben szerelt készház"]
@@ -69,26 +85,26 @@ GERENDAHAZ = tipusok["Boronafalas gerendaház"]
 # ---------------------------------------------------------------- alvállalkozók (kitalált)
 ALV = {}
 for nev, kapcsolat in [
-    ("Mecsek-Tető Zrt.", "Dr. Árpád Gyula vezérigazgató · +36 72 555 0142 · iroda@mecsektetozrt.example · 7621 Pécs, Szabadság u. 31. · adószám: 24817530-2-02"),
-    ("Pannon-Villany Kft.", "Sebők Roland ügyvezető · +36 30 288 4410 · sebok.roland@pannonvillany.example · 8200 Veszprém, Kossuth L. u. 12."),
-    ("Dráva Gépészet Bt.", "Hegedűs Tibor beltag · +36 20 913 7725 · hegedus@dravagepeszet.example · 7400 Kaposvár, Fő u. 54."),
-    ("Zala-Beton Kft.", "Orbán Katalin ügyvezető · +36 92 311 908 · orban.katalin@zalabeton.example · 8900 Zalaegerszeg, Ipar u. 3."),
-    ("Bakony Faipari Kft.", "Lengyel Dénes műszaki vezető · +36 88 450 216 · lengyel.denes@bakonyfa.example · 8420 Zirc, Rákóczi tér 6."),
-    ("Balaton Nyílászáró Kft.", "Kövesdi Ágnes értékesítési vezető · +36 87 540 332 · kovesdi.agnes@balatonnyilaszaro.example · 8230 Balatonfüred, Zsigmond u. 9."),
+    ("Tyrell Tető Zrt.", "Dr. Ana Selene vezérigazgató · +36 72 555 0101 · iroda@tyrellteto.example · 7621 Pécs, Nexus köz 6. · adószám: 00000000-0-00"),
+    ("Nexus Villany Kft.", "Doc Ford ügyvezető · +36 30 555 0102 · ford@nexusvillany.example · 8200 Veszprém, Esper u. 4."),
+    ("Replikáns Gépészet Bt.", "Cooper Gill beltag · +36 20 555 0103 · gill@replikans.example · 7400 Kaposvár, Orion sor 11."),
+    ("Off-World Beton Kft.", "Mariette Voss ügyvezető · +36 92 555 0104 · voss@offworldbeton.example · 8900 Zalaegerszeg, Kolónia u. 3."),
+    ("Voight-Kampff Faipari Kft.", "Lev Aston műszaki vezető · +36 88 555 0105 · aston@voightkampff.example · 8420 Zirc, Mérő tér 6."),
+    ("Esper Nyílászáró Kft.", "Freysa Kim értékesítési vezető · +36 87 555 0106 · kim@esper.example · 8230 Balatonfüred, Tavasz u. 9."),
 ]:
     ALV[nev] = post("/alvallalkozok", {"nev": nev, "kapcsolat": kapcsolat})["id"]
-TETO = ALV["Mecsek-Tető Zrt."]
+TETO = ALV["Tyrell Tető Zrt."]
 
 # ---------------------------------------------------------------- ügyfelek
 def ugyfel(nev, tel, mail):
     return post("/ugyfelek", {"nev": nev, "telefon": tel, "email": mail})["id"]
 
 
-U_KOVACS = ugyfel("Kovács Péter és Neményi Dóra", "+36 30 412 7788", "kovacs.dora@kovacscsalad.example")
-U_BALOGH = ugyfel("Balogh Tamás és Balogh Eszter", "+36 70 335 1920", "balogh.tamas@balogh-otthon.example")
-U_HORVATH = ugyfel("Horváth Éva", "+36 20 744 0613", "horvath.eva@szegedimail.example")
-U_DUNAKANYAR = ugyfel("Dunakanyar Pihenő Kft.", "+36 26 398 450", "szilagyi.marta@dunakanyarpiheno.example")
-U_TOTH = ugyfel("Tóth Gábor", "+36 30 559 2147", "toth.gabor@zalamail.example")
+U_KOVACS = ugyfel("Roy Batty és Pris Stratton", "+36 30 555 0111", "pris.stratton@batty-otthon.example")
+U_BALOGH = ugyfel("J. F. Sebastian és Zhora Salome", "+36 70 555 0112", "zhora.salome@sebastian-otthon.example")
+U_HORVATH = ugyfel("Ana Stelline", "+36 20 555 0113", "ana.stelline@stelline.example")
+U_DUNAKANYAR = ugyfel("Wallace Wellness Kft.", "+36 26 555 0114", "niander@wallacewellness.example")
+U_TOTH = ugyfel("Hannibal Chew", "+36 30 555 0115", "hannibal.chew@chew.example")
 
 # ---------------------------------------------------------------- projektek
 def projekt(nev, ugyfel_id, cim, allapot, tipus, delivery, lat, lon, hrsz, szerepek, utemezes=True):
@@ -110,20 +126,20 @@ def projekt(nev, ugyfel_id, cim, allapot, tipus, delivery, lat, lon, hrsz, szere
     return p["id"]
 
 
-P_KOVACS = projekt("Kovács–Neményi boronafalas gerendaház, Pécs", U_KOVACS, "7634 Pécs, Hajnal utca 14.", "kivitelezes",
+P_KOVACS = projekt("Batty–Stratton boronafalas gerendaház, Pécs", U_KOVACS, "7634 Pécs, Nexus utca 6.", "kivitelezes",
                    GERENDAHAZ, d(125), 46.0925, 18.2018, "Pécs 10234/7",
-                   [("Novák Péter", "epitesvezeto"), ("Varga Erzsébet", "projektfelelos")])
-P_BALOGH = projekt("Balogh készház, Balatonfüred", U_BALOGH, "8230 Balatonfüred, Kisfaludy utca 27.", "szerzodott",
+                   [("Rick Deckard", "epitesvezeto"), ("Rachael Rosen", "projektfelelos")])
+P_BALOGH = projekt("Sebastian készház, Balatonfüred", U_BALOGH, "8230 Balatonfüred, Esper utca 12.", "szerzodott",
                    KESZHAZ, d(220), 46.9588, 17.8890, "Balatonfüred 3381/2",
-                   [("Bori István", "epitesvezeto"), ("Varga Erzsébet", "projektfelelos")])
-P_HORVATH = projekt("Horváth tetőcsere és tetőtér-beépítés, Szeged", U_HORVATH, "6722 Szeged, Tisza Lajos körút 61.", "ajanlat",
-                    None, d(150), 46.2530, 20.1480, "Szeged 1845/3", [("Jelencsics Áron", "projektfelelos")], utemezes=False)
-P_DUNA = projekt("Dunakanyar Wellness vendégház-együttes, Visegrád", U_DUNAKANYAR, "2025 Visegrád, Fő utca 83.", "kivitelezes",
+                   [("Dave Holden", "epitesvezeto"), ("Rachael Rosen", "projektfelelos")])
+P_HORVATH = projekt("Stelline tetőcsere és tetőtér-beépítés, Szeged", U_HORVATH, "6722 Szeged, Orion körút 20.", "ajanlat",
+                    None, d(150), 46.2530, 20.1480, "Szeged 1845/3", [("Leon Kowalski", "projektfelelos")], utemezes=False)
+P_DUNA = projekt("Wallace Wellness vendégház-együttes, Visegrád", U_DUNAKANYAR, "2025 Visegrád, Kolónia utca 41.", "kivitelezes",
                  GERENDAHAZ, d(170), 47.7845, 18.9710, "Visegrád 412/1",
-                 [("Nemes Péter", "epitesvezeto"), ("Ubrankovics Márton", "projektfelelos")])
-P_TOTH = projekt("Tóth kerti faház és szauna, Zalaegerszeg", U_TOTH, "8900 Zalaegerszeg, Kaszaháza út 9.", "lezart",
+                 [("Edward Gaff", "epitesvezeto"), ("Eldon Tyrell", "projektfelelos")])
+P_TOTH = projekt("Chew kerti faház és szauna, Zalaegerszeg", U_TOTH, "8900 Zalaegerszeg, Mérő út 9.", "lezart",
                  KESZHAZ, d(-30), 46.8417, 16.8416, "Zalaegerszeg 7021/5",
-                 [("Hajós Márió", "epitesvezeto"), ("Varga Erzsébet", "projektfelelos")], utemezes=False)
+                 [("Harry Bryant", "epitesvezeto"), ("Rachael Rosen", "projektfelelos")], utemezes=False)
 
 # ---------------------------------------------------------------- tételek
 TETEL_PROJEKT = {}
@@ -162,50 +178,50 @@ def esemeny(tetel_id, tipus, allapot, nap, megjegyzes=None):
 
 
 # P_KOVACS – gerendaház, épül
-t1 = tetel(P_KOVACS, "ALAP-VIZSZIG", "Sávalap C25/30, vízszigetelés kétrétegű bitumenes lemezzel", "kesz", "alvallalkozo", ALV["Zala-Beton Kft."], duration=9)
+t1 = tetel(P_KOVACS, "ALAP-VIZSZIG", "Sávalap C25/30, vízszigetelés kétrétegű bitumenes lemezzel", "kesz", "alvallalkozo", ALV["Off-World Beton Kft."], duration=9)
 spec(t1, "Betonminőség", "C25/30", "Alapozás"); spec(t1, "Alap mélysége", "90", "Alapozás", "cm")
 esemeny(t1, "szerzodes", "kesz", -70); esemeny(t1, "munka_kesz", "kesz", -48, "Átvéve, geodéziai bemérés rendben")
-t2 = tetel(P_KOVACS, "SZERKEPITES", "Boronafal 20 cm, 8×8 m alapterület, nútféderes bekötésekkel", "kivitelezes", "sajat", duration=21, kijelolt="Novák Péter")
+t2 = tetel(P_KOVACS, "SZERKEPITES", "Boronafal 20 cm, 8×8 m alapterület, nútféderes bekötésekkel", "kivitelezes", "sajat", duration=21, kijelolt="Rick Deckard")
 spec(t2, "Falvastagság", "20", "Szerkezet", "cm"); spec(t2, "Fafaj", "Lucfenyő, kamrai szárított", "Szerkezet")
 esemeny(t2, "anyag_megrendelve", "kesz", -52); esemeny(t2, "anyag_megerkezett", "kesz", -35); esemeny(t2, "munka_kesz", "folyamatban", -3)
 t3 = tetel(P_KOVACS, "RACSOS-TETO", "Fogópáros fedélszék, 38° tetőhajlás, 190 m² tetősík", "kivitelezes", "alvallalkozo", TETO, duration=8, tig="TIG-1 elfogadva")
 esemeny(t3, "szerzodes", "kesz", -30); esemeny(t3, "munka_kesz", "nyitott", 6)
 t4 = tetel(P_KOVACS, "CSEREPEZES", "Antracit betoncserép, hófogóval", "szerzodes", "alvallalkozo", TETO, duration=6, potmunka=420000)
-t5 = tetel(P_KOVACS, "KULTERI-NYZ", "3 rétegű üvegezésű fa-alu nyílászárók, 9 db", "beszerzes", "alvallalkozo", ALV["Balaton Nyílászáró Kft."], duration=3)
+t5 = tetel(P_KOVACS, "KULTERI-NYZ", "3 rétegű üvegezésű fa-alu nyílászárók, 9 db", "beszerzes", "alvallalkozo", ALV["Esper Nyílászáró Kft."], duration=3)
 spec(t5, "Üvegezés Ug", "0,5", "Nyílászáró", "W/m²K")
-t6 = tetel(P_KOVACS, "VILLANYSZERELES", "Teljes villanyhálózat, 3 fázis, okosotthon-előkészítés", "ajanlat", "alvallalkozo", ALV["Pannon-Villany Kft."], duration=7)
-t7 = tetel(P_KOVACS, "BELSO-FABURKOLAT", "Fenyő lambéria a nappaliban és a hálóban", "ajanlat", "alvallalkozo", ALV["Bakony Faipari Kft."], duration=5)
+t6 = tetel(P_KOVACS, "VILLANYSZERELES", "Teljes villanyhálózat, 3 fázis, okosotthon-előkészítés", "ajanlat", "alvallalkozo", ALV["Nexus Villany Kft."], duration=7)
+t7 = tetel(P_KOVACS, "BELSO-FABURKOLAT", "Fenyő lambéria a nappaliban és a hálóban", "ajanlat", "alvallalkozo", ALV["Voight-Kampff Faipari Kft."], duration=5)
 r1 = post(f"{tp(t5)}/rendelesek", {"megnevezes": "Fa-alu ablak 120×140, 3 rétegű", "mennyiseg": 6, "mertekegyseg": "db", "szukseges_datum": d(28), "megjegyzes": "Antracit külső / fehér belső"})
 post(f"{tp(t5)}/rendelesek", {"megnevezes": "Erkélyajtó 90×210, 3 rétegű", "mennyiseg": 2, "mertekegyseg": "db", "szukseges_datum": d(28)})
 post(f"{tp(t2)}/rendelesek", {"megnevezes": "Boronafal gerenda 20×14, 6 m", "mennyiseg": 280, "mertekegyseg": "db", "szukseges_datum": d(-50)})
 
 # P_BALOGH – készház, szerződött
-b1 = tetel(P_BALOGH, "ALAP-VIZSZIG", "Vasbeton lemezalap 12×8 m", "szerzodes", "alvallalkozo", ALV["Zala-Beton Kft."], duration=8)
-b2 = tetel(P_BALOGH, "SZERKEPITES", "Üzemben gyártott könnyűszerkezetes falelemek, 25 cm falvastagság", "szerzodes", "sajat", duration=14, kijelolt="Bori István")
+b1 = tetel(P_BALOGH, "ALAP-VIZSZIG", "Vasbeton lemezalap 12×8 m", "szerzodes", "alvallalkozo", ALV["Off-World Beton Kft."], duration=8)
+b2 = tetel(P_BALOGH, "SZERKEPITES", "Üzemben gyártott könnyűszerkezetes falelemek, 25 cm falvastagság", "szerzodes", "sajat", duration=14, kijelolt="Dave Holden")
 spec(b2, "Falvastagság", "25", "Szerkezet", "cm"); spec(b2, "Hőszigetelés", "Kőzetgyapot 15 cm + 5 cm homlokzati", "Szerkezet")
 b3 = tetel(P_BALOGH, "RACSOS-TETO", "Rácsos tetőszerkezet, 25° hajlás", "szerzodes", "alvallalkozo", TETO, duration=5)
-b4 = tetel(P_BALOGH, "VIZSZERELES", "Víz- és csatorna alapvezetékek, 2 fürdő", "ajanlat", "alvallalkozo", ALV["Dráva Gépészet Bt."])
-b5 = tetel(P_BALOGH, "FUTES-HUTES", "Levegő-víz hőszivattyú, padlófűtés", "ajanlat", "alvallalkozo", ALV["Dráva Gépészet Bt."])
+b4 = tetel(P_BALOGH, "VIZSZERELES", "Víz- és csatorna alapvezetékek, 2 fürdő", "ajanlat", "alvallalkozo", ALV["Replikáns Gépészet Bt."])
+b5 = tetel(P_BALOGH, "FUTES-HUTES", "Levegő-víz hőszivattyú, padlófűtés", "ajanlat", "alvallalkozo", ALV["Replikáns Gépészet Bt."])
 esemeny(b2, "ajanlat_ugyfelnek", "kesz", -62); esemeny(b2, "ajanlat_alairva", "kesz", -41); esemeny(b2, "szerzodes", "kesz", -34)
 esemeny(b3, "ajanlatkeres", "kesz", -55); esemeny(b3, "ajanlat_beerkezett", "kesz", -48)
 
 # P_HORVATH – ajánlati fázis
 h1 = tetel(P_HORVATH, "BADOGOZAS", "Teljes tetőbádogozás, lemez ereszcsatorna, 42 fm", "ajanlat", "alvallalkozo", TETO)
 h2 = tetel(P_HORVATH, "CSEREPEZES", "Bontás és új cserépfedés, 140 m²", "ajanlat", "alvallalkozo", TETO)
-h3 = tetel(P_HORVATH, "TETOSIK-ABLAK", "4 db tetősík ablak, 78×140", "ajanlat", "alvallalkozo", ALV["Balaton Nyílászáró Kft."])
+h3 = tetel(P_HORVATH, "TETOSIK-ABLAK", "4 db tetősík ablak, 78×140", "ajanlat", "alvallalkozo", ALV["Esper Nyílászáró Kft."])
 h4 = tetel(P_HORVATH, "GIPSZKARTON", "Tetőtéri gipszkarton burkolás, 85 m²", "ajanlat", "sajat")
 esemeny(h2, "ajanlatkeres", "kesz", -9); esemeny(h2, "ajanlat_beerkezett", "folyamatban", -2)
 
 # P_DUNA – nagy projekt
-du1 = tetel(P_DUNA, "ALAP-VIZSZIG", "6 db vendégház-alap, közös szennyvíz- és vízvezeték", "kesz", "alvallalkozo", ALV["Zala-Beton Kft."], duration=18)
-du2 = tetel(P_DUNA, "SZERKEPITES", "6 db boronafalas vendégház (á 48 m²), 24 cm faltest", "kivitelezes", "sajat", duration=60, kijelolt="Nemes Péter")
+du1 = tetel(P_DUNA, "ALAP-VIZSZIG", "6 db vendégház-alap, közös szennyvíz- és vízvezeték", "kesz", "alvallalkozo", ALV["Off-World Beton Kft."], duration=18)
+du2 = tetel(P_DUNA, "SZERKEPITES", "6 db boronafalas vendégház (á 48 m²), 24 cm faltest", "kivitelezes", "sajat", duration=60, kijelolt="Edward Gaff")
 spec(du2, "Falvastagság", "24", "Szerkezet", "cm")
 du3 = tetel(P_DUNA, "RACSOS-TETO", "6 db nyeregtető, rejtett ereszcsatornával", "kivitelezes", "alvallalkozo", TETO, duration=24, tig="TIG-1 elfogadva, TIG-2 folyamatban")
 du4 = tetel(P_DUNA, "CSEREPEZES", "Cseréppel fedett tetők, 6 × 62 m²", "szerzodes", "alvallalkozo", TETO, duration=18, potmunka=1850000)
-du5 = tetel(P_DUNA, "VILLANYSZERELES", "Vendégházak és közös terek villamos hálózata", "szerzodes", "alvallalkozo", ALV["Pannon-Villany Kft."], duration=20)
-du6 = tetel(P_DUNA, "FUTES-HUTES", "Padlófűtés és hőszivattyúk, 6 egység", "beszerzes", "alvallalkozo", ALV["Dráva Gépészet Bt."], duration=22)
+du5 = tetel(P_DUNA, "VILLANYSZERELES", "Vendégházak és közös terek villamos hálózata", "szerzodes", "alvallalkozo", ALV["Nexus Villany Kft."], duration=20)
+du6 = tetel(P_DUNA, "FUTES-HUTES", "Padlófűtés és hőszivattyúk, 6 egység", "beszerzes", "alvallalkozo", ALV["Replikáns Gépészet Bt."], duration=22)
 du7 = tetel(P_DUNA, "TERASZ-SZERK", "6 db fedett terasz, 14 m² / ház", "szerzodes", "sajat", duration=12)
-du8 = tetel(P_DUNA, "BELSO-LEPCSO", "Galéria-lépcsők, tölgy, 6 db", "ajanlat", "alvallalkozo", ALV["Bakony Faipari Kft."])
+du8 = tetel(P_DUNA, "BELSO-LEPCSO", "Galéria-lépcsők, tölgy, 6 db", "ajanlat", "alvallalkozo", ALV["Voight-Kampff Faipari Kft."])
 for t_, tip, al, nap in [(du1, "munka_kesz", "kesz", -95), (du2, "anyag_megerkezett", "kesz", -60), (du3, "szerzodes", "kesz", -48)]:
     esemeny(t_, tip, al, nap)
 post(f"{tp(du6)}/rendelesek", {"megnevezes": "Levegő-víz hőszivattyú 12 kW", "mennyiseg": 6, "mertekegyseg": "db", "szukseges_datum": d(40)})
@@ -214,7 +230,7 @@ post(f"{tp(du2)}/rendelesek", {"megnevezes": "Boronafal gerenda 24×14, 6 m", "m
 # P_TOTH – lezárt
 to1 = tetel(P_TOTH, "SZERKEPITES", "Kerti faház 6×4 m, 12 cm falvastagság", "kesz", "sajat", duration=6)
 to2 = tetel(P_TOTH, "CSEREPEZES", "Gyalult fenyő deszkaburkolat és bitumenes zsindely", "kesz", "alvallalkozo", TETO, duration=2)
-to3 = tetel(P_TOTH, "KANDALLO", "Finn szauna kályha és szerelt kémény", "kesz", "alvallalkozo", ALV["Dráva Gépészet Bt."], duration=2)
+to3 = tetel(P_TOTH, "KANDALLO", "Finn szauna kályha és szerelt kémény", "kesz", "alvallalkozo", ALV["Replikáns Gépészet Bt."], duration=2)
 for t_ in (to1, to2, to3):
     esemeny(t_, "munka_kesz", "kesz", -40)
 
@@ -287,13 +303,13 @@ def tig_es_szamla(projekt_id, alv, tig_datum, kezd, veg, netto, szamlaszam, esed
     return tg
 
 
-tig_es_szamla(P_KOVACS, ALV["Zala-Beton Kft."], d(-45), d(-70), d(-48), 3_200_000, "ZB-2026/0311", d(-15), d(-14))
+tig_es_szamla(P_KOVACS, ALV["Off-World Beton Kft."], d(-45), d(-70), d(-48), 3_200_000, "ZB-2026/0311", d(-15), d(-14))
 tig_es_szamla(P_KOVACS, TETO, d(-4), d(-30), d(-5), 4_100_000, "MT-2026/1187", d(26))
-tig_es_szamla(P_DUNA, ALV["Zala-Beton Kft."], d(-90), d(-118), d(-95), 9_400_000, "ZB-2026/0268", d(-60), d(-58))
+tig_es_szamla(P_DUNA, ALV["Off-World Beton Kft."], d(-90), d(-118), d(-95), 9_400_000, "ZB-2026/0268", d(-60), d(-58))
 tig_es_szamla(P_DUNA, TETO, d(-20), d(-48), d(-22), 12_650_000, "MT-2026/1102", d(10))
 tig_es_szamla(P_DUNA, TETO, d(-2), d(-21), d(-3), 6_300_000, "MT-2026/1196", d(28))
 tig_es_szamla(P_TOTH, TETO, d(-45), d(-50), d(-44), 640_000, "MT-2026/0988", d(-30), d(-29))
-tig_es_szamla(P_TOTH, ALV["Dráva Gépészet Bt."], d(-42), d(-45), d(-41), 380_000, "DG-2026/0057", d(-28), d(-27))
+tig_es_szamla(P_TOTH, ALV["Replikáns Gépészet Bt."], d(-42), d(-45), d(-41), 380_000, "DG-2026/0057", d(-28), d(-27))
 
 # ---------------------------------------------------------------- vevői ajánlatok (katalógus-tételnevekkel)
 a = post(f"/projektek/{P_HORVATH}/ajanlatok", {
@@ -318,7 +334,7 @@ post(f"/ajanlatok/{a['id']}/verziok", {
         {"megnevezes": "Tetőtéri gipszkarton burkolat, 20 cm hőszigeteléssel", "mennyiseg": 85, "egyseg": "m²", "egysegar": 11400},
     ]})
 a2 = post(f"/projektek/{P_BALOGH}/ajanlatok", {
-    "cim": "Balogh készház – ajánlat", "ervenyes_ig": d(-20), "megjegyzes": "Aláírt, a szerződés alapja.",
+    "cim": "Sebastian készház – ajánlat", "ervenyes_ig": d(-20), "megjegyzes": "Aláírt, a szerződés alapja.",
     "sorok": [
         {"megnevezes": "Lemezalap kialakítása, vízszigeteléssel", "mennyiseg": 96, "egyseg": "m²", "egysegar": 38500},
         {"megnevezes": "Könnyűszerkezetes falelemek gyártása és szerelése", "mennyiseg": 168, "egyseg": "m²", "egysegar": 92000},
@@ -332,18 +348,18 @@ naplo = [
     (P_KOVACS, -6, "napos, 8 °C", 7, "Külső boronafal 3. sor, nyílászáró-kiváltók beépítése.", None),
     (P_KOVACS, -5, "felhős, 6 °C", 7, "Falszerkezet 4. sor, sarokbekötések. Gerenda-szállítmány hiánytalanul megérkezett.", None),
     (P_KOVACS, -4, "szitáló eső, 5 °C", 4, "Esős idő miatt rövidített műszak: födémgerendák előkészítése fedett helyen.", "Betakarás megtörtént."),
-    (P_KOVACS, -3, "napos, 9 °C", 8, "Födémgerendák beemelése darúval, koszorú szerelése.", "Mecsek-Tető Zrt. szakembere helyszíni bejárást tartott."),
+    (P_KOVACS, -3, "napos, 9 °C", 8, "Födémgerendák beemelése darúval, koszorú szerelése.", "Tyrell Tető Zrt. szakembere helyszíni bejárást tartott."),
     (P_DUNA, -9, "napos, 7 °C", 14, "3. és 4. vendégház tetőszerkezet ácsolása.", None),
     (P_DUNA, -8, "szeles, 6 °C", 9, "Szél miatt a daruzás szünetelt, belső előkészítés zajlott.", "Daruzás szünetelt 11 órától."),
     (P_DUNA, -7, "napos, 8 °C", 14, "5. ház tetőszerkezet, 1–2. ház léc és fólia.", None),
-    (P_DUNA, -2, "felhős, 4 °C", 12, "Mecsek-Tető Zrt. TIG-2 ellenőrző felmérés, 3. ház cserépfedés indul.", "Felmérési jegyzőkönyv a mappában."),
+    (P_DUNA, -2, "felhős, 4 °C", 12, "Tyrell Tető Zrt. TIG-2 ellenőrző felmérés, 3. ház cserépfedés indul.", "Felmérési jegyzőkönyv a mappában."),
 ]
 for pid, nap, ido, fo, munka, megj in naplo:
     post(f"/projektek/{pid}/naplo", {"datum": d(nap), "idojaras": ido, "letszam": fo, "munka": munka, "megjegyzes": megj})
 
 # ---------------------------------------------------------------- átadás, garancia (lezárt projekt)
 at = post(f"/projektek/{P_TOTH}/atvetelek", {
-    "datum": d(-30), "atado_nev": "Hajós Márió", "atvevo_nev": "Tóth Gábor", "garancia_honap": 36,
+    "datum": d(-30), "atado_nev": "Harry Bryant", "atvevo_nev": "Hannibal Chew", "garancia_honap": 36,
     "hibak": "A szauna ajtó alsó élének beállítása kis hézag miatt javítandó.", "megjegyzes": "Kulcsok és üzemeltetési útmutató átadva."})
 post(f"/atvetelek/{at['id']}/alairas", {})
 post(f"/projektek/{P_TOTH}/garancia-hiba", {"targy": "Szauna ajtó záródása", "leiras": "Az ajtó alsó éle súrolja a küszöböt, nem csukódik rendesen."})
@@ -354,30 +370,30 @@ def erd(nev, tel, mail, forras, allapot, ertek, megj, lezaras):
                                 "becsult_ertek": ertek, "megjegyzes": megj, "varhato_lezaras": lezaras})["id"]
 
 
-E1 = erd("Fehér Zoltán", "+36 30 771 2285", "feher.zoltan@sopronimail.example", "Weboldal", "targyalas", 32_000_000,
+E1 = erd("Sapper Morton", "+36 30 555 0121", "sapper.morton@morton.example", "Weboldal", "targyalas", 32_000_000,
          "Soproni telken 100 m²-es boronafalas ház, tervekkel rendelkezik.", d(35))
-E2 = erd("Mészáros Építő Kft.", "+36 1 477 3012", "info@meszarosepito.example", "Ajánlás", "ajanlat", 18_500_000,
+E2 = erd("Nexus Építő Kft.", "+36 1 555 0122", "info@nexusepito.example", "Ajánlás", "ajanlat", 18_500_000,
          "Irodai faház 60 m², telephelyükre.", d(21))
-E3 = erd("Molnár Ildikó", "+36 20 618 9034", "molnar.ildiko@kaposmail.example", "Kiállítás", "kapcsolatfelvetel", 6_400_000,
+E3 = erd("Mariette Cole", "+36 20 555 0123", "mariette.cole@cole.example", "Kiállítás", "kapcsolatfelvetel", 6_400_000,
          "Garázs és előtető, még tájékozódik.", d(60))
-E4 = erd("Gulyás Bence", "+36 70 442 6150", "gulyas.bence@debrecenimail.example", "Közösségi média", "uj", 12_000_000,
+E4 = erd("Luv Wallace", "+36 70 555 0124", "luv.wallace@luv.example", "Közösségi média", "uj", 12_000_000,
          "Panelcseréhez hasonló áron készházat nézne, Debrecen.", d(90))
 
 KOMM = [
     # (ugyfel, erdeklodes, tipus, tartalom, nap)
     (U_KOVACS, None, "talalkozo", "Helyszíni bejárás a telken: tájolás, bejárat, szomszédos épületek egyeztetve. Megrendelő a boronafalat választotta.", -140),
     (U_KOVACS, None, "email", "Elküldtük a második ajánlatverziót a tetőtér-beépítéssel; a megrendelő a 38,5 millió Ft-os változatot fogadta el.", -100),
-    (U_KOVACS, None, "hivas", "Dóra érdeklődött a falszerkezet ütemezéséről és a nyílászárók színéről (antracit).", -22),
+    (U_KOVACS, None, "hivas", "Pris érdeklődött a falszerkezet ütemezéséről és a nyílászárók színéről (antracit).", -22),
     (U_KOVACS, None, "megjegyzes", "Pótmunka igény: a cserepek mellé hófogó és kéményseprő-járda. Ajánlat a következő bejáráskor.", -8),
     (U_BALOGH, None, "talalkozo", "Gyártóüzemi látogatás Balatonfüreden kívül, megnézték a falelemeket és a hőszivattyús minta-házat.", -85),
     (U_BALOGH, None, "email", "A szerződéstervezetet és az aláírandó ajánlatot elküldtük; aláírás visszaérkezett.", -41),
-    (U_BALOGH, None, "hivas", "Eszter a konyhabútor-előkészítésről kérdezett (gépészeti pontok). Átadtuk a gépészeti terveket.", -12),
+    (U_BALOGH, None, "hivas", "Zhora a konyhabútor-előkészítésről kérdezett (gépészeti pontok). Átadtuk a gépészeti terveket.", -12),
     (U_HORVATH, None, "hivas", "Telefonos érdeklődés tetőcserére; helyszíni felmérést egyeztettünk szerdára.", -14),
     (U_HORVATH, None, "talalkozo", "Felmérés a helyszínen, a tetőszerkezet jó állapotú, a szarufák megtarthatók.", -10),
     (U_HORVATH, None, "email", "Elküldtük az 1. ajánlatverziót; kérésére 2. verzió vastagabb szigeteléssel.", -3),
-    (U_DUNAKANYAR, None, "talalkozo", "Projektindító megbeszélés Szilágyi Mártával és a gyártási partnerekkel; szállásadói engedély határidők egyeztetve.", -130),
+    (U_DUNAKANYAR, None, "talalkozo", "Projektindító megbeszélés Niander Wallace-szal és a gyártási partnerekkel; szállásadói engedély határidők egyeztetve.", -130),
     (U_DUNAKANYAR, None, "email", "Heti állapotjelentés a vendégházak készültségéről és az 5. részszámláról.", -9),
-    (U_DUNAKANYAR, None, "hivas", "Márta a TIG-2 jóváhagyási menetéről érdeklődött; jóváhagyás a hétvégéig.", -2),
+    (U_DUNAKANYAR, None, "hivas", "Niander a TIG-2 jóváhagyási menetéről érdeklődött; jóváhagyás a hétvégéig.", -2),
     (U_TOTH, None, "email", "Átadás-átvételi jegyzőkönyv és garanciajegy elküldve; a megrendelő elégedett.", -29),
     (U_TOTH, None, "hivas", "Szauna ajtó záródás miatti garanciális bejelentés rögzítve.", -5),
     (None, E1, "hivas", "Első hívás: 100 m²-es ház, tervekkel rendelkezik, Sopron mellett.", -12),
@@ -391,14 +407,14 @@ for ugy, erd_id, tip, szoveg, nap in KOMM:
 
 # ---------------------------------------------------------------- feladatok
 for cim, leiras, nap, pid in [
-    ("Gerenda-szállítmány átvétele – Kovács ház", "Hiánytalan átvétel, fotók a naplóba.", 2, P_KOVACS),
-    ("Pótmunka-ajánlat hófogóra és kéményseprő-járdára", "Kovács–Neményi, ajánlat a következő bejárásig.", 5, P_KOVACS),
-    ("Nyílászáró-megrendelés véglegesítése", "Balaton Nyílászáró Kft., szín: antracit.", 9, P_KOVACS),
-    ("Balogh készház – gyártási terv jóváhagyatása", "A megrendelő aláírása szükséges.", 6, P_BALOGH),
-    ("Horváth ajánlat: 2. verzió utánkövetése", "Hívjuk fel az ajánlat lejárta előtt.", 8, P_HORVATH),
-    ("Dunakanyar – TIG-2 aláírása és számla", "Mecsek-Tető Zrt. számla jóváhagyása.", 3, P_DUNA),
+    ("Gerenda-szállítmány átvétele – Batty ház", "Hiánytalan átvétel, fotók a naplóba.", 2, P_KOVACS),
+    ("Pótmunka-ajánlat hófogóra és kéményseprő-járdára", "Batty–Stratton, ajánlat a következő bejárásig.", 5, P_KOVACS),
+    ("Nyílászáró-megrendelés véglegesítése", "Esper Nyílászáró Kft., szín: antracit.", 9, P_KOVACS),
+    ("Sebastian készház – gyártási terv jóváhagyatása", "A megrendelő aláírása szükséges.", 6, P_BALOGH),
+    ("Stelline ajánlat: 2. verzió utánkövetése", "Hívjuk fel az ajánlat lejárta előtt.", 8, P_HORVATH),
+    ("Wallace – TIG-2 aláírása és számla", "Tyrell Tető Zrt. számla jóváhagyása.", 3, P_DUNA),
     ("Hőszivattyúk rendelése – Visegrád", "6 db, szállítási idő 5 hét.", 4, P_DUNA),
-    ("Garanciális javítás – szauna ajtó", "Tóth Gábor, Zalaegerszeg, lehetőleg a héten.", 7, P_TOTH),
+    ("Garanciális javítás – szauna ajtó", "Hannibal Chew, Zalaegerszeg, lehetőleg a héten.", 7, P_TOTH),
 ]:
     post("/feladatok", {"cim": cim, "leiras": leiras, "hatarido": d(nap), "projekt_id": pid, "felelos_id": ME["id"]})
 
@@ -417,7 +433,7 @@ def feltolt(pid, tipus, fajl, megj):
 for pid in (P_KOVACS, P_BALOGH, P_DUNA, P_TOTH):
     feltolt(pid, "szerzodes", "Jogaszi_Ugyfel_Epitesi_Szerzodes_HUF.docx", "Vállalkozási szerződés (HUF) – ügyfél")
 for pid in (P_KOVACS, P_DUNA):
-    feltolt(pid, "szerzodes", "Jogaszi_Alvallalkozoi_Szerzodes_HUF.docx", "Alvállalkozói szerződés (HUF) – Mecsek-Tető Zrt.")
+    feltolt(pid, "szerzodes", "Jogaszi_Alvallalkozoi_Szerzodes_HUF.docx", "Alvállalkozói szerződés (HUF) – Tyrell Tető Zrt.")
     feltolt(pid, "egyeb", "TIG_papir_alapu.docx", "Teljesítésigazolás – papír alapú minta")
 feltolt(P_HORVATH, "egyeb", "csaladi_haz_munkatetel_katalogus.xlsx", "Munkatétel-katalógus – az ajánlat alapja")
 feltolt(P_BALOGH, "egyeb", "csaladi_haz_munkatetel_katalogus.xlsx", "Munkatétel-katalógus – költségvetési alap")

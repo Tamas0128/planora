@@ -27,12 +27,12 @@ test("Képernyőképek", async ({ page, request, browser }) => {
   const headers = await api(request);
   const projektek: { id: number; projekt_nev: string }[] = await (await request.get("/api/projektek", { headers })).json();
   const pid = (reszlet: string) => projektek.find((p) => p.projekt_nev.includes(reszlet))!.id;
-  const KOVACS = pid("Kovács–Neményi");
-  const DUNA = pid("Dunakanyar");
-  const HORVATH = pid("Horváth");
-  const TOTH = pid("Tóth");
+  const KOVACS = pid("Batty–Stratton");
+  const DUNA = pid("Wallace");
+  const HORVATH = pid("Stelline");
+  const TOTH = pid("Chew");
   const ugyfelek: { id: number; nev: string }[] = await (await request.get("/api/ugyfelek", { headers })).json();
-  const dunaUgyfel = ugyfelek.find((u) => u.nev.includes("Dunakanyar"))!.id;
+  const dunaUgyfel = ugyfelek.find((u) => u.nev.includes("Wallace"))!.id;
 
   // 1. Belépés (kijelentkezve)
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -58,7 +58,7 @@ test("Képernyőképek", async ({ page, request, browser }) => {
   await shot(page, "05-projektek-terkep");
   await page.getByRole("button", { name: "Lista" }).click(); // alapértelmezett nézet vissza
 
-  // 6–12. Projekt (Dunakanyar): áttekintés, tételek, ütemezés, ajánlat, napló, átadás, dokumentumok
+  // 6–12. Projekt (Wallace): áttekintés, tételek, ütemezés, ajánlat, napló, átadás, dokumentumok
   await page.goto(`/projektek/${DUNA}`);
   await shot(page, "06-projekt-attekintes");
   await page.getByRole("button", { name: "Tételek", exact: true }).click();
@@ -128,7 +128,7 @@ test("Képernyőképek", async ({ page, request, browser }) => {
   // 26. Globális keresés
   await page.goto("/");
   await page.keyboard.press("Control+k");
-  await page.keyboard.type("Mecsek");
+  await page.keyboard.type("Tyrell");
   await page.waitForTimeout(900);
   await page.screenshot({ path: path.join(KEP_DIR, "25-kereses.png") });
   await page.keyboard.press("Escape");
