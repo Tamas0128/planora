@@ -45,7 +45,7 @@ test.describe("Ügyfelek", () => {
 
     await page.getByRole("link", { name: nev }).click();
     page.once("dialog", (d) => d.accept());
-    await page.getByRole("button", { name: "Törlés" }).click();
+    await page.getByRole("button", { name: "Törlés", exact: true }).click();
     await expect(page).toHaveURL(/\/ugyfelek$/);
     await expect(page.locator(`text=${nev}`)).toHaveCount(0);
   });
