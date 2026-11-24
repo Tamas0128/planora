@@ -69,13 +69,13 @@ export default function DashboardPage() {
     return map;
   }, [projektek]);
 
-  const sajatFeladatok = useMemo(() => {
-    if (!feladatok || !me) return [];
+  const sajatOsszes = useMemo(() => {
+    if (!feladatok || !me) return null;
     return feladatok
       .filter((f) => f.felelos_id === me.id)
-      .sort((a, b) => (a.hatarido || "9999").localeCompare(b.hatarido || "9999"))
-      .slice(0, 5);
+      .sort((a, b) => (a.hatarido || "9999").localeCompare(b.hatarido || "9999"));
   }, [feladatok, me]);
+  const sajatFeladatok = useMemo(() => (sajatOsszes ?? []).slice(0, 5), [sajatOsszes]);
 
   const aktivBucket = cashflow?.bucketek[0];
 
@@ -96,7 +96,7 @@ export default function DashboardPage() {
         </div>
         <div className={`${cardCls} p-4`}>
           <div className="text-xs text-[var(--muted)]">Nyitott saját feladat</div>
-          <div className="font-heading text-4xl font-bold leading-tight">{sajatFeladatok.length}</div>
+          <div className="font-heading text-4xl font-bold leading-tight">{sajatOsszes ? sajatOsszes.length : "—"}</div>
         </div>
         <LejartKartya cimke="Lejárt bevétel (ügyfelek tartoznak)" osszeg={osszesito?.lejart_bevetel_osszesen} />
         <LejartKartya cimke="Lejárt kiadás (mi tartozunk)" osszeg={osszesito?.lejart_kiadas_osszesen} />
@@ -165,7 +165,7 @@ export default function DashboardPage() {
               Mind megnyitása
             </Link>
           </div>
-          {!feladatok ? (
+          {!sajatOsszes ? (
             <p className="text-sm text-[var(--muted)]">Betöltés…</p>
           ) : sajatFeladatok.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">Nincs nyitott saját feladat.</p>

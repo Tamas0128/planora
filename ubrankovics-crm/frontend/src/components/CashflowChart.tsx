@@ -222,7 +222,7 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                   strokeWidth={v === 0 ? 1.25 : 1}
                   strokeDasharray={v === 0 ? undefined : "2 4"}
                 />
-                <text x={marginLeft - 10} y={flowY(v)} textAnchor="end" dominantBaseline="middle" fontSize={11} fill={COLOR.mutedInk}>
+                <text x={marginLeft - 10} y={flowY(v)} textAnchor="end" dominantBaseline="middle" fontSize={12} fill={COLOR.mutedInk}>
                   {rovid(v)}
                 </text>
               </g>
@@ -293,7 +293,7 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                   strokeWidth={Math.abs(v) < 0.001 ? 1.25 : 1}
                   strokeDasharray={Math.abs(v) < 0.001 ? undefined : "2 4"}
                 />
-                <text x={marginLeft - 10} y={balanceY(v)} textAnchor="end" dominantBaseline="middle" fontSize={11} fill={COLOR.mutedInk}>
+                <text x={marginLeft - 10} y={balanceY(v)} textAnchor="end" dominantBaseline="middle" fontSize={12} fill={COLOR.mutedInk}>
                   {rovid(v)}
                 </text>
               </g>
@@ -334,7 +334,7 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
                 x={Math.min(minPont.x, width - marginRight - 4)}
                 y={minPont.y + (minPont.y > balanceHeight - 24 ? -12 : 20)}
                 textAnchor={minPont.x > width - 120 ? "end" : "middle"}
-                fontSize={11}
+                fontSize={12}
                 fontWeight={600}
                 fill={minPont.negativ ? COLOR.zaroNegativ : COLOR.mutedInk}
               >
@@ -345,7 +345,7 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
             {todayX !== null && (
               <g>
                 <line x1={todayX} x2={todayX} y1={-gapBetween + 8} y2={balanceHeight} stroke={COLOR.today} strokeWidth={1.5} strokeDasharray="4 3" />
-                <text x={todayX + 5} y={-gapBetween + 18} fontSize={10} fontWeight={600} fill={COLOR.today}>
+                <text x={todayX + 5} y={-gapBetween + 18} fontSize={12} fontWeight={600} fill={COLOR.today}>
                   ma
                 </text>
               </g>
@@ -363,11 +363,11 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
               const ujEv = !elozo || elozo.getFullYear() !== d.getFullYear();
               return (
                 <g key={b.kezdo_datum}>
-                  <text x={cx} y={0} textAnchor="middle" fontSize={11} fill={hoverIdx === i ? COLOR.ink : COLOR.mutedInk} fontWeight={hoverIdx === i ? 600 : 400}>
+                  <text x={cx} y={0} textAnchor="middle" fontSize={12} fill={hoverIdx === i ? COLOR.ink : COLOR.mutedInk} fontWeight={hoverIdx === i ? 600 : 400}>
                     {havi ? HONAP[d.getMonth()] : d.getDate()}
                   </text>
                   {(havi ? ujEv : ujHonap) && (
-                    <text x={cx} y={15} textAnchor="middle" fontSize={11} fontWeight={600} fill={COLOR.ink}>
+                    <text x={cx} y={15} textAnchor="middle" fontSize={12} fontWeight={600} fill={COLOR.ink}>
                       {havi ? d.getFullYear() : `${d.getFullYear() !== new Date().getFullYear() ? d.getFullYear() + " " : ""}${HONAP[d.getMonth()]}`}
                     </text>
                   )}
@@ -388,10 +388,10 @@ export default function CashflowChart({ bucketek }: { bucketek: CashflowBucket[]
             <div className="mb-1.5 font-heading text-sm font-semibold">
               {hovered.kezdo_datum} – {hovered.vege_datum}
             </div>
-            <Row label="Bevétel (tény)" value={huf(Number(hovered.bevetel_teny))} color={COLOR.bevetel} />
-            <Row label="Bevétel (terv)" value={huf(Number(hovered.bevetel_terv))} color={COLOR.bevetel} dim />
-            <Row label="Kiadás (tény)" value={huf(Number(hovered.kiadas_teny))} color={COLOR.kiadas} />
-            <Row label="Kiadás (terv)" value={huf(Number(hovered.kiadas_terv))} color={COLOR.kiadas} dim />
+            <Row label="Számlázott bevétel" value={huf(Number(hovered.bevetel_teny))} color={COLOR.bevetel} />
+            <Row label="Tervezett bevétel" value={huf(Number(hovered.bevetel_terv))} color={COLOR.bevetel} dim />
+            <Row label="Számlázott kiadás" value={huf(Number(hovered.kiadas_teny))} color={COLOR.kiadas} />
+            <Row label="Tervezett kiadás" value={huf(Number(hovered.kiadas_terv))} color={COLOR.kiadas} dim />
             <div className="mt-1.5 flex justify-between gap-4 border-t border-[var(--border)] pt-1.5 text-sm font-semibold" style={{ color: hovered.negativ ? COLOR.zaroNegativ : COLOR.zaro }}>
               <span>Záró</span>
               <span>{huf(Number(hovered.zaro))}</span>

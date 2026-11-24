@@ -19,6 +19,7 @@ function isOverdue(hatarido: string | null | undefined, kesz: boolean): boolean 
 export default function FeladatokPage() {
   const [me, setMe] = useState<UserResponse | null>(null);
   const [feladatok, setFeladatok] = useState<Feladat[]>([]);
+  const [betoltve, setBetoltve] = useState(false);
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [projektek, setProjektek] = useState<ProjektListItem[]>([]);
   const [csakEnyem, setCsakEnyem] = useState(true);
@@ -32,7 +33,7 @@ export default function FeladatokPage() {
   const [projektId, setProjektId] = useState<number | "">("");
 
   function load() {
-    api.listFeladatok().then(setFeladatok).catch(() => {});
+    api.listFeladatok().then((f) => { setFeladatok(f); setBetoltve(true); }).catch(() => setBetoltve(true));
   }
 
   useEffect(() => {
@@ -165,7 +166,8 @@ export default function FeladatokPage() {
             </button>
           </li>
         ))}
-        {lathato.length === 0 && (
+        {!betoltve && <li className="px-3 py-4 text-center text-sm text-[var(--muted)]" role="status">Feladatok betöltése…</li>}
+        {betoltve && lathato.length === 0 && (
           <li className="px-3 py-4 text-center text-sm text-[var(--muted)]">Nincs megjelenítendő feladat.</li>
         )}
       </ul>

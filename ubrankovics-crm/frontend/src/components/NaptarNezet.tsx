@@ -153,7 +153,7 @@ export default function NaptarNezet({ projektId }: { projektId?: number }) {
       <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--border)]" role="grid" aria-label="Hónap naptár">
         <div role="row" className="grid grid-cols-7 gap-px">
           {NAPOK.map((n, i) => (
-            <div key={n} role="columnheader" className={`bg-[var(--card)] py-1.5 text-center text-xs font-semibold uppercase tracking-wide ${i >= 5 ? "text-[var(--muted)]/70" : "text-[var(--muted)]"}`}>
+            <div key={n} role="columnheader" className={`bg-[var(--card)] py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-[var(--muted)]`}>
               {n}
             </div>
           ))}
@@ -193,7 +193,7 @@ export default function NaptarNezet({ projektId }: { projektId?: number }) {
                           ev2.stopPropagation();
                           setReszlet(e);
                         }}
-                        className={`block w-full truncate rounded border px-1 text-left text-xs hover:brightness-95 ${TIPUS_STIL[e.tipus]} ${e.kesz ? "line-through opacity-70" : ""}`}
+                        className={`block w-full truncate rounded border px-1 text-left text-xs text-[var(--foreground)] hover:brightness-95 ${TIPUS_STIL[e.tipus]} ${e.kesz ? "line-through opacity-70" : ""}`}
                       >
                         {e.kezdes === e.vege || k === e.kezdes || d.getDay() === 1 ? rovidCim(e) : " "}
                       </button>

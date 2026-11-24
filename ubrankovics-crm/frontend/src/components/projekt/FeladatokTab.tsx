@@ -65,23 +65,6 @@ export default function FeladatokTab({ projektId }: { projektId: number }) {
     <div className="max-w-3xl space-y-4">
       {error && <div role="alert" className="rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
 
-      <form onSubmit={letrehoz} className="space-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3" aria-label="Új feladat">
-        <input placeholder="Új feladat címe" aria-label="Feladat címe" value={cim} onChange={(e) => setCim(e.target.value)} className={`${inputCls} w-full`} required />
-        <textarea placeholder="Leírás (opcionális)" aria-label="Leírás" value={leiras} onChange={(e) => setLeiras(e.target.value)} className={`${inputCls} w-full`} rows={2} />
-        <div className="flex flex-wrap gap-2">
-          <input type="date" aria-label="Határidő" value={hatarido} onChange={(e) => setHatarido(e.target.value)} className={inputCls} />
-          <select aria-label="Felelős" value={felelosId} onChange={(e) => setFelelosId(e.target.value === "" ? "" : Number(e.target.value))} className={inputCls}>
-            <option value="">Felelős...</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>{u.full_name}</option>
-            ))}
-          </select>
-          <button type="submit" className={btnCls}>
-            <Plus size={14} /> Feladat hozzáadása
-          </button>
-        </div>
-      </form>
-
       <div className="flex items-center justify-between text-sm">
         <span className="text-[var(--muted)]">{nyitott} nyitott feladat</span>
         <label className="flex items-center gap-2">
@@ -126,6 +109,23 @@ export default function FeladatokTab({ projektId }: { projektId: number }) {
         ))}
         {lathato.length === 0 && <li className="px-3 py-4 text-center text-sm text-[var(--muted)]">Ehhez a projekthez még nincs feladat.</li>}
       </ul>
+
+      <form onSubmit={letrehoz} className="space-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3" aria-label="Új feladat">
+        <input placeholder="Új feladat címe" aria-label="Feladat címe" value={cim} onChange={(e) => setCim(e.target.value)} className={`${inputCls} w-full`} required />
+        <textarea placeholder="Leírás (opcionális)" aria-label="Leírás" value={leiras} onChange={(e) => setLeiras(e.target.value)} className={`${inputCls} w-full`} rows={2} />
+        <div className="flex flex-wrap gap-2">
+          <input type="date" aria-label="Határidő" value={hatarido} onChange={(e) => setHatarido(e.target.value)} className={inputCls} />
+          <select aria-label="Felelős" value={felelosId} onChange={(e) => setFelelosId(e.target.value === "" ? "" : Number(e.target.value))} className={inputCls}>
+            <option value="">Felelős...</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{u.full_name}</option>
+            ))}
+          </select>
+          <button type="submit" className={btnCls}>
+            <Plus size={14} /> Feladat hozzáadása
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

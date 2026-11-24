@@ -176,10 +176,10 @@ export default function FelhasznalokPage() {
                   )}
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
-                  <button onClick={() => resetPassword(u)} className="mr-3 text-xs text-[var(--primary)] hover:underline">
+                  <button onClick={() => resetPassword(u)} className="mr-2 inline-flex min-h-11 items-center px-1 text-xs text-[var(--primary)] hover:underline md:min-h-8">
                     Jelszó visszaállítása
                   </button>
-                  <button onClick={() => toggleActive(u)} className="text-xs text-[var(--primary)] hover:underline">
+                  <button onClick={() => toggleActive(u)} className="inline-flex min-h-11 items-center px-1 text-xs text-[var(--primary)] hover:underline md:min-h-8">
                     {u.is_active ? "Letiltás" : "Aktiválás"}
                   </button>
                 </td>

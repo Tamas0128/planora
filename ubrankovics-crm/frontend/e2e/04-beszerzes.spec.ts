@@ -6,15 +6,14 @@ test.describe("Tétel-részletező és beszerzési (RFQ/PO) folyamat", () => {
     const { id } = await createProjekt(page);
     await page.getByRole("button", { name: "Tételek" }).click();
 
-    const munkanemSelect = page.locator("select").first();
-    const munkanemNev = (await munkanemSelect.locator("option").nth(1).textContent())!.trim();
-    await munkanemSelect.selectOption({ index: 1 });
+    const munkanemNev = (await page.locator("#munkanem-lista option").first().getAttribute("value"))!.trim();
+    await page.getByLabel(/^Munkanem/).fill(munkanemNev);
     await page.getByRole("button", { name: "Tétel", exact: true }).click();
 
     await page.getByRole("button", { name: munkanemNev }).click();
 
     await expect(page.getByText("Vállalások")).toBeVisible();
-    await page.getByRole("button", { name: "Vállaló hozzáadása" }).click();
+    await page.getByRole("button", { name: "Vállalkozó hozzáadása" }).click();
     await expect(page.locator("li", { hasText: "Saját" })).toBeVisible();
     await shot(page, `projekt-${id}-tetel-reszletezo`);
 
@@ -30,9 +29,8 @@ test.describe("Tétel-részletező és beszerzési (RFQ/PO) folyamat", () => {
   test("beszerzési igény → ajánlatkérés → ajánlat → kiválasztás → ügyfél ár", async ({ page }) => {
     const { id } = await createProjekt(page);
     await page.getByRole("button", { name: "Tételek" }).click();
-    const munkanemSelect = page.locator("select").first();
-    const munkanemNev = (await munkanemSelect.locator("option").nth(1).textContent())!.trim();
-    await munkanemSelect.selectOption({ index: 1 });
+    const munkanemNev = (await page.locator("#munkanem-lista option").first().getAttribute("value"))!.trim();
+    await page.getByLabel(/^Munkanem/).fill(munkanemNev);
     await page.getByRole("button", { name: "Tétel", exact: true }).click();
     await page.getByRole("button", { name: munkanemNev }).click();
 

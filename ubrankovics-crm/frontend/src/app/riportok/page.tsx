@@ -38,7 +38,7 @@ export default function RiportokPage() {
   }, []);
 
   const maxErtek = useMemo(
-    () => Math.max(1, ...(megoszlas || []).map((m) => Number(m.ertek_osszesen))),
+    () => Math.max(1, ...(megoszlas || []).map((m) => Number(m.tetel_szam))),
     [megoszlas]
   );
 
@@ -49,7 +49,7 @@ export default function RiportokPage() {
       <section className="mb-6">
         <h2 className="mb-2 text-sm font-semibold">Értékesítési állapot</h2>
         <p className="mb-2 text-xs text-[var(--muted)]">
-          Tételek megoszlása szakaszonként, az ügyfélnek kiajánlott érték (bruttó) összegével.
+          Tételek megoszlása szakaszonként: a sáv hossza a tételek számát mutatja, mellette az ügyfélnek kiajánlott érték (bruttó) áll.
         </p>
         {!megoszlas ? (
           <p className="text-sm text-[var(--muted)]">Betöltés…</p>
@@ -62,7 +62,7 @@ export default function RiportokPage() {
                   <div
                     className="h-full rounded-full"
                     style={{
-                      width: `${(Number(m.ertek_osszesen) / maxErtek) * 100}%`,
+                      width: `${(Number(m.tetel_szam) / maxErtek) * 100}%`,
                       backgroundColor: SZAKASZ_COLOR[m.szakasz] || "#999",
                     }}
                   />

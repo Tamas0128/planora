@@ -91,8 +91,8 @@ export default function KommunikacioNaplo({ ugyfelId, erdeklodesId }: { ugyfelId
                     {k.user ? ` · ${k.user.full_name}` : ""}
                   </div>
                 </div>
-                <button onClick={() => remove(k.id)} className="text-[var(--muted)] hover:text-[var(--danger)]" aria-label="Törlés">
-                  <Trash2 size={14} />
+                <button onClick={() => remove(k.id)} className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--muted)] hover:text-[var(--danger)] md:h-8 md:w-8" aria-label={`${label} bejegyzés törlése`}>
+                  <Trash2 size={16} />
                 </button>
               </li>
             );

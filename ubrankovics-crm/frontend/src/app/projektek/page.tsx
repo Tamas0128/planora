@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { LayoutGrid, List, MapPin, Plus, Search } from "lucide-react";
+import { AlertTriangle, LayoutGrid, List, MapPin, Plus, Search } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import AllapotPill from "@/components/AllapotPill";
 import { api, ProjektListItem, ProjektTipus, Ugyfel } from "@/lib/api";
@@ -24,6 +24,15 @@ function huDatum(d?: string | null) {
   return d ? d.replaceAll("-", ".") + "." : null;
 }
 
+function LejartJelveny({ db }: { db?: number }) {
+  if (!db) return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-2 py-0.5 text-xs font-medium text-[var(--danger)]">
+      <AlertTriangle size={12} aria-hidden="true" /> Lejárt számla{db > 1 ? " (" + db + ")" : ""}
+    </span>
+  );
+}
+
 export default function ProjektekPage() {
   const [projektek, setProjektek] = useState<ProjektListItem[]>([]);
   const [ugyfelek, setUgyfelek] = useState<Ugyfel[]>([]);
@@ -39,12 +48,22 @@ export default function ProjektekPage() {
   const [kereses, setKereses] = useState("");
   const [geoUzenet, setGeoUzenet] = useState("");
   const [geoFut, setGeoFut] = useState(false);
+  const [lejart, setLejart] = useState<Map<number, number>>(new Map());
+
+  useEffect(() => {
+    api.getPenzugyiOsszesito().then((o) => {
+      const m = new Map<number, number>();
+      for (const sz of o.lejart_szamlak) m.set(sz.projekt_id, (m.get(sz.projekt_id) || 0) + 1);
+      setLejart(m);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     try {
       const v = localStorage.getItem("projekt-nezet");
       // eslint-disable-next-line react-hooks/set-state-in-effect -- tárolt beállítás betöltése csak kliensen lehetséges (SSR-egyezés)
       if (v === "lista" || v === "kartyak" || v === "terkep") setNezet(v);
+      else if (window.innerWidth < 768) setNezet("kartyak"); // telefonon a kártyanézet az alapértelmezett: a táblázat oszlopai nem férnek ki
     } catch {
       // nincs tárhely: marad a lista
     }
@@ -248,7 +267,10 @@ export default function ProjektekPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <h2 className="font-heading text-base font-semibold leading-snug">{p.projekt_nev}</h2>
-                    <AllapotPill allapot={p.allapot} />
+                    <span className="flex flex-col items-end gap-1">
+                      <AllapotPill allapot={p.allapot} />
+                      <LejartJelveny db={lejart.get(p.id)} />
+                    </span>
                   </div>
                   <div className="space-y-0.5 text-sm">
                     {p.ugyfel_nev && <div>{p.ugyfel_nev}</div>}
@@ -299,7 +321,12 @@ export default function ProjektekPage() {
                   </Link>
                 </td>
                 <td className="px-3 py-2 text-[var(--muted)]">{p.ugyfel_nev || "—"}</td>
-                <td className="px-3 py-2"><AllapotPill allapot={p.allapot} /></td>
+                <td className="px-3 py-2">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <AllapotPill allapot={p.allapot} />
+                    <LejartJelveny db={lejart.get(p.id)} />
+                  </span>
+                </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 w-20 rounded-full bg-[var(--border)]" aria-hidden="true">

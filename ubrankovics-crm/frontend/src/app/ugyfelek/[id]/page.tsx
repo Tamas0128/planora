@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
+import Skeleton from "@/components/Skeleton";
 import EgyediMezok from "@/components/EgyediMezok";
 import KommunikacioNaplo from "@/components/KommunikacioNaplo";
 import UgyfelCimkek from "@/components/UgyfelCimkek";
@@ -65,7 +66,7 @@ export default function UgyfelDetailPage() {
   if (!ugyfel) {
     return (
       <AppLayout>
-        <p className="text-[var(--muted)]">{error || "Betöltés..."}</p>
+        {error ? <p role="alert" className="text-[var(--danger)]">{error}</p> : <Skeleton cimke="Ügyfél betöltése" />}
       </AppLayout>
     );
   }

@@ -22,6 +22,8 @@ import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import Modal from "@/components/Modal";
 import AllapotPill from "@/components/AllapotPill";
+import Skeleton from "@/components/Skeleton";
+import MiKellMost from "@/components/projekt/MiKellMost";
 import AtvetelTab from "@/components/projekt/AtvetelTab";
 import NaploTab from "@/components/projekt/NaploTab";
 import AjanlatTab from "@/components/projekt/AjanlatTab";
@@ -199,15 +201,11 @@ export default function ProjektDetailPage() {
   if (!projekt) {
     return (
       <AppLayout>
-        error ? (
-          <p role="alert" className="text-[var(--danger)]">{error}</p>
+        {error ? (
+          <p role="alert" className="text-[var(--danger)]">{error} <button type="button" onClick={() => window.location.reload()} className="underline">Újrapróbálom</button></p>
         ) : (
-          <div role="status" aria-label="Projekt betöltése" className="space-y-3">
-            <div className="h-7 w-72 max-w-full animate-pulse rounded bg-[var(--border)]" />
-            <div className="h-16 animate-pulse rounded-[var(--radius)] bg-[var(--border)]" />
-            <div className="h-40 animate-pulse rounded-[var(--radius)] bg-[var(--border)]" />
-          </div>
-        )
+          <Skeleton cimke="Projekt betöltése" />
+        )}
       </AppLayout>
     );
   }
@@ -238,7 +236,7 @@ export default function ProjektDetailPage() {
       </div>
 
       {tab === "attekintes" && (
-        <AttekintesTab projekt={projekt} szemelyek={szemelyek} onChange={loadProjekt} />
+        <AttekintesTab projekt={projekt} tetelek={tetelek} szemelyek={szemelyek} onChange={loadProjekt} onNavigate={setTab} />
       )}
       {tab === "tetelek" && (
         <TetelekTab
@@ -284,7 +282,7 @@ export default function ProjektDetailPage() {
 
 function ProjektFejlec({ projekt, tetelek }: { projekt: ProjektDetail; tetelek: ProjektTetel[] }) {
   const szazalek = Math.max(0, Math.min(100, Number(projekt.completion_percent ?? 0)));
-  const keso = tetelek.filter((t) => t.end_date && t.end_date < ma() && t.szakasz !== "kesz").length;
+  const keso = tetelek.filter((t) => t.end_date && t.end_date < ma() && t.szakasz === "kivitelezes").length;
   const kesz = tetelek.filter((t) => t.szakasz === "kesz").length;
   return (
     <div className="mb-4 grid gap-x-8 gap-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center">
@@ -317,12 +315,16 @@ function ProjektFejlec({ projekt, tetelek }: { projekt: ProjektDetail; tetelek: 
 
 function AttekintesTab({
   projekt,
+  tetelek,
   szemelyek,
   onChange,
+  onNavigate,
 }: {
   projekt: ProjektDetail;
+  tetelek: ProjektTetel[];
   szemelyek: Szemely[];
   onChange: () => void;
+  onNavigate: (ful: "tetelek" | "feladatok" | "naplo") => void;
 }) {
   const [szerep, setSzerep] = useState<string>("epitesvezeto");
   const [szemelyId, setSzemelyId] = useState<string>("");
@@ -336,7 +338,11 @@ function AttekintesTab({
   }
 
   return (
-    <div className="grid max-w-3xl grid-cols-1 gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <div className="lg:order-2">
+        <MiKellMost projektId={projekt.id} tetelek={tetelek} onNavigate={onNavigate} />
+      </div>
+      <div className="grid content-start gap-6 lg:order-1">
       <section className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
         <h2 className="mb-2 text-sm font-semibold">Ügyfelek / építési címek</h2>
         <ul className="space-y-1 text-sm">
@@ -416,6 +422,7 @@ function AttekintesTab({
           </button>
         </form>
       </section>
+      </div>
     </div>
   );
 }
@@ -434,6 +441,7 @@ function TetelekTab({
   onChange: () => void;
 }) {
   const [munkanemId, setMunkanemId] = useState("");
+  const [munkanemNev, setMunkanemNev] = useState("");
   const [expanded, setExpanded] = useState<number | null>(null);
   const [kivalasztott, setKivalasztott] = useState<Set<number>>(new Set());
 
@@ -442,6 +450,7 @@ function TetelekTab({
     if (!munkanemId) return;
     await api.createTetel(projektId, { munkanem_id: Number(munkanemId) });
     setMunkanemId("");
+    setMunkanemNev("");
     onChange();
   }
 
@@ -457,18 +466,23 @@ function TetelekTab({
   return (
     <div>
       <form onSubmit={addTetel} className="mb-4 flex max-w-md gap-2">
-        <select
-          value={munkanemId}
-          onChange={(e) => setMunkanemId(e.target.value)}
-          className="flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
-        >
-          <option value="">Munkanem kiválasztása...</option>
+        <input
+          list="munkanem-lista"
+          aria-label="Munkanem (kezdj el gépelni a kereséshez)"
+          placeholder="Munkanem keresése…"
+          value={munkanemNev}
+          onChange={(e) => {
+            setMunkanemNev(e.target.value);
+            const talalat = munkanemek.find((m) => m.nev.toLowerCase() === e.target.value.trim().toLowerCase());
+            setMunkanemId(talalat ? String(talalat.id) : "");
+          }}
+          className="min-w-0 flex-1 rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
+        />
+        <datalist id="munkanem-lista">
           {munkanemek.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nev}
-            </option>
+            <option key={m.id} value={m.nev} />
           ))}
-        </select>
+        </datalist>
         <button type="submit" className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm text-[var(--primary-foreground)]">
           <Plus size={14} /> Tétel
         </button>
@@ -498,7 +512,7 @@ function TetelekTab({
                   {expanded === t.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   {t.munkanem.nev}
                 </span>
-                {t.end_date && t.end_date < ma() && t.szakasz !== "kesz" ? (
+                {t.end_date && t.end_date < ma() && t.szakasz === "kivitelezes" ? (
                   <span className="text-xs font-medium text-[var(--danger)]">Késik · {t.end_date}</span>
                 ) : (
                   t.end_date && <span className="text-xs text-[var(--muted)]">{t.end_date}</span>
@@ -596,7 +610,7 @@ function TetelDetail({
               </option>
             ))}
           </select>
-          <button onClick={saveSzakasz} className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+          <button onClick={saveSzakasz} className="rounded-[var(--radius)] border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
             Mentés
           </button>
         </div>
@@ -647,8 +661,8 @@ function TetelDetail({
               ))}
             </select>
           )}
-          <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
-            Vállaló hozzáadása
+          <button type="submit" className="rounded-[var(--radius)] border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
+            Vállalkozó hozzáadása
           </button>
         </form>
       </div>
@@ -692,7 +706,7 @@ function TetelDetail({
             onChange={(e) => setEsemenyDatum(e.target.value)}
             className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
           />
-          <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+          <button type="submit" className="rounded-[var(--radius)] border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
             Esemény rögzítése
           </button>
         </form>
@@ -731,7 +745,7 @@ function TetelDetail({
             onChange={(e) => setSpecErtek(e.target.value)}
             className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
           />
-          <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+          <button type="submit" className="rounded-[var(--radius)] border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
             Hozzáadás
           </button>
         </form>
@@ -809,7 +823,7 @@ function RendelesSection({
           onChange={(e) => setSzuksegesDatum(e.target.value)}
           className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1"
         />
-        <button type="submit" className="rounded-[var(--radius)] bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+        <button type="submit" className="rounded-[var(--radius)] border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
           Beszerzési igény hozzáadása
         </button>
       </form>
@@ -962,7 +976,7 @@ function RendelesCard({
                 onChange={(e) => setAkHatarido(e.target.value)}
                 className="rounded border border-[var(--border)] px-2 py-1"
               />
-              <button type="submit" className="rounded bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+              <button type="submit" className="rounded border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
                 Ajánlatkérés kiküldése
               </button>
             </form>
@@ -990,7 +1004,7 @@ function RendelesCard({
                     </option>
                   ))}
                 </select>
-                <button type="submit" className="rounded bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+                <button type="submit" className="rounded border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
                   Mentés
                 </button>
               </form>
@@ -1011,7 +1025,7 @@ function RendelesCard({
                   onChange={(e) => setPoSzam(e.target.value)}
                   className="rounded border border-[var(--border)] px-2 py-1"
                 />
-                <button type="button" onClick={savePo} className="rounded bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+                <button type="button" onClick={savePo} className="rounded border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
                   Jóváhagyás
                 </button>
                 {rendeles.jovahagyva && (
@@ -1081,7 +1095,7 @@ function RendelesCard({
                     </option>
                   ))}
                 </select>
-                <button type="submit" className="rounded bg-[var(--primary)] px-2 py-1 text-[var(--primary-foreground)]">
+                <button type="submit" className="rounded border border-[var(--primary)] px-2 py-1 text-[var(--primary)] hover:bg-[var(--color-accent-100)]">
                   Mentés
                 </button>
               </form>
@@ -1228,7 +1242,7 @@ function GanttDiagram({ tetelek, minDate, maxDate, totalDays }: { tetelek: Proje
     <div className="mb-4 overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3" tabIndex={0} role="group" aria-label="Ütemterv Gantt-diagram">
       <div className="min-w-[640px]">
         <div className="mb-1 flex items-end gap-2 text-xs text-[var(--muted)]">
-          <div className="w-36 shrink-0 md:w-44">Időszak: {minDate.replaceAll("-", ".")} – {maxDate.replaceAll("-", ".")}</div>
+          <div className="w-28 shrink-0 md:w-44">Időszak: {minDate.replaceAll("-", ".")} – {maxDate.replaceAll("-", ".")}</div>
           <div className="relative h-5 flex-1">
             {honapok.map((h) => (
               <span key={h.datum} className="absolute bottom-0 -translate-x-px border-l border-[var(--border)] pl-1 leading-5" style={{ left: `${pct(h.datum)}%` }}>
@@ -1249,7 +1263,7 @@ function GanttDiagram({ tetelek, minDate, maxDate, totalDays }: { tetelek: Proje
             const allapot = kesz ? "kész" : keso ? "késik" : "folyamatban";
             return (
               <div key={t.id} className="flex items-center gap-2 text-xs">
-                <div className="w-36 shrink-0 truncate md:w-44" title={t.munkanem.nev}>{t.munkanem.nev}</div>
+                <div className="w-28 shrink-0 truncate md:w-44" title={t.munkanem.nev}>{t.munkanem.nev}</div>
                 <div className="relative h-6 flex-1 rounded bg-[var(--muted-bg)]">
                   {honapok.map((h) => (
                     <span key={h.datum} aria-hidden="true" className="absolute inset-y-0 border-l border-[var(--border)]" style={{ left: `${pct(h.datum)}%` }} />
@@ -1474,6 +1488,7 @@ function TetelUtemezesRow({
       <td className="px-3 py-2 whitespace-nowrap">{tetel.munkanem.nev}</td>
       <td className="px-3 py-2">
         <select
+          aria-label={`${tetel.munkanem.nev}: felelős szerep`}
           value={tetel.felelos_szerep || ""}
           onChange={async (e) => {
             await api.updateTetel(projektId, tetel.id, { felelos_szerep: e.target.value || null });
@@ -1491,6 +1506,7 @@ function TetelUtemezesRow({
       </td>
       <td className="px-3 py-2">
         <select
+          aria-label={`${tetel.munkanem.nev}: kijelölt személy`}
           value={tetel.kijelolt_id || ""}
           onChange={async (e) => {
             await api.updateTetel(projektId, tetel.id, {
@@ -1512,6 +1528,7 @@ function TetelUtemezesRow({
         <input
           type="number"
           min={0}
+          aria-label={`${tetel.munkanem.nev}: időtartam (nap)`}
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
           onBlur={save}
@@ -1522,6 +1539,7 @@ function TetelUtemezesRow({
         <input
           type="number"
           min={0}
+          aria-label={`${tetel.munkanem.nev}: előkészítés (nap)`}
           value={prep}
           onChange={(e) => setPrep(e.target.value)}
           onBlur={save}
@@ -1538,6 +1556,7 @@ function TetelUtemezesRow({
         <div className="flex flex-col gap-1">
           <input
             type="date"
+            aria-label={`${tetel.munkanem.nev}: tényleges kezdés`}
             value={tenylegesKezdes}
             onChange={(e) => setTenylegesKezdes(e.target.value)}
             onBlur={saveTenyleges}
@@ -1545,6 +1564,7 @@ function TetelUtemezesRow({
           />
           <input
             type="date"
+            aria-label={`${tetel.munkanem.nev}: tényleges befejezés`}
             value={tenylegesBefejezes}
             onChange={(e) => setTenylegesBefejezes(e.target.value)}
             onBlur={saveTenyleges}
@@ -1573,6 +1593,7 @@ function TetelUtemezesRow({
         </ul>
         <div className="flex gap-1">
           <select
+            aria-label={`${tetel.munkanem.nev}: új függőség`}
             value={addPrereq}
             onChange={(e) => setAddPrereq(e.target.value)}
             className="flex-1 rounded border border-[var(--border)] px-1 py-0.5 text-xs"
@@ -1798,8 +1819,7 @@ function EmailKuldesPanel({ projektId, tetelIds }: { projektId: number; tetelIds
     <div className="mt-6 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4">
       <h3 className="mb-2 font-heading font-semibold">Dokumentum / levél küldése</h3>
       <p className="mb-3 text-xs text-[var(--muted)]">
-        Jelöld ki a tétel(eke)t fent a listában, válaszd ki a sablont, és küldd el. Az e-mail dev módban
-        Mailpit-re megy (nem valódi címre).
+        Jelöld ki a tétel(eke)t fent a listában, válaszd ki a sablont, és küldd el. Küldés előtt ellenőrizd a címzettet.
       </p>
       <form onSubmit={kuldes} className="grid max-w-xl grid-cols-1 gap-2">
         <select

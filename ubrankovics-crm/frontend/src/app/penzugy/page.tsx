@@ -184,12 +184,12 @@ function CashflowTab() {
           <span className="mb-1 block text-[var(--muted)]">Időszak vége</span>
           <input type="date" value={ig} min={tol} onChange={(e) => setIg(e.target.value)} className={inputCls} />
         </label>
-        <label className="text-sm">
+        <label className="min-w-0 max-w-full text-sm">
           <span className="mb-1 block text-[var(--muted)]">Projekt</span>
           <select
             value={projektId}
             onChange={(e) => setProjektId(e.target.value === "" ? "" : Number(e.target.value))}
-            className={inputCls}
+            className={`${inputCls} max-w-full`}
           >
             <option value="">Összes (cégszint)</option>
             {projektek.map((p) => (
@@ -253,6 +253,9 @@ function CashflowTab() {
         <div className="mb-4">
           <CashflowChart bucketek={data.bucketek} />
         </div>
+        <p className="mb-3 text-xs text-[var(--muted)]">
+          Számlázott: már kiállított vagy beérkezett számla, amely még nincs kifizetve. A lejárt, ki nem fizetett számlák az első időszakban szerepelnek, mert a pénzmozgás még hátravan. Tervezett: szerződés-részlet vagy jóváhagyott rendelés alapján várható tétel.
+        </p>
         <div tabIndex={0} className={`${cardCls} overflow-x-auto`}>
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--border)] text-left text-[var(--muted)]">
@@ -260,10 +263,10 @@ function CashflowTab() {
                 <th className="px-2 py-2"></th>
                 <th className="px-2 py-2">Időszak</th>
                 <th className="px-2 py-2 text-right">Nyitó</th>
-                <th className="px-2 py-2 text-right">Bevétel (tény)</th>
-                <th className="px-2 py-2 text-right">Bevétel (terv)</th>
-                <th className="px-2 py-2 text-right">Kiadás (tény)</th>
-                <th className="px-2 py-2 text-right">Kiadás (terv)</th>
+                <th className="px-2 py-2 text-right">Számlázott bevétel</th>
+                <th className="px-2 py-2 text-right">Tervezett bevétel</th>
+                <th className="px-2 py-2 text-right">Számlázott kiadás</th>
+                <th className="px-2 py-2 text-right">Tervezett kiadás</th>
                 <th className="px-2 py-2 text-right">Záró</th>
               </tr>
             </thead>
