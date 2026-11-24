@@ -78,7 +78,7 @@ test("Képernyőképek", async ({ page, request, browser }) => {
   await shot(page, "30-projekt-beallitasok", { full: true });
 
   await page.goto(`/projektek/${HORVATH}`);
-  await page.getByRole("button", { name: "Ügyfélajánlat", exact: true }).click();
+  await page.getByRole("button", { name: "Szerződés", exact: true }).click();
   await shot(page, "09-projekt-ajanlat");
 
   await page.goto(`/projektek/${TOTH}`);

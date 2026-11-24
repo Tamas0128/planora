@@ -5,6 +5,7 @@ test.describe("Tétel-részletező és beszerzési (RFQ/PO) folyamat", () => {
   test("tétel hozzáadása, vállalás, esemény, specifikáció", async ({ page }) => {
     const { id } = await createProjekt(page);
     await page.getByRole("button", { name: "Tételek" }).click();
+    await page.getByRole("button", { name: "Részletes" }).click();
 
     const munkanemNev = (await page.locator("#munkanem-lista option").first().getAttribute("value"))!.trim();
     await page.getByLabel(/^Munkanem/).fill(munkanemNev);
@@ -29,6 +30,7 @@ test.describe("Tétel-részletező és beszerzési (RFQ/PO) folyamat", () => {
   test("beszerzési igény → ajánlatkérés → ajánlat → kiválasztás → ügyfél ár", async ({ page }) => {
     const { id } = await createProjekt(page);
     await page.getByRole("button", { name: "Tételek" }).click();
+    await page.getByRole("button", { name: "Részletes" }).click();
     const munkanemNev = (await page.locator("#munkanem-lista option").first().getAttribute("value"))!.trim();
     await page.getByLabel(/^Munkanem/).fill(munkanemNev);
     await page.getByRole("button", { name: "Tétel", exact: true }).click();

@@ -60,7 +60,7 @@ test.describe("Projekten belüli munka: feladatok, naptár, ütemező-admin", ()
     })).json();
     await request.patch(`/api/ajanlat-verziok/${a.verziok[0].id}/allapot`, { data: { allapot: "elfogadva" }, headers });
     await page.goto(`/projektek/${p.id}`);
-    await page.getByRole("button", { name: "Ügyfélajánlat", exact: true }).click();
+    await page.getByRole("button", { name: "Szerződés", exact: true }).click();
     await page.getByRole("button", { name: "Átemelés a Tételekbe" }).click();
     await page.getByLabel("Egyedi csempézés munkanem").selectOption({ index: 1 });
     await page.getByRole("button", { name: "Átemelés (1 sor)" }).click();
@@ -99,5 +99,33 @@ test.describe("Projekten belüli munka: feladatok, naptár, ütemező-admin", ()
     const almenu = page.getByRole("navigation", { name: "Projektek almenü" });
     await expect(almenu.getByRole("link", { name: "Naptár" })).toBeVisible();
     await expect(page.getByRole("banner").getByRole("button", { name: "Értesítések" })).toBeVisible();
+  });
+});
+
+test.describe("Folyamat-nézet, Szerződés fül, Excel-átvétel", () => {
+  test("Tételek folyamat-mátrix: egy cella állapota lép; a Szerződés fül CR-t és összképet mutat", async ({ page, request }) => {
+    const headers = await auth(request);
+    const p = await (await request.post("/api/projektek", { data: { projekt_nev: `E2E Folyamat ${uniqueSuffix()}` }, headers })).json();
+    const mn = (await (await request.get("/api/munkanemek", { headers })).json())[0];
+    await request.post(`/api/projektek/${p.id}/tetelek`, { data: { munkanem_id: mn.id }, headers });
+    await page.goto(`/projektek/${p.id}`);
+    await page.getByRole("button", { name: "Tételek", exact: true }).click();
+    const cella = page.getByRole("button", { name: new RegExp(`${mn.nev}, Ajánlatkérés: üres`) });
+    await cella.click();
+    await expect(page.getByRole("button", { name: new RegExp(`${mn.nev}, Ajánlatkérés: folyamatban`) })).toBeVisible();
+
+    await request.post(`/api/projektek/${p.id}/ajanlatok`, { data: { cim: "Alap", sorok: [{ megnevezes: "x", mennyiseg: 1, egysegar: 1000000 }] }, headers });
+    await request.post(`/api/projektek/${p.id}/ajanlatok`, { data: { cim: "Terasz", cr_azonosito: "CR-1", sorok: [{ megnevezes: "y", mennyiseg: 1, egysegar: 200000 }] }, headers });
+    await page.getByRole("button", { name: "Szerződés", exact: true }).click();
+    await expect(page.getByTestId("szerzodes-osszkep")).toContainText("Teljes szerződéses érték");
+    await expect(page.getByText("Pótmunka CR-1")).toBeVisible();
+  });
+
+  test("Excel-átvétel: üres sablonra érthető hibát ad", async ({ page }) => {
+    await page.goto("/projektek/import");
+    await page.locator('input[type="file"]').setInputFiles("../docs/excel-sablon/Ubrankovics_projekt_alap.xlsx");
+    await page.getByRole("button", { name: "Előnézet" }).click();
+    // a sablonban nincs projektnév: érthető hibát várunk
+    await expect(page.getByRole("alert").filter({ hasText: "kötelező" })).toBeVisible();
   });
 });

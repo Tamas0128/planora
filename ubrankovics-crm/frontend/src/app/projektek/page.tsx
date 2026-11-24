@@ -140,12 +140,17 @@ export default function ProjektekPage() {
     <AppLayout>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Projektek</h1>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]"
-        >
-          <Plus size={16} /> Új projekt
-        </button>
+        <div className="flex items-center gap-2">
+          <Link href="/projektek/import" className="flex min-h-9 items-center rounded-[var(--radius)] border border-[var(--border)] px-3 text-sm">
+            Átvétel Excelből
+          </Link>
+          <button
+            onClick={() => setShowForm((v) => !v)}
+            className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]"
+          >
+            <Plus size={16} /> Új projekt
+          </button>
+        </div>
       </div>
 
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}

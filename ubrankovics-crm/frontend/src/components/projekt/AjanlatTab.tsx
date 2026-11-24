@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useId, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { AjanlatAllapot, AjanlatSor, AjanlatVerzio, api, Munkanem, VevoiAjanlat } from "@/lib/api";
+import { AjanlatAllapot, AjanlatSor, AjanlatVerzio, api, Munkanem, SzerzodesOsszkep, VevoiAjanlat } from "@/lib/api";
 
 const INPUT = "w-full rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm";
 const CARD = "rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4";
@@ -180,7 +180,12 @@ function AjanlatKartya({ a, onChange }: { a: VevoiAjanlat; onChange: () => void 
   return (
     <article className={`${CARD} space-y-3`} aria-label={`Ajánlat: ${a.cim}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold">{a.cim}</h3>
+        <h3 className="flex items-center gap-2 font-semibold">
+          {a.cim}
+          <span className={`rounded-full px-2 py-0.5 text-xs font-normal ${a.cr_azonosito ? "bg-[var(--warning-bg)] text-[var(--warning)]" : "bg-[var(--color-accent-100)] text-[var(--primary)]"}`}>
+            {a.cr_azonosito ? `Pótmunka ${a.cr_azonosito}` : "Alapszerződés (MVP)"}
+          </span>
+        </h3>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="rounded-[var(--radius)] bg-black/5 px-2 py-0.5 text-xs">
             v{utolso.verzio} · {ALLAPOT_LABEL[utolso.allapot]}
@@ -293,12 +298,15 @@ export default function AjanlatTab({ projektId }: { projektId: number }) {
   const [lista, setLista] = useState<VevoiAjanlat[]>([]);
   const [error, setError] = useState("");
   const [cim, setCim] = useState("");
+  const [osszkep, setOsszkep] = useState<SzerzodesOsszkep | null>(null);
+  const [crTipus, setCrTipus] = useState<"alap" | "cr">("alap");
   const [sorok, setSorok] = useState<AjanlatSor[]>([ures()]);
   const [urlapNyitva, setUrlapNyitva] = useState<boolean | null>(null); // null: az első betöltés dönt
   const [betoltve, setBetoltve] = useState(false);
 
   const load = useCallback(() => {
     api.listAjanlatok(projektId).then((l) => { setLista(l); setBetoltve(true); }).catch((e) => setError(e.message));
+    api.getSzerzodesOsszkep(projektId).then(setOsszkep).catch(() => {});
   }, [projektId]);
   useEffect(load, [load]);
 
@@ -306,7 +314,9 @@ export default function AjanlatTab({ projektId }: { projektId: number }) {
     e.preventDefault();
     setError("");
     try {
-      await api.createAjanlat(projektId, { cim, sorok });
+      const crSzam = lista.filter((x) => x.cr_azonosito).length + 1;
+      await api.createAjanlat(projektId, { cim, sorok, cr_azonosito: crTipus === "cr" ? `CR-${crSzam}` : null } as Parameters<typeof api.createAjanlat>[1]);
+      setCrTipus("alap");
       setCim("");
       setSorok([ures()]);
       setUrlapNyitva(false);
@@ -324,7 +334,7 @@ export default function AjanlatTab({ projektId }: { projektId: number }) {
       {error && <div role="alert" className="rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold">Ajánlat az ügyfélnek</h2>
+          <h2 className="text-sm font-semibold">Szerződés és pótmunkák</h2>
           <p className="max-w-xl text-xs text-[var(--muted)]">
             Ezt az árat mi adjuk az ügyfélnek a munkáról. Módosításkor új verzió készül, elfogadás után a sorokat átemelheti a Tételekbe. A beszállítóktól kért árak nem itt, hanem a Tételek fülön, a beszerzési igénynél vannak.
           </p>
@@ -335,9 +345,31 @@ export default function AjanlatTab({ projektId }: { projektId: number }) {
           </button>
         )}
       </div>
+      {osszkep && (osszkep.alap_ajanlat_id || osszkep.crk.length > 0) && (
+        <section aria-label="Szerződéses érték" className="grid gap-2 sm:grid-cols-3" data-testid="szerzodes-osszkep">
+          {[
+            ["Alapszerződés (MVP)", ft(osszkep.alap_netto), osszkep.alap_allapot === "elfogadva" ? "elfogadva" : "még nincs elfogadva"],
+            ["Pótmunkák (CR), elfogadott", `+ ${ft(osszkep.cr_elfogadott_netto)}`, Number(osszkep.cr_fuggo_netto) > 0 ? `+ ${ft(osszkep.cr_fuggo_netto)} válaszra vár` : "nincs függő"],
+            ["Teljes szerződéses érték", ft(osszkep.teljes_netto), "nettó"],
+          ].map(([cim, ertek, megj]) => (
+            <div key={cim} className={`${CARD} p-3`}>
+              <div className="text-xs text-[var(--muted)]">{cim}</div>
+              <div className="font-heading text-lg font-semibold tabular-nums">{ertek}</div>
+              <div className="text-xs text-[var(--muted)]">{megj}</div>
+            </div>
+          ))}
+        </section>
+      )}
       {nyitva && (
         <form onSubmit={create} className={`${CARD} space-y-3`} aria-label="Új ajánlat">
           <h3 className="text-sm font-semibold">Új vevői ajánlat</h3>
+          <div className="space-y-1">
+            <label htmlFor="aj-tipus" className="text-sm font-medium">Mire szól?</label>
+            <select id="aj-tipus" className={INPUT} value={crTipus} onChange={(e) => setCrTipus(e.target.value as "alap" | "cr")}>
+              <option value="alap">Az alapszerződésre (a szerződés alapja)</option>
+              <option value="cr">Pótmunkára (szerződésmódosítás, CR)</option>
+            </select>
+          </div>
           <div className="space-y-1">
             <label htmlFor="aj-cim" className="text-sm font-medium">Ajánlat címe</label>
             <input id="aj-cim" required className={INPUT} value={cim} onChange={(e) => setCim(e.target.value)} />

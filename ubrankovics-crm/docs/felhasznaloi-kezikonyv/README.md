@@ -70,7 +70,7 @@ Ha egy projekthez még nincs térképi pozíció, az oldal alján megjelenik a *
 
 ### 3.4 Egy projekt részletei
 
-A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, Fázisok, Feladatok, Naptár, Ügyfélajánlat, Átadás, Dokumentumok, Beállítások**. A leggyakrabban használtak:
+A projekt oldalán fülek találhatók: **Áttekintés, Tételek, Ütemezés, Fázisok, Feladatok, Naptár, Szerződés, Átadás, Dokumentumok, Beállítások**. A leggyakrabban használtak:
 
 **Áttekintés** – az ügyfél és az építési cím, a projekt szerepkörei (építésvezető, projektfelelős), alapadatok.
 

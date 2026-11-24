@@ -35,6 +35,24 @@ export interface Ugyfel {
   created_at: string;
 }
 
+export interface SzerzodesOsszkep {
+  alap_netto: string | number;
+  alap_ajanlat_id: number | null;
+  alap_allapot: string | null;
+  cr_elfogadott_netto: string | number;
+  cr_fuggo_netto: string | number;
+  teljes_netto: string | number;
+  crk: { ajanlat_id: number; cr_azonosito: string; cim: string; allapot: string; netto: string | number; elfogadott: boolean }[];
+}
+
+export interface ExcelImportEredmeny {
+  projekt_id: number | null;
+  projekt_nev: string;
+  dry_run: boolean;
+  statisztika: { tetelek: number; esemenyek: number; uj_munkanem: number; cr: number; szerepek: number; kihagyva: Record<string, number> };
+  figyelmeztetesek: string[];
+}
+
 export interface UgyfelDokumentum {
   id: number;
   projekt_id: number;
@@ -518,6 +536,7 @@ export interface ProjektTetel {
   potmunka: boolean;
   potmunka_osszeg?: string | null;
   tig?: string | null;
+  cr_azonosito?: string | null;
   varhato_szoveg?: string | null;
   varhato_datum?: string | null;
   szakasz: string;
@@ -848,6 +867,7 @@ export interface VevoiAjanlat {
   id: number;
   projekt_id: number;
   cim: string;
+  cr_azonosito?: string | null;
   created_at: string;
   verziok: AjanlatVerzio[];
 }
@@ -1436,6 +1456,12 @@ export const api = {
     request<VevoiAjanlat>(`/ajanlatok/${ajanlatId}/verziok`, { method: "POST", body: JSON.stringify(body) }),
   atemelAjanlat: (verzioId: number, body: { sorok: { sor_id: number; munkanem_id: number }[]; afa_tipus: string }) =>
     request<{ uj_tetelek: number; uj_igenyek: number; kihagyva: number }>(`/ajanlat-verziok/${verzioId}/atemeles`, { method: "POST", body: JSON.stringify(body) }),
+  getSzerzodesOsszkep: (projektId: number) => request<SzerzodesOsszkep>(`/projektek/${projektId}/szerzodes-osszkep`),
+  importExcel: (file: File, dryRun: boolean) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request<ExcelImportEredmeny>(`/projektek-import/excel?dry_run=${dryRun}`, { method: "POST", body: fd });
+  },
   setAjanlatAllapot: (verzioId: number, allapot: AjanlatAllapot) =>
     request<VevoiAjanlat>(`/ajanlat-verziok/${verzioId}/allapot`, { method: "PATCH", body: JSON.stringify({ allapot }) }),
   deleteAjanlat: (id: number) => request<void>(`/ajanlatok/${id}`, { method: "DELETE" }),

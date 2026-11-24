@@ -23,6 +23,7 @@ import AppLayout from "@/components/AppLayout";
 import Modal from "@/components/Modal";
 import AllapotPill from "@/components/AllapotPill";
 import Skeleton from "@/components/Skeleton";
+import TetelFolyamat from "@/components/projekt/TetelFolyamat";
 import GyorsFeladat from "@/components/projekt/GyorsFeladat";
 import MiKellMost from "@/components/projekt/MiKellMost";
 import AtvetelTab from "@/components/projekt/AtvetelTab";
@@ -150,7 +151,7 @@ const FULEK: [FulId, string][] = [
   ["fazisok", "Fázisok"],
   ["feladatok", "Feladatok"],
   ["naptar", "Naptár"],
-  ["ajanlat", "Ügyfélajánlat"],
+  ["ajanlat", "Szerződés"],
   ["atadas", "Átadás"],
   ["dokumentumok", "Dokumentumok"],
   ["beallitasok", "Beállítások"],
@@ -444,6 +445,7 @@ function TetelekTab({
   const [munkanemNev, setMunkanemNev] = useState("");
   const [expanded, setExpanded] = useState<number | null>(null);
   const [kivalasztott, setKivalasztott] = useState<Set<number>>(new Set());
+  const [nezet, setNezet] = useState<"folyamat" | "reszletes">("folyamat");
 
   async function addTetel(e: FormEvent) {
     e.preventDefault();
@@ -488,7 +490,15 @@ function TetelekTab({
         </button>
       </form>
 
-      <div className="space-y-2">
+      <div role="group" aria-label="Tételek nézete" className="mb-3 flex gap-1 text-sm">
+        {([["folyamat", "Folyamat"], ["reszletes", "Részletes"]] as const).map(([v, l]) => (
+          <button key={v} type="button" aria-pressed={nezet === v} onClick={() => setNezet(v)} className={`min-h-9 rounded-full px-3 ${nezet === v ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "border border-[var(--border)] text-[var(--muted)]"}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+      {nezet === "folyamat" && <TetelFolyamat projektId={projektId} tetelek={tetelek} onChange={onChange} />}
+      <div className={`space-y-2 ${nezet === "folyamat" ? "hidden" : ""}`}>
         {Object.keys(SZAKASZ_LABEL).filter((k) => tetelek.some((t) => t.szakasz === k)).map((k) => (
           <section key={k} aria-label={SZAKASZ_LABEL[k]} className="space-y-2 pb-2">
             <h2 className="flex items-center gap-2 pt-2 text-sm font-semibold">

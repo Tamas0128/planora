@@ -18,6 +18,7 @@ test.describe("Projektek", () => {
     await shot(page, "projekt-letrehozva-attekintes");
 
     await page.getByRole("button", { name: "Tételek" }).click();
+    await page.getByRole("button", { name: "Részletes" }).click();
     await expect(page.getByRole("region", { name: "Ajánlat" })).toBeVisible(); // a tételek szakaszonként csoportosítva
     const tetelSorok = page.getByTitle("Kijelölés levélhez");
     expect(await tetelSorok.count()).toBeGreaterThan(15); // ~20 core + 3 type-specific
