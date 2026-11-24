@@ -20,3 +20,21 @@ def test_atemeles(client, admin_headers):
     t = client.get(f"/api/projektek/{p['id']}/tetelek", headers=admin_headers).json()
     rend = [x for x in t if x["munkanem_id"] == mn["id"]][0]["rendelesek"][0]
     assert float(rend["ugyfel_netto"]) == 50000.0
+
+
+def test_szerzodes_osszkep(client, admin_headers):
+    p = client.post("/api/projektek", json={"projekt_nev": "Összkép"}, headers=admin_headers).json()
+    mk = lambda cim, cr, ar: client.post(
+        f"/api/projektek/{p['id']}/ajanlatok",
+        json={"cim": cim, "cr_azonosito": cr, "sorok": [{"megnevezes": "x", "mennyiseg": 1, "egysegar": ar}]},
+        headers=admin_headers,
+    ).json()
+    alap = mk("Alap", None, 1000)
+    cr1 = mk("Terasz", "CR-1", 200)
+    mk("Világítás", "CR-2", 50)
+    for a in (alap, cr1):
+        client.patch(f"/api/ajanlat-verziok/{a['verziok'][0]['id']}/allapot", json={"allapot": "elfogadva"}, headers=admin_headers)
+    o = client.get(f"/api/projektek/{p['id']}/szerzodes-osszkep", headers=admin_headers).json()
+    assert float(o["alap_netto"]) == 1000 and float(o["cr_elfogadott_netto"]) == 200
+    assert float(o["cr_fuggo_netto"]) == 50 and float(o["teljes_netto"]) == 1200
+    assert [c["cr_azonosito"] for c in o["crk"]] == ["CR-1", "CR-2"]

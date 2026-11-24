@@ -96,6 +96,7 @@ class VevoiAjanlat(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     projekt_id: Mapped[int] = mapped_column(ForeignKey("projektek.id", ondelete="CASCADE"), index=True)
     cim: Mapped[str] = mapped_column(String(255))
+    cr_azonosito: Mapped[str | None] = mapped_column(String(30), nullable=True)  # üres = alapszerződés (MVP), kitöltve = pótmunka (CR)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     verziok: Mapped[list["AjanlatVerzio"]] = relationship(

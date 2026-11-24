@@ -59,7 +59,7 @@ def create_ajanlat(
 ):
     if not db.query(Projekt).get(projekt_id):
         raise HTTPException(status_code=404, detail="Projekt not found")
-    a = VevoiAjanlat(projekt_id=projekt_id, cim=body.cim)
+    a = VevoiAjanlat(projekt_id=projekt_id, cim=body.cim, cr_azonosito=(body.cr_azonosito or None))
     db.add(a)
     db.flush()
     a.verziok = [_uj_verzio(a, body, user)]
@@ -201,3 +201,58 @@ def atemeles(
     log_audit(db, user, "ajanlat", ajanlat.id, "atemeles", f"v{v.verzio}: {uj_igenyek} igény, {uj_tetelek} új tétel")
     db.commit()
     return AtemelesOut(uj_tetelek=uj_tetelek, uj_igenyek=uj_igenyek, kihagyva=kihagyva)
+
+
+# --- Szerződés-összkép: alapszerződés (MVP) + pótmunkák (CR) -------------------------------------
+
+
+class SzerzodesCr(BaseModel):
+    ajanlat_id: int
+    cr_azonosito: str
+    cim: str
+    allapot: str
+    netto: Decimal
+    elfogadott: bool
+
+
+class SzerzodesOsszkep(BaseModel):
+    alap_netto: Decimal
+    alap_ajanlat_id: int | None
+    alap_allapot: str | None
+    cr_elfogadott_netto: Decimal
+    cr_fuggo_netto: Decimal
+    teljes_netto: Decimal
+    crk: list[SzerzodesCr]
+
+
+@router.get("/projektek/{projekt_id}/szerzodes-osszkep", response_model=SzerzodesOsszkep)
+def szerzodes_osszkep(projekt_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    """Az alapszerződés az elfogadott (vagy ennek hiányában a legutóbbi) CR-azonosító nélküli ajánlat;
+    a teljes érték az alap plusz az elfogadott pótmunkák."""
+    if not db.query(Projekt).get(projekt_id):
+        raise HTTPException(status_code=404, detail="Projekt not found")
+    lista = _q(db).filter(VevoiAjanlat.projekt_id == projekt_id).order_by(VevoiAjanlat.id).all()
+    alapok = [a for a in lista if not a.cr_azonosito]
+    alap = next((a for a in alapok if a.verziok and a.verziok[-1].allapot == AjanlatAllapot.ELFOGADVA), None) or (alapok[-1] if alapok else None)
+    alap_v = alap.verziok[-1] if alap and alap.verziok else None
+    crk, elf, fuggo = [], Decimal(0), Decimal(0)
+    for a in lista:
+        if not a.cr_azonosito or not a.verziok:
+            continue
+        v = a.verziok[-1]
+        ok = v.allapot == AjanlatAllapot.ELFOGADVA
+        if ok:
+            elf += v.netto_osszeg
+        elif v.allapot in (AjanlatAllapot.TERVEZET, AjanlatAllapot.ELKULDVE):
+            fuggo += v.netto_osszeg
+        crk.append(SzerzodesCr(ajanlat_id=a.id, cr_azonosito=a.cr_azonosito, cim=a.cim, allapot=v.allapot.value, netto=v.netto_osszeg, elfogadott=ok))
+    alap_netto = alap_v.netto_osszeg if alap_v else Decimal(0)
+    return SzerzodesOsszkep(
+        alap_netto=alap_netto,
+        alap_ajanlat_id=alap.id if alap else None,
+        alap_allapot=alap_v.allapot.value if alap_v else None,
+        cr_elfogadott_netto=elf,
+        cr_fuggo_netto=fuggo,
+        teljes_netto=alap_netto + elf,
+        crk=crk,
+    )

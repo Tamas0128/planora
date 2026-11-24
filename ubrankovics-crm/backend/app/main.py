@@ -28,6 +28,7 @@ from app.api import (
     naplo,
     naptar,
     vevoi_ajanlat,
+    projekt_import,
     projektek,
     riportok,
     sablonfajlok,
@@ -116,6 +117,7 @@ app.include_router(naplo.router, prefix="/api")
 app.include_router(sablonfajlok.router, prefix="/api")
 app.include_router(naptar.router, prefix="/api")
 app.include_router(vevoi_ajanlat.router, prefix="/api")
+app.include_router(projekt_import.router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -388,6 +388,7 @@ class ProjektTetelCreate(BaseModel):
     potmunka: bool = False
     potmunka_osszeg: Optional[Decimal] = None
     tig: Optional[str] = None
+    cr_azonosito: Optional[str] = None
     varhato_szoveg: Optional[str] = None
     varhato_datum: Optional[date] = None
     szakasz: TetelSzakasz = TetelSzakasz.AJANLAT
@@ -562,6 +563,7 @@ class ProjektTetelResponse(BaseModel):
     potmunka: bool
     potmunka_osszeg: Optional[Decimal]
     tig: Optional[str]
+    cr_azonosito: Optional[str] = None
     varhato_szoveg: Optional[str]
     varhato_datum: Optional[date]
     szakasz: TetelSzakasz

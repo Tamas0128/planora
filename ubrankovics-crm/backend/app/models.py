@@ -440,6 +440,7 @@ class ProjektTetel(Base):
         ForeignKey("dokumentumok.id"), nullable=True
     )
     tig: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    cr_azonosito: Mapped[str | None] = mapped_column(String(30), nullable=True)
     varhato_szoveg: Mapped[str | None] = mapped_column(String(255), nullable=True)
     varhato_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
     szakasz: Mapped[TetelSzakasz] = mapped_column(Enum(TetelSzakasz), default=TetelSzakasz.AJANLAT)

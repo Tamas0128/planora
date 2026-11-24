@@ -118,6 +118,7 @@ class AjanlatVerzioIn(BaseModel):
 
 class AjanlatCreate(AjanlatVerzioIn):
     cim: str = Field(min_length=1)
+    cr_azonosito: str | None = None  # üres = alapszerződés (MVP)
 
 
 class AjanlatAllapotUpdate(BaseModel):
@@ -141,6 +142,7 @@ class AjanlatResponse(BaseModel):
     id: int
     projekt_id: int
     cim: str
+    cr_azonosito: str | None = None
     created_at: datetime
     verziok: list[AjanlatVerzioResponse]
 
