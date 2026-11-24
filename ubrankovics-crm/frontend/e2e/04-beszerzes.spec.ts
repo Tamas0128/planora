@@ -44,12 +44,12 @@ test.describe("Tétel-részletező és beszerzési (RFQ/PO) folyamat", () => {
     await page.locator("button", { hasText: megnevezes }).click();
     await shot(page, `projekt-${id}-beszerzesi-igeny`);
 
-    await page.getByPlaceholder("Cimzett neve").fill("Teszt Beszállító Kft.");
+    await page.getByPlaceholder("Beszállító neve").fill("Teszt Beszállító Kft.");
     await page.getByRole("button", { name: "Ajánlatkérés kiküldése" }).click();
     await expect(page.locator("text=Teszt Beszállító Kft.")).toBeVisible();
 
     await page.getByPlaceholder("Nettó").first().fill("100000");
-    await page.getByRole("button", { name: "+ Ajánlat" }).click();
+    await page.getByRole("button", { name: "+ Beszállítói ajánlat" }).click();
     await expect(page.locator("text=/127\\s*000|100\\s*000/").first()).toBeVisible();
     await shot(page, `projekt-${id}-ajanlat-beerkezett`);
 

@@ -150,7 +150,7 @@ const FULEK: [FulId, string][] = [
   ["fazisok", "Fázisok"],
   ["feladatok", "Feladatok"],
   ["naptar", "Naptár"],
-  ["ajanlat", "Ajánlat"],
+  ["ajanlat", "Ügyfélajánlat"],
   ["atadas", "Átadás"],
   ["dokumentumok", "Dokumentumok"],
   ["beallitasok", "Beállítások"],
@@ -933,15 +933,16 @@ function RendelesCard({
       <div className="mt-1 flex flex-wrap gap-3 text-xs text-[var(--muted)]">
         <span>Beszállító: {rendeles.beszallito || "—"}</span>
         <span>
-          Beszerzési ár: {rendeles.beszerzesi_brutto ? `${Number(rendeles.beszerzesi_brutto).toLocaleString("hu-HU")} Ft` : "—"}
+          Beszerzési ár (amit mi fizetünk): {rendeles.beszerzesi_brutto ? `${Number(rendeles.beszerzesi_brutto).toLocaleString("hu-HU")} Ft` : "—"}
         </span>
-        <span>Ügyfél ár: {rendeles.ugyfel_brutto ? `${Number(rendeles.ugyfel_brutto).toLocaleString("hu-HU")} Ft` : "—"}</span>
+        <span>Ügyfélnek (amit ő fizet): {rendeles.ugyfel_brutto ? `${Number(rendeles.ugyfel_brutto).toLocaleString("hu-HU")} Ft` : "—"}</span>
       </div>
 
       {open && (
         <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[var(--border)] pt-2 md:grid-cols-2">
           <div>
-            <h4 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">Ajánlatkérések</h4>
+            <h4 className="text-xs font-semibold uppercase text-[var(--muted)]">Árkérés a beszállítóktól</h4>
+            <p className="mb-2 text-xs text-[var(--muted)]">Mi kérünk árat beszállítótól erre az anyagra. A kapott árat rögzítse, legfeljebb kettőt, és válassza ki a nyertest.</p>
             <ul className="mb-2 space-y-2">
               {rendeles.ajanlatkeresek.map((ak) => (
                 <AjanlatkeresRow
@@ -959,7 +960,7 @@ function RendelesCard({
             </ul>
             <form onSubmit={addAjanlatkeres} className="flex flex-col gap-1">
               <input
-                placeholder="Cimzett neve"
+                placeholder="Beszállító neve"
                 value={akCimzettNev}
                 onChange={(e) => setAkCimzettNev(e.target.value)}
                 className="rounded border border-[var(--border)] px-2 py-1"
@@ -984,7 +985,8 @@ function RendelesCard({
 
           <div className="space-y-3">
             <div>
-              <h4 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">Ügyfélnek kiajánlott ár</h4>
+              <h4 className="text-xs font-semibold uppercase text-[var(--muted)]">Ár az ügyfélnek</h4>
+              <p className="mb-1 text-xs text-[var(--muted)]">Ezt az árat számoljuk fel az ügyfélnek erre az anyagra (a beszerzési ártól független).</p>
               <form onSubmit={saveUgyfelAr} className="flex flex-wrap items-end gap-2">
                 <input
                   type="number"
@@ -1205,7 +1207,7 @@ function AjanlatkeresRow({
                 ))}
               </select>
               <button type="submit" className="rounded border border-[var(--border)] px-1 py-0.5 text-xs">
-                + Ajánlat
+                + Beszállítói ajánlat
               </button>
             </form>
           </li>

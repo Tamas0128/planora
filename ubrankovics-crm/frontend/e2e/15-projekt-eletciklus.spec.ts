@@ -58,7 +58,7 @@ test.describe("Projekt életciklus", () => {
   test("Vevői ajánlat: új verzió és változás-összehasonlítás", async ({ page, request }) => {
     const p = await ujProjekt(request);
     await page.goto(`/projektek/${p.id}`);
-    await page.getByRole("button", { name: "Ajánlat", exact: true }).click();
+    await page.getByRole("button", { name: "Ügyfélajánlat", exact: true }).click();
 
     await page.getByLabel("Ajánlat címe").fill("Családi ház");
     await page.getByLabel("Megnevezés").fill("Alapozás");

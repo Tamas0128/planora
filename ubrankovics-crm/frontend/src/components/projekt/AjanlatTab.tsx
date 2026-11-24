@@ -323,7 +323,12 @@ export default function AjanlatTab({ projektId }: { projektId: number }) {
     <div className="max-w-3xl space-y-4">
       {error && <div role="alert" className="rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Vevői ajánlatok</h2>
+        <div>
+          <h2 className="text-sm font-semibold">Ajánlat az ügyfélnek</h2>
+          <p className="max-w-xl text-xs text-[var(--muted)]">
+            Ezt az árat mi adjuk az ügyfélnek a munkáról. Módosításkor új verzió készül, elfogadás után a sorokat átemelheti a Tételekbe. A beszállítóktól kért árak nem itt, hanem a Tételek fülön, a beszerzési igénynél vannak.
+          </p>
+        </div>
         {!nyitva && (
           <button onClick={() => setUrlapNyitva(true)} aria-expanded={false} className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]">
             <Plus size={14} /> Új ajánlat

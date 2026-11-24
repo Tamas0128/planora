@@ -60,7 +60,7 @@ test.describe("Projekten belüli munka: feladatok, naptár, ütemező-admin", ()
     })).json();
     await request.patch(`/api/ajanlat-verziok/${a.verziok[0].id}/allapot`, { data: { allapot: "elfogadva" }, headers });
     await page.goto(`/projektek/${p.id}`);
-    await page.getByRole("button", { name: "Ajánlat", exact: true }).click();
+    await page.getByRole("button", { name: "Ügyfélajánlat", exact: true }).click();
     await page.getByRole("button", { name: "Átemelés a Tételekbe" }).click();
     await page.getByLabel("Egyedi csempézés munkanem").selectOption({ index: 1 });
     await page.getByRole("button", { name: "Átemelés (1 sor)" }).click();
