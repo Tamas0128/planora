@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppLayout from "@/components/AppLayout";
+import RadialAllapotDiagram from "@/components/RadialAllapotDiagram";
 import {
   CashflowRolling,
   Feladat,
@@ -20,6 +21,14 @@ const ALLAPOT_LABEL: Record<string, string> = {
   szerzodott: "Szerződött",
   kivitelezes: "Kivitelezés",
   lezart: "Lezárt",
+};
+
+const ALLAPOT_SZIN: Record<string, string> = {
+  uj: "#3a5668",
+  ajanlat: "var(--warning)",
+  szerzodott: "var(--critical)",
+  kivitelezes: "var(--primary)",
+  lezart: "var(--muted)",
 };
 
 function huf(v: string | number | null | undefined) {
@@ -104,25 +113,15 @@ export default function DashboardPage() {
           {!projektMegoszlas ? (
             <p className="text-sm text-[var(--muted)]">Betöltés…</p>
           ) : (
-            <ul className="space-y-2.5 text-sm">
-              {Object.entries(ALLAPOT_LABEL).map(([v, l]) => (
-                <li key={v} className="space-y-1">
-                  <div className="flex justify-between">
-                    <span>{l}</span>
-                    <span className="font-medium">{projektMegoszlas.get(v) || 0}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-[var(--border)]" aria-hidden="true">
-                    <div
-                      className="bar-grow h-full w-full rounded-full bg-[var(--primary)]"
-                      style={{
-                        "--w": (projektMegoszlas.get(v) || 0) / Math.max(1, projektek?.length || 1),
-                        animationDelay: `${Object.keys(ALLAPOT_LABEL).indexOf(v) * 50}ms`,
-                      } as React.CSSProperties}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <RadialAllapotDiagram
+              osszes={projektek?.length || 0}
+              sorok={Object.entries(ALLAPOT_LABEL).map(([v, l]) => ({
+                kulcs: v,
+                cimke: l,
+                ertek: projektMegoszlas.get(v) || 0,
+                szin: ALLAPOT_SZIN[v],
+              }))}
+            />
           )}
         </div>
 
