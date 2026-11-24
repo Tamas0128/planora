@@ -214,14 +214,48 @@ export default function ProjektDetailPage() {
   return (
     <AppLayout>
       <Morzsa elemek={[{ cimke: "Projektek", href: "/projektek" }, { cimke: projekt.projekt_nev, href: `/projektek/${projektId}` }, { cimke: FULEK.find(([t]) => t === tab)?.[1] ?? "" }]} />
-      <h1 className="mb-2 text-xl font-semibold">{projekt.projekt_nev}</h1>
+      <h1 className="mb-2 line-clamp-2 text-xl font-semibold">{projekt.projekt_nev}</h1>
       <ProjektFejlec projekt={projekt} tetelek={tetelek} />
       {error && <div className="mb-4 rounded-[var(--radius)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div>}
 
+      {/* Telefonon két szint: előbb a szakasz, alatta a szakasz fülei; asztalon egy sor, szakaszhatárokkal. */}
+      <div className="mb-4 md:hidden">
+        <div role="group" aria-label="Projekt szakasza" className="grid grid-cols-5 gap-1">
+          {FUL_CSOPORTOK.map((g) => {
+            const aktiv = g.fulek.some(([t]) => t === tab);
+            return (
+              <button
+                key={g.cimke}
+                type="button"
+                aria-pressed={aktiv}
+                onClick={() => setTab(g.fulek[0][0])}
+                className={`min-h-11 truncate rounded-[var(--radius)] px-1 text-xs font-medium ${aktiv ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "border border-[var(--border)] bg-[var(--card)] text-[var(--muted)]"}`}
+              >
+                {g.cimke}
+              </button>
+            );
+          })}
+        </div>
+        {(FUL_CSOPORTOK.find((g) => g.fulek.some(([t]) => t === tab))?.fulek.length ?? 0) > 1 && (
+          <div role="group" aria-label="Szakasz fülei" className="mt-2 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
+            {FUL_CSOPORTOK.find((g) => g.fulek.some(([t]) => t === tab))!.fulek.map(([t, label]) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                aria-pressed={tab === t}
+                className={`min-h-11 shrink-0 whitespace-nowrap px-3 text-sm font-medium ${tab === t ? "border-b-2 border-[var(--primary)] text-[var(--primary)]" : "text-[var(--muted)]"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <div
         role="group"
         aria-label="Projekt szakaszai"
-        className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)] [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] md:[mask-image:none]"
+        className="mb-4 hidden gap-1 overflow-x-auto border-b border-[var(--border)] md:flex"
       >
         {FUL_CSOPORTOK.map((g) => (
           <div key={g.cimke} className="flex shrink-0 gap-1 border-l border-[var(--border)] pl-1 first:border-l-0 first:pl-0">
@@ -285,6 +319,7 @@ export default function ProjektDetailPage() {
       {tab === "dokumentumok" && (
         <DokumentumokTab projektId={projektId} dokumentumok={dokumentumok} onChange={loadDokumentumok} />
       )}
+      <div className="h-20" aria-hidden="true" />
       <GyorsFeladat projektId={projektId} onCreated={() => setFeladatVerzio((v) => v + 1)} />
     </AppLayout>
   );
@@ -295,12 +330,12 @@ function ProjektFejlec({ projekt, tetelek }: { projekt: ProjektDetail; tetelek: 
   const keso = tetelek.filter((t) => t.end_date && t.end_date < ma() && t.szakasz === "kivitelezes").length;
   const kesz = tetelek.filter((t) => t.szakasz === "kesz").length;
   return (
-    <div className="mb-4 grid gap-x-8 gap-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-4 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="mb-4 grid grid-cols-2 gap-x-6 gap-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center sm:gap-x-8 sm:gap-y-3 sm:p-4">
+      <div className="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1">
         <AllapotPill allapot={projekt.allapot} />
         <span className="text-xs text-[var(--muted)]">{projekt.utemezes_aktiv ? "Ütemező aktív" : "Ütemező kikapcsolva"}</span>
       </div>
-      <div className="min-w-0">
+      <div className="col-span-2 min-w-0 sm:col-span-1">
         <div className="mb-1 flex justify-between text-xs text-[var(--muted)]">
           <span>Készültség · {kesz}/{tetelek.length} tétel kész</span>
           <span className="tabular-nums">{Math.round(szazalek)}%</span>
@@ -1506,7 +1541,7 @@ function TetelUtemezesRow({
           <GripVertical size={14} />
         </button>
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">{tetel.munkanem.nev}</td>
+      <td className="sticky left-0 z-10 bg-[var(--card)] px-3 py-2 whitespace-nowrap md:static">{tetel.munkanem.nev}</td>
       <td className="px-3 py-2">
         <select
           aria-label={`${tetel.munkanem.nev}: felelős szerep`}
@@ -1843,7 +1878,7 @@ function EmailKuldesPanel({ projektId, tetelIds }: { projektId: number; tetelIds
         Jelöld ki a tétel(eke)t fent a listában, válaszd ki a sablont, és küldd el. Küldés előtt ellenőrizd a címzettet.
       </p>
       <form onSubmit={kuldes} className="grid max-w-xl grid-cols-1 gap-2">
-        <select
+        <select aria-label="Küldendő dokumentum sablonja"
           value={tipus}
           onChange={(e) => setTipus(e.target.value)}
           className="rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm"
@@ -2064,7 +2099,7 @@ function DokumentumokTab({
           </li>
         ))}
         {dokumentumok.length === 0 && (
-          <li className="px-3 py-4 text-center text-sm text-[var(--muted)]">Nincs még feltöltött dokumentum.</li>
+          <li className="px-3 py-6 text-center text-sm text-[var(--muted)]">Még nincs dokumentum. A fenti gombbal tölthetsz fel szerződést, tervrajzot vagy fotót.</li>
         )}
       </ul>
     </div>

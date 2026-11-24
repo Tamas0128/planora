@@ -182,7 +182,7 @@ function AjanlatKartya({ a, onChange }: { a: VevoiAjanlat; onChange: () => void 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 font-semibold">
           {a.cim}
-          <span className={`rounded-full px-2 py-0.5 text-xs font-normal ${a.cr_azonosito ? "bg-[var(--warning-bg)] text-[var(--warning)]" : "bg-[var(--color-accent-100)] text-[var(--primary)]"}`}>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-normal ${a.cr_azonosito ? "bg-[var(--warning-bg)] text-[var(--warning-fg)]" : "bg-[var(--color-accent-100)] text-[var(--primary)]"}`}>
             {a.cr_azonosito ? `Pótmunka ${a.cr_azonosito}` : "Alapszerződés (MVP)"}
           </span>
         </h3>

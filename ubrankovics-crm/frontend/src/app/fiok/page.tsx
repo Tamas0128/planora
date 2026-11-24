@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import Morzsa from "@/components/Morzsa";
 import QrKod from "@/components/QrKod";
 import { api, UserResponse } from "@/lib/api";
 
@@ -54,6 +55,7 @@ export default function FiokPage() {
 
   return (
     <AppLayout>
+      <Morzsa elemek={[{ cimke: "Fiókom" }]} />
       <h1 className="mb-4 text-xl font-semibold">Fiókom</h1>
       {me && (
         <p className="mb-4 text-sm text-[var(--muted)]">

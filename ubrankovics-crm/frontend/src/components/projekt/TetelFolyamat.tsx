@@ -19,7 +19,7 @@ const KOVETKEZO: Record<string, string | null> = { "": "folyamatban", nyitott: "
 const MEGJELENIT: Record<string, { szoveg: string; cls: string }> = {
   "": { szoveg: "·", cls: "text-[var(--muted)]" },
   nyitott: { szoveg: "nyitott", cls: "text-[var(--muted)]" },
-  folyamatban: { szoveg: "folyamatban", cls: "bg-[var(--warning-bg)] text-[var(--warning)] px-1.5 rounded-full" },
+  folyamatban: { szoveg: "folyamatban", cls: "bg-[var(--warning-bg)] text-[var(--warning-fg)] px-1.5 rounded-full" },
   kesz: { szoveg: "igen", cls: "text-[var(--positive)] font-medium" },
   nem_relevans: { szoveg: "–", cls: "text-[var(--muted)]" },
 };

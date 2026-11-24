@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import { huDatum } from "@/lib/datum";
 import { ALLAPOT_LABEL, ALLAPOT_SZIN } from "@/components/AllapotPill";
 import RadialAllapotDiagram from "@/components/RadialAllapotDiagram";
 import {
@@ -81,7 +82,8 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <h1 className="text-xl font-semibold">Kezdőlap{me ? ` — ${me.full_name}` : ""}</h1>
+      <h1 className="text-xl font-semibold">Kezdőlap</h1>
+      {me && <p className="mb-2 text-sm text-[var(--muted)]">Üdv, {me.full_name}.</p>}
 
       {aktivBucket?.negativ && (
         <div className="mb-4 rounded-[var(--radius)] border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">
@@ -90,6 +92,8 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <LejartKartya cimke="Lejárt bevétel (ügyfelek tartoznak)" osszeg={osszesito?.lejart_bevetel_osszesen} />
+        <LejartKartya cimke="Lejárt kiadás (mi tartozunk)" osszeg={osszesito?.lejart_kiadas_osszesen} />
         <div className={`${cardCls} p-4`}>
           <div className="text-xs text-[var(--muted)]">Projektek összesen</div>
           <div className="font-heading text-4xl font-bold leading-tight">{projektek ? projektek.length : "—"}</div>
@@ -98,8 +102,6 @@ export default function DashboardPage() {
           <div className="text-xs text-[var(--muted)]">Nyitott saját feladat</div>
           <div className="font-heading text-4xl font-bold leading-tight">{sajatOsszes ? sajatOsszes.length : "—"}</div>
         </div>
-        <LejartKartya cimke="Lejárt bevétel (ügyfelek tartoznak)" osszeg={osszesito?.lejart_bevetel_osszesen} />
-        <LejartKartya cimke="Lejárt kiadás (mi tartozunk)" osszeg={osszesito?.lejart_kiadas_osszesen} />
       </div>
 
       {osszesito && osszesito.lejart_szamlak.length > 0 && (
@@ -125,7 +127,7 @@ export default function DashboardPage() {
                       {s.projekt_nev}
                     </Link>
                     <span className="block text-xs text-[var(--muted)]">
-                      {s.forras_tipus === "ugyfel_szamla" ? "Bevétel" : "Kiadás"} · esedékes: {s.esedekesseg}
+                      {s.forras_tipus === "ugyfel_szamla" ? "Bevétel" : "Kiadás"} · esedékes: {huDatum(s.esedekesseg)}
                     </span>
                   </span>
                   <span className="font-semibold tabular-nums text-[var(--danger)]">{huf(s.hatralek)}</span>
@@ -176,7 +178,7 @@ export default function DashboardPage() {
                   <span>{f.cim}</span>
                   {f.hatarido && (
                     <span className={isOverdue(f.hatarido) ? "font-semibold text-[var(--danger)]" : "text-[var(--muted)]"}>
-                      {f.hatarido}
+                      {huDatum(f.hatarido)}
                     </span>
                   )}
                 </li>
@@ -192,7 +194,7 @@ export default function DashboardPage() {
         </Link>
         <span className="text-[var(--muted)]">·</span>
         <Link href="/penzugy" className="text-[var(--primary)] hover:underline">
-          Cash flow előrejelzés →
+          Teljes cash flow →
         </Link>
       </div>
     </AppLayout>

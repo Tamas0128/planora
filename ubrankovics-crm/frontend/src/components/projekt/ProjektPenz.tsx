@@ -32,7 +32,17 @@ export default function ProjektPenz({ projektId, irany }: { projektId: number; i
       </div>
       {hiba && <p role="alert" className="text-sm text-[var(--danger)]">{hiba}</p>}
       {lista === null && !hiba && <div role="status" aria-label="Betöltés" className="h-20 animate-pulse rounded-[var(--radius)] bg-[var(--border)]" />}
-      {lista && lista.length === 0 && <p className="text-sm text-[var(--muted)]">Ehhez a projekthez még nincs {cim.toLowerCase()}. A számlák a Pénzügy menüben rögzíthetők.</p>}
+      {lista && lista.length === 0 && (
+        <div className="rounded-[var(--radius)] border border-dashed border-[var(--border)] p-4">
+          <p className="text-sm font-medium">Még nincs {cim.toLowerCase()} ehhez a projekthez.</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {irany === "bevetel" ? "Itt jelennek meg az ügyfélnek kiállított számlák és a szerződés tervezett részletei." : "Itt jelennek meg az alvállalkozói számlák és a tervezett kifizetések."}
+          </p>
+          <Link href={`/penzugy?tab=${irany === "bevetel" ? "szerzodesek" : "szamlak"}&projekt=${projektId}`} className="mt-3 inline-flex min-h-11 items-center rounded-[var(--radius)] bg-[var(--primary)] px-4 text-sm font-medium text-[var(--primary-foreground)] md:min-h-9">
+            {irany === "bevetel" ? "Szerződés és számlák kezelése" : "TIG és számla rögzítése"}
+          </Link>
+        </div>
+      )}
       {lista && lista.length > 0 && (
         <div tabIndex={0} className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)]">
           <table className="w-full text-sm">

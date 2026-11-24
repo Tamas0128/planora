@@ -5,7 +5,8 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { AlertTriangle, LayoutGrid, List, MapPin, Plus, Search } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
-import AllapotPill from "@/components/AllapotPill";
+import { huDatum } from "@/lib/datum";
+import AllapotPill, { ALLAPOT_LABEL } from "@/components/AllapotPill";
 import { api, ProjektListItem, ProjektTipus, Ugyfel } from "@/lib/api";
 
 const ProjektekTerkep = dynamic(() => import("@/components/ProjektekTerkep"), {
@@ -19,10 +20,6 @@ const NEZETEK: { v: Nezet; label: string; Icon: typeof List }[] = [
   { v: "kartyak", label: "Kártyák", Icon: LayoutGrid },
   { v: "terkep", label: "Térkép", Icon: MapPin },
 ];
-
-function huDatum(d?: string | null) {
-  return d ? d.replaceAll("-", ".") + "." : null;
-}
 
 function LejartJelveny({ db }: { db?: number }) {
   if (!db) return null;
@@ -46,6 +43,9 @@ export default function ProjektekPage() {
   const [error, setError] = useState("");
   const [nezet, setNezet] = useState<Nezet>("lista");
   const [kereses, setKereses] = useState("");
+  const [allapotSzuro, setAllapotSzuro] = useState<string>("");
+  const [csakLejart, setCsakLejart] = useState(false);
+  const [rendez, setRendez] = useState<"uj" | "atadas" | "nev">("uj");
   const [geoUzenet, setGeoUzenet] = useState("");
   const [geoFut, setGeoFut] = useState(false);
   const [lejart, setLejart] = useState<Map<number, number>>(new Map());
@@ -78,11 +78,20 @@ export default function ProjektekPage() {
     }
   }
 
-  const szurt = projektek.filter((p) => {
-    const q = kereses.trim().toLowerCase();
-    if (!q) return true;
-    return [p.projekt_nev, p.ugyfel_nev, p.epitesi_cim].some((x) => x?.toLowerCase().includes(q));
-  });
+  const allapotok = [...new Set(projektek.map((p) => p.allapot))];
+  const szurt = projektek
+    .filter((p) => {
+      if (allapotSzuro && p.allapot !== allapotSzuro) return false;
+      if (csakLejart && !lejart.get(p.id)) return false;
+      const q = kereses.trim().toLowerCase();
+      if (!q) return true;
+      return [p.projekt_nev, p.ugyfel_nev, p.epitesi_cim].some((x) => x?.toLowerCase().includes(q));
+    })
+    .sort((a, b) => {
+      if (rendez === "nev") return a.projekt_nev.localeCompare(b.projekt_nev, "hu");
+      if (rendez === "atadas") return (a.delivery_date ?? "9999").localeCompare(b.delivery_date ?? "9999");
+      return b.id - a.id;
+    });
   const terkepenNincs = szurt.filter((p) => p.latitude == null || p.longitude == null);
   const feloldhato = terkepenNincs.filter((p) => p.epitesi_cim).length;
 
@@ -138,15 +147,15 @@ export default function ProjektekPage() {
 
   return (
     <AppLayout>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Projektek</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/projektek/import" className="flex min-h-9 items-center rounded-[var(--radius)] border border-[var(--border)] px-3 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/projektek/import" className="flex min-h-11 items-center whitespace-nowrap rounded-[var(--radius)] border border-[var(--border)] px-3 text-sm md:min-h-9">
             Átvétel Excelből
           </Link>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-1 rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-[var(--primary-foreground)]"
+            className="flex min-h-11 items-center gap-1 whitespace-nowrap rounded-[var(--radius)] bg-[var(--primary)] px-3 text-sm font-medium text-[var(--primary-foreground)] md:min-h-9"
           >
             <Plus size={16} /> Új projekt
           </button>
@@ -234,8 +243,33 @@ export default function ProjektekPage() {
             className="w-64 max-w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] py-1.5 pl-8 pr-2 text-sm"
           />
         </label>
+        <label className="flex items-center gap-1.5 text-sm text-[var(--muted)]">
+          Rendezés
+          <select value={rendez} onChange={(e) => setRendez(e.target.value as "uj" | "atadas" | "nev")} className="min-h-9 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] px-2 text-sm text-[var(--foreground)]">
+            <option value="uj">Legújabb elöl</option>
+            <option value="atadas">Átadás szerint</option>
+            <option value="nev">Név szerint</option>
+          </select>
+        </label>
         <span className="text-sm text-[var(--muted)]">{szurt.length} projekt</span>
       </div>
+      {(allapotok.length > 1 || lejart.size > 0) && (
+        <div role="group" aria-label="Szűrés állapot szerint" className="mb-4 flex flex-wrap gap-2">
+          <button type="button" aria-pressed={!allapotSzuro && !csakLejart} onClick={() => { setAllapotSzuro(""); setCsakLejart(false); }} className={`min-h-9 rounded-full border px-3 text-sm ${!allapotSzuro && !csakLejart ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]" : "border-[var(--border)] bg-[var(--card)] text-[var(--muted)]"}`}>
+            Mind
+          </button>
+          {allapotok.map((a) => (
+            <button key={a} type="button" aria-pressed={allapotSzuro === a} onClick={() => setAllapotSzuro(allapotSzuro === a ? "" : a)} className={`min-h-9 rounded-full border px-3 text-sm ${allapotSzuro === a ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]" : "border-[var(--border)] bg-[var(--card)] text-[var(--muted)]"}`}>
+              {ALLAPOT_LABEL[a] || a}
+            </button>
+          ))}
+          {lejart.size > 0 && (
+            <button type="button" aria-pressed={csakLejart} onClick={() => setCsakLejart(!csakLejart)} className={`min-h-9 rounded-full border px-3 text-sm ${csakLejart ? "border-[var(--danger)] bg-[var(--danger)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--danger)]"}`}>
+              Lejárt számlával ({lejart.size})
+            </button>
+          )}
+        </div>
+      )}
 
       {nezet === "terkep" && (
         <div className="space-y-2" data-testid="projekt-terkep">

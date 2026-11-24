@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
+import Morzsa from "@/components/Morzsa";
 import Skeleton from "@/components/Skeleton";
 import EgyediMezok from "@/components/EgyediMezok";
 import KommunikacioNaplo from "@/components/KommunikacioNaplo";
@@ -68,6 +69,7 @@ export default function UgyfelDetailPage() {
 
   return (
     <AppLayout>
+      <Morzsa elemek={[{ cimke: "Ügyfelek", href: "/ugyfelek" }, { cimke: ugyfel.nev }]} />
       <h1 className="mb-4 text-xl font-semibold">{ugyfel.nev}</h1>
       {ugyfel.leiratkozott && (
         <div

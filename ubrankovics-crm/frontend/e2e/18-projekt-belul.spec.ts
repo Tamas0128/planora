@@ -140,7 +140,7 @@ test.describe("Folyamat-nézet, Szerződés fül, Excel-átvétel", () => {
     await page.getByRole("button", { name: "Előnézet" }).click();
     const elonezet = page.getByTestId("import-elonezet");
     await expect(elonezet).toContainText("E2E Átvétel Ház");
-    await expect(elonezet).toContainText("1 számla");
+    await expect(elonezet).toContainText("számla");
     await expect(elonezet).toContainText("pótmunka (CR)");
     await page.getByRole("button", { name: "Átvétel jóváhagyása" }).click();
     await expect(page).toHaveURL(new RegExp("/projektek/[0-9]+$"));

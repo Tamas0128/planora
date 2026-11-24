@@ -86,7 +86,7 @@ test.describe("CRM modulok", () => {
     await expect(page.getByRole("heading", { name: "Auditnapló" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "Művelet" })).toBeVisible();
     await expect(page.locator("tbody tr").first()).toBeVisible();
-    await page.getByLabel("Entitás szűrő").selectOption({ index: 1 });
+    await page.getByLabel("Típus szűrő").selectOption({ index: 1 });
     await expect(page.locator("tbody")).toBeVisible();
   });
 

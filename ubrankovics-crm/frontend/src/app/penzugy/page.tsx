@@ -35,6 +35,11 @@ function huf(v: string | number | null | undefined) {
 
 export default function PenzugyPage() {
   const [tab, setTab] = useState<"cashflow" | "szerzodesek" | "szamlak" | "berkoltseg">("cashflow");
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("tab");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- az URL csak kliensen olvasható
+    if (v === "szerzodesek" || v === "szamlak" || v === "berkoltseg") setTab(v);
+  }, []);
 
   return (
     <AppLayout>
@@ -43,7 +48,7 @@ export default function PenzugyPage() {
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
         {(
           [
-            ["cashflow", "Cash flow előrejelzés"],
+            ["cashflow", "Teljes cash flow"],
             ["szerzodesek", "Szerződések"],
             ["szamlak", "TIG + számlák"],
             ["berkoltseg", "Bérköltség"],
@@ -76,6 +81,26 @@ function useProjektOptions() {
     api.listProjektek().then(setProjektek).catch(() => {});
   }, []);
   return projektek;
+}
+
+/** Amíg nincs projekt kiválasztva: a legfrissebb projektek egy kattintásra, hogy ne üres oldal fogadjon. */
+function ProjektGyorsvalasztas({ projektek, mire, onValaszt }: { projektek: ProjektListItem[]; mire: string; onValaszt: (id: number) => void }) {
+  const friss = [...projektek].sort((a, b) => b.id - a.id).slice(0, 8);
+  return (
+    <section aria-label="Projekt kiválasztása" className={`${cardCls} max-w-xl p-4`}>
+      <h2 className="mb-1 text-sm font-semibold">Melyik projekt {mire}?</h2>
+      <p className="mb-3 text-sm text-[var(--muted)]">Válassz a legutóbbiak közül, vagy a fenti listából.</p>
+      <ul className="flex flex-wrap gap-2">
+        {friss.map((p) => (
+          <li key={p.id}>
+            <button type="button" onClick={() => onValaszt(p.id)} className="min-h-11 rounded-[var(--radius)] border border-[var(--border)] px-3 text-sm hover:border-[var(--primary)] md:min-h-9">
+              {p.projekt_nev}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 function isoDate(d: Date) {
@@ -344,6 +369,11 @@ function CashflowTab() {
 function SzerzodesekTab() {
   const projektek = useProjektOptions();
   const [projektId, setProjektId] = useState<number | "">("");
+  useEffect(() => {
+    const v = Number(new URLSearchParams(window.location.search).get("projekt"));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- az URL csak kliensen olvasható
+    if (Number.isFinite(v) && v > 0) setProjektId(v);
+  }, []);
   const [ugyfelek, setUgyfelek] = useState<Ugyfel[]>([]);
   const [szerzodesek, setSzerzodesek] = useState<Szerzodes[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -419,6 +449,7 @@ function SzerzodesekTab() {
         </label>
       </div>
 
+      {projektId === "" && <ProjektGyorsvalasztas projektek={projektek} mire="szerződéseit nézzük" onValaszt={setProjektId} />}
       {projektId !== "" && (
         <>
           <button onClick={() => setShowForm((s) => !s)} className={`${btnCls} mb-3`}>
@@ -624,6 +655,11 @@ function ReszletRow({
 function SzamlakTab() {
   const projektek = useProjektOptions();
   const [projektId, setProjektId] = useState<number | "">("");
+  useEffect(() => {
+    const v = Number(new URLSearchParams(window.location.search).get("projekt"));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- az URL csak kliensen olvasható
+    if (Number.isFinite(v) && v > 0) setProjektId(v);
+  }, []);
   const [alvallalkozok, setAlvallalkozok] = useState<Alvallalkozo[]>([]);
   const [tigek, setTigek] = useState<Tig[]>([]);
   const [alvSzamlak, setAlvSzamlak] = useState<AlvallalkozoiSzamla[]>([]);
@@ -706,6 +742,7 @@ function SzamlakTab() {
         </label>
       </div>
 
+      {projektId === "" && <ProjektGyorsvalasztas projektek={projektek} mire="TIG-jeit és számláit nézzük" onValaszt={setProjektId} />}
       {projektId !== "" && (
         <div className="space-y-6">
           <section>

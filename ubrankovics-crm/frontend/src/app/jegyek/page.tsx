@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import Morzsa from "@/components/Morzsa";
 import { api, Jegy, JegyAllapot, JegyPrioritas, Ugyfel, UserBrief } from "@/lib/api";
 
 const ALLAPOT: Record<JegyAllapot, string> = {
@@ -81,6 +82,7 @@ export default function JegyekPage() {
 
   return (
     <AppLayout>
+      <Morzsa elemek={[{ cimke: "Projektek", href: "/projektek" }, { cimke: "Jegyek" }]} />
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Ügyfélszolgálati jegyek</h1>
         <div className="flex items-center gap-3">

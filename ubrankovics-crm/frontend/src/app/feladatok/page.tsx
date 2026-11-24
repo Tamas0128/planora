@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import Morzsa from "@/components/Morzsa";
 import { Feladat, ProjektListItem, UserBrief, UserResponse, api } from "@/lib/api";
 
 const inputCls = "rounded-[var(--radius)] border border-[var(--border)] px-2 py-1.5 text-sm";
@@ -81,6 +82,7 @@ export default function FeladatokPage() {
 
   return (
     <AppLayout>
+      <Morzsa elemek={[{ cimke: "Projektek", href: "/projektek" }, { cimke: "Feladatok" }]} />
       <h1 className="mb-4 text-xl font-semibold">Feladatok</h1>
 
       <div className="mb-4 flex flex-wrap items-center gap-4">
