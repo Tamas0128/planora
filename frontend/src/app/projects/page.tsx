@@ -7,6 +7,7 @@ import {
   Calendar,
   ChevronRight,
   Download,
+  FileSpreadsheet,
   Image as ImageIcon,
   Kanban as KanbanIcon,
   LayoutGrid,
@@ -143,6 +144,7 @@ export default function ProjectsPage() {
   const [view, setView] = useState<"list" | "cards" | "map" | "kanban">("kanban");
   const [kanbanBoard, setKanbanBoard] = useState<Record<string, ProjectCard[]>>({});
   const [kanbanLoading, setKanbanLoading] = useState(true);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
 
   function loadProjects() {
     return api.projects()
@@ -212,6 +214,17 @@ export default function ProjectsPage() {
       toast.error(err instanceof Error ? err.message : "Hiba a Gantt-diagram létrehozása során");
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleXlsxExport() {
+    setExportingXlsx(true);
+    try {
+      await api.exportProjects();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba az Excel exportálása során");
+    } finally {
+      setExportingXlsx(false);
     }
   }
 
@@ -293,6 +306,17 @@ export default function ProjectsPage() {
           {exporting ? "Készül…" : `Gantt PDF (${selected.size})`}
         </Button>
       )}
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={exportingXlsx}
+        onClick={handleXlsxExport}
+        className="h-8 gap-1.5 border border-border text-[13px] font-semibold"
+      >
+        <FileSpreadsheet className="size-3.5" />
+        {exportingXlsx ? "Készül…" : "Excel export"}
+      </Button>
+      <div className="h-5 w-px bg-border" />
       <Button size="sm" onClick={() => setShowNew(true)} className="h-8 gap-1.5 text-[13px] font-semibold">
         <Plus className="size-3.5" /> Új projekt
       </Button>

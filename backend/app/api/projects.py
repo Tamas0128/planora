@@ -1,4 +1,9 @@
+from io import BytesIO
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.documents import get_s3_client
@@ -9,8 +14,10 @@ from app.models import (
     Activity,
     ActivityDependency,
     ActivityStatus,
+    BUILDING_TYPE_LABELS,
     Document,
     Favorite,
+    PROJECT_STATUS_LABELS,
     Project,
     ProjectStatus,
     User,
@@ -95,11 +102,7 @@ def _favorite_ids(db: Session, user: User) -> set[int]:
     }
 
 
-@router.get("", response_model=list[ProjectCard])
-def list_projects(
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
+def _scoped_projects_query(db: Session, user: User):
     q = db.query(Project).options(
         joinedload(Project.project_manager), joinedload(Project.site_manager)
     )
@@ -113,11 +116,68 @@ def list_projects(
                 (Activity.responsible_role == UserRole.SUBCONTRACTOR) & Activity.is_active
             )
         )
-    projects = q.order_by(Project.delivery_date).all()
+    return q
+
+
+@router.get("", response_model=list[ProjectCard])
+def list_projects(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    projects = _scoped_projects_query(db, user).order_by(Project.delivery_date).all()
     favorite_ids = _favorite_ids(db, user)
     health_map = compute_health_for_projects(db, projects)
     finance_status_map = compute_finance_status_for_projects(db, projects)
     return [_project_to_card(p, favorite_ids, health_map, finance_status_map) for p in projects]
+
+
+@router.get("/export")
+def export_projects(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    projects = _scoped_projects_query(db, user).order_by(Project.delivery_date).all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Projektek"
+
+    headers = [
+        "Azonosító", "Projekt neve", "Ügyfél", "Település", "Cím",
+        "Épülettípus", "Alapterület (m²)", "Státusz", "Készültség (%)",
+        "Projektvezető", "Helyszíni vezető", "Átadási határidő",
+    ]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = cell.font.copy(bold=True)
+
+    for p in projects:
+        ws.append([
+            p.project_code,
+            p.name,
+            p.client_name,
+            p.settlement,
+            p.address,
+            BUILDING_TYPE_LABELS.get(p.building_type, p.building_type.value),
+            p.floor_area_sqm,
+            PROJECT_STATUS_LABELS.get(p.status, p.status.value),
+            p.completion_percent,
+            p.project_manager.full_name if p.project_manager else "",
+            p.site_manager.full_name if p.site_manager else "",
+            p.delivery_date.isoformat() if p.delivery_date else "",
+        ])
+
+    for i, header in enumerate(headers, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = max(12, len(header) + 2)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=projektek.xlsx"},
+    )
 
 
 @router.get("/kanban")

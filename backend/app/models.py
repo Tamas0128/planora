@@ -89,11 +89,13 @@ class DocumentationSubtype(str, enum.Enum):
 
 
 PROJECT_STATUS_LABELS = {
+    ProjectStatus.WAITING: "Várakozik",
     ProjectStatus.PLANNING: "Tervezés alatt",
     ProjectStatus.FOUNDATION: "Alapozás",
     ProjectStatus.STRUCTURE: "Szerkezetállítás",
     ProjectStatus.EXTERIOR_DONE: "Kívülről kész",
     ProjectStatus.TURNKEY: "Kulcsrakész",
+    ProjectStatus.CLOSED: "Lezárva",
 }
 
 BUILDING_TYPE_LABELS = {

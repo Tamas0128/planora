@@ -760,6 +760,8 @@ export const api = {
 
   projects: () => request<ProjectCard[]>("/projects"),
 
+  exportProjects: () => downloadFile("/projects/export", "projektek.xlsx"),
+
   project: (id: number) => request<ProjectDetail>(`/projects/${id}`),
 
   createProject: (data: Record<string, unknown>) =>
