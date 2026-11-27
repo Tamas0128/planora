@@ -6,7 +6,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import activity_templates, auth, dashboard, document_generator, documents, estimates, gantt, notifications, photos, projects, search, tasks
+from app.api import activity_templates, auth, dashboard, document_generator, documents, estimates, gantt, notifications, photos, project_specs, projects, search, tasks, trade_items
 from app.api import (
     crm_communications,
     crm_contracts,
@@ -28,6 +28,7 @@ import app.models_crm  # noqa: F401 — register CRM models on Base.metadata
 import app.models_finance  # noqa: F401 — register finance models on Base.metadata
 import app.models_documents  # noqa: F401 — register document generator models on Base.metadata
 import app.models_estimate  # noqa: F401 — register cost estimate models on Base.metadata
+import app.models_project_extras  # noqa: F401 — register trade-item/spec-item models on Base.metadata
 from app.services.cost_estimate import seed_rough_estimate_rates
 from app.services.notifications import send_daily_digest
 from app.services.schedule_engine import seed_activity_templates
@@ -131,6 +132,8 @@ app.include_router(crm_search.router, prefix="/api")
 app.include_router(finance.router, prefix="/api")
 app.include_router(document_generator.router, prefix="/api")
 app.include_router(estimates.router, prefix="/api")
+app.include_router(trade_items.router, prefix="/api")
+app.include_router(project_specs.router, prefix="/api")
 
 
 @app.get("/api/health")

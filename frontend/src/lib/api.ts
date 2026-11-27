@@ -860,6 +860,48 @@ export interface PriceCatalogImportParseResult {
   sheet_name: string;
 }
 
+export interface TradeItem {
+  id: number;
+  sort_order: number;
+  name: string;
+  contractor?: string | null;
+  info?: string | null;
+  offer_status?: string | null;
+  contract_status?: string | null;
+  material_status?: string | null;
+  expected_timing?: string | null;
+  tig?: string | null;
+  cross_trade_note?: string | null;
+  extra_work_note?: string | null;
+}
+
+export type TradeItemInput = Omit<TradeItem, "id" | "sort_order">;
+
+export interface TradeItemImportResult {
+  rows: TradeItemInput[];
+  sheet_used: string;
+  sheet_names: string[];
+  warnings: string[];
+}
+
+export interface ProjectSpecItem {
+  id: number;
+  sort_order: number;
+  group_name: string;
+  label: string;
+  value?: string | null;
+  note?: string | null;
+}
+
+export type ProjectSpecItemInput = Omit<ProjectSpecItem, "id" | "sort_order">;
+
+export interface ProjectSpecImportResult {
+  rows: ProjectSpecItemInput[];
+  sheet_used: string;
+  sheet_names: string[];
+  warnings: string[];
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<{ access_token: string; refresh_token: string }>("/auth/login/json", {
@@ -905,6 +947,72 @@ export const api = {
 
   deleteProject: (id: number) =>
     request<{ ok: boolean; deleted: string }>(`/projects/${id}`, { method: "DELETE" }),
+
+  tradeItems: (projectId: number) => request<TradeItem[]>(`/projects/${projectId}/trade-items`),
+
+  createTradeItem: (projectId: number, data: TradeItemInput) =>
+    request<TradeItem>(`/projects/${projectId}/trade-items`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateTradeItem: (projectId: number, itemId: number, data: Partial<TradeItemInput> & { sort_order?: number }) =>
+    request<TradeItem>(`/projects/${projectId}/trade-items/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteTradeItem: (projectId: number, itemId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/trade-items/${itemId}`, { method: "DELETE" }),
+
+  parseTradeItemsImport: (projectId: number, file: File, sheet?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (sheet) formData.append("sheet", sheet);
+    return request<TradeItemImportResult>(`/projects/${projectId}/trade-items/import/parse`, {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  commitTradeItemsImport: (projectId: number, rows: TradeItemInput[]) =>
+    request<TradeItem[]>(`/projects/${projectId}/trade-items/import/commit`, {
+      method: "POST",
+      body: JSON.stringify({ rows }),
+    }),
+
+  specItems: (projectId: number) => request<ProjectSpecItem[]>(`/projects/${projectId}/specs`),
+
+  createSpecItem: (projectId: number, data: ProjectSpecItemInput) =>
+    request<ProjectSpecItem>(`/projects/${projectId}/specs`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateSpecItem: (projectId: number, itemId: number, data: Partial<ProjectSpecItemInput> & { sort_order?: number }) =>
+    request<ProjectSpecItem>(`/projects/${projectId}/specs/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteSpecItem: (projectId: number, itemId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/specs/${itemId}`, { method: "DELETE" }),
+
+  parseSpecItemsImport: (projectId: number, file: File, sheet?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (sheet) formData.append("sheet", sheet);
+    return request<ProjectSpecImportResult>(`/projects/${projectId}/specs/import/parse`, {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  commitSpecItemsImport: (projectId: number, rows: ProjectSpecItemInput[]) =>
+    request<ProjectSpecItem[]>(`/projects/${projectId}/specs/import/commit`, {
+      method: "POST",
+      body: JSON.stringify({ rows }),
+    }),
 
   activities: (projectId: number) => request<Activity[]>(`/projects/${projectId}/activities`),
 

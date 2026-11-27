@@ -45,6 +45,10 @@ from app.models_estimate import (  # noqa: F401 — register cost estimate model
     RoughEstimateRate,
     RoughEstimateSettings,
 )
+from app.models_project_extras import (  # noqa: F401 — register trade-item/spec-item models on Base.metadata
+    ProjectSpecItem,
+    TradeItem,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

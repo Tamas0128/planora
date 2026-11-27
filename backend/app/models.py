@@ -241,6 +241,12 @@ class Project(Base):
     cost_estimates_detailed: Mapped[list["CostEstimateDetailed"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    trade_items: Mapped[list["TradeItem"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+    spec_items: Mapped[list["ProjectSpecItem"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
     @property
     def has_thumbnail(self) -> bool:

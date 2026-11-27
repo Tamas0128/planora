@@ -406,3 +406,95 @@ class NotificationResponse(BaseModel):
     read_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+class TradeItemResponse(BaseModel):
+    id: int
+    sort_order: int
+    name: str
+    contractor: Optional[str] = None
+    info: Optional[str] = None
+    offer_status: Optional[str] = None
+    contract_status: Optional[str] = None
+    material_status: Optional[str] = None
+    expected_timing: Optional[str] = None
+    tig: Optional[str] = None
+    cross_trade_note: Optional[str] = None
+    extra_work_note: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class TradeItemCreate(BaseModel):
+    name: str
+    contractor: Optional[str] = None
+    info: Optional[str] = None
+    offer_status: Optional[str] = None
+    contract_status: Optional[str] = None
+    material_status: Optional[str] = None
+    expected_timing: Optional[str] = None
+    tig: Optional[str] = None
+    cross_trade_note: Optional[str] = None
+    extra_work_note: Optional[str] = None
+
+
+class TradeItemUpdate(BaseModel):
+    name: Optional[str] = None
+    contractor: Optional[str] = None
+    info: Optional[str] = None
+    offer_status: Optional[str] = None
+    contract_status: Optional[str] = None
+    material_status: Optional[str] = None
+    expected_timing: Optional[str] = None
+    tig: Optional[str] = None
+    cross_trade_note: Optional[str] = None
+    extra_work_note: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+class TradeItemImportParseResponse(BaseModel):
+    rows: list[TradeItemCreate]
+    sheet_used: str
+    sheet_names: list[str]
+    warnings: list[str] = []
+
+
+class TradeItemImportCommitRequest(BaseModel):
+    rows: list[TradeItemCreate]
+
+
+class ProjectSpecItemResponse(BaseModel):
+    id: int
+    sort_order: int
+    group_name: str
+    label: str
+    value: Optional[str] = None
+    note: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectSpecItemCreate(BaseModel):
+    group_name: str
+    label: str
+    value: Optional[str] = None
+    note: Optional[str] = None
+
+
+class ProjectSpecItemUpdate(BaseModel):
+    group_name: Optional[str] = None
+    label: Optional[str] = None
+    value: Optional[str] = None
+    note: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+class ProjectSpecImportParseResponse(BaseModel):
+    rows: list[ProjectSpecItemCreate]
+    sheet_used: str
+    sheet_names: list[str]
+    warnings: list[str] = []
+
+
+class ProjectSpecImportCommitRequest(BaseModel):
+    rows: list[ProjectSpecItemCreate]

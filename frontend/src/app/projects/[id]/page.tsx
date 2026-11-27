@@ -23,6 +23,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
 import CostEstimateTab from "@/components/CostEstimateTab";
+import ProjectSpecTab from "@/components/ProjectSpecTab";
+import TradeItemsTab from "@/components/TradeItemsTab";
 import {
   Activity,
   api,
@@ -491,6 +493,8 @@ export default function ProjectDetailPage() {
     | "log"
     | "finance"
     | "cost-estimate"
+    | "trade-items"
+    | "specs"
   >("info");
   const [prepFilter, setPrepFilter] = useState<"all" | "overdue" | "today" | "7d" | "14d">("all");
   const [editing, setEditing] = useState(false);
@@ -1301,6 +1305,8 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="log">Napló</TabsTrigger>
           <TabsTrigger value="finance">Pénzügy</TabsTrigger>
           <TabsTrigger value="cost-estimate">Költségbecslés</TabsTrigger>
+          <TabsTrigger value="trade-items">Munkanemek</TabsTrigger>
+          <TabsTrigger value="specs">Műszaki adatlap</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="mt-4">
@@ -3159,6 +3165,14 @@ export default function ProjectDetailPage() {
             hasCustomer={Boolean(project.customer_id)}
             canEdit={canEdit}
           />
+        </TabsContent>
+
+        <TabsContent value="trade-items" className="mt-3">
+          <TradeItemsTab projectId={project.id} canEdit={canEdit} />
+        </TabsContent>
+
+        <TabsContent value="specs" className="mt-3">
+          <ProjectSpecTab projectId={project.id} canEdit={canEdit} />
         </TabsContent>
       </Tabs>
     </AppLayout>
