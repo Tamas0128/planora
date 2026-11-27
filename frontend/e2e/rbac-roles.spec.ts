@@ -3,14 +3,23 @@ import {
   CREDENTIALS,
   USER_IDS,
   SEED_OWNED_PROJECT_IDS,
-  E2E_PROJECT_ID,
-  E2E_PROJECT_CODE,
+  E2E_PROJECT,
+  E2E_PARTNER,
   ALL_PROJECT_CODES,
+  ensureE2eFixtures,
   loginAs,
   loginViaForm,
   apiToken,
   authHeader,
 } from "./rbac-helpers";
+
+// Finds-or-creates the E2E project/partner this file depends on and
+// refreshes ALL_PROJECT_CODES from live data before anything else runs —
+// see the comment on E2E_PROJECT in rbac-helpers.ts for why this can't be
+// a hardcoded id/code anymore.
+test.beforeAll(async ({ request }) => {
+  await ensureE2eFixtures(request);
+});
 
 // Real end-to-end login form smoke test for one representative non-admin role
 // (every other test uses loginAs' cached-token shortcut to stay under the
@@ -89,20 +98,29 @@ for (const role of ALL_ROLES) {
 // ---------------------------------------------------------------------------
 // 2. Project list scope — GET /projects: only PROJECT_MANAGER/SITE_MANAGER filtered.
 // ---------------------------------------------------------------------------
-const EXPECTED_PROJECT_CODES: Record<Role, string[]> = {
-  admin: ALL_PROJECT_CODES,
-  management: ALL_PROJECT_CODES,
-  project_manager: [E2E_PROJECT_CODE],
-  site_manager: [E2E_PROJECT_CODE],
-  procurement: ALL_PROJECT_CODES,
-  billing: ALL_PROJECT_CODES,
-  // Fixed 2026-08-12: subcontractor used to see every project, unscoped —
-  // now scoped to projects with at least one activity assigned to their
-  // role, same as scoped_activity_query already did for prep-center/my-tasks.
-  // None of the seed/E2E projects have a subcontractor-assigned activity by
-  // default, so the list is empty here — see the dedicated scoping test below.
-  subcontractor: [],
-};
+// A function, not a static object — ALL_PROJECT_CODES/E2E_PROJECT.code are
+// only populated once beforeAll's ensureE2eFixtures() has run, so this must
+// be evaluated per-test (after that), not captured into array literals at
+// module-load time (which would freeze them at their still-empty initial values).
+function getExpectedProjectCodes(role: Role): string[] {
+  switch (role) {
+    case "admin":
+    case "management":
+    case "procurement":
+    case "billing":
+      return ALL_PROJECT_CODES;
+    case "project_manager":
+    case "site_manager":
+      return [E2E_PROJECT.code];
+    // Fixed 2026-08-12: subcontractor used to see every project, unscoped —
+    // now scoped to projects with at least one activity assigned to their
+    // role, same as scoped_activity_query already did for prep-center/my-tasks.
+    // None of the seed/E2E projects have a subcontractor-assigned activity by
+    // default, so the list is empty here — see the dedicated scoping test below.
+    case "subcontractor":
+      return [];
+  }
+}
 
 for (const role of ALL_ROLES) {
   test(`project list scope — ${role}`, async ({ page }) => {
@@ -111,7 +129,7 @@ for (const role of ALL_ROLES) {
     // default view is "kanban" (project_code is not rendered there) — switch to
     // "Lista" where each row shows project_code as visible text (page.tsx:425).
     await page.getByRole("button", { name: "Lista" }).click();
-    const expected = EXPECTED_PROJECT_CODES[role];
+    const expected = getExpectedProjectCodes(role);
     for (const code of expected) {
       await expect(page.getByText(code, { exact: true }), `${role} should see project ${code}`).toBeVisible();
     }
@@ -127,7 +145,7 @@ for (const role of ALL_ROLES) {
 // ---------------------------------------------------------------------------
 test("project_manager can open and see edit controls on own project", async ({ page }) => {
   await loginAs(page, "project_manager");
-  await page.goto(`/projects/${E2E_PROJECT_ID}`);
+  await page.goto(`/projects/${E2E_PROJECT.id}`);
   await expect(page.getByRole("heading", { name: "E2E RBAC Test Projekt" })).toBeVisible();
   await expect(page.getByText("Betöltés...")).toHaveCount(0);
 });
@@ -149,7 +167,7 @@ test("project_manager CANNOT open another PM's project (seed_pm's project 1)", a
 
 test("site_manager can open own project and CANNOT open another SM's project", async ({ page, request }) => {
   await loginAs(page, "site_manager");
-  await page.goto(`/projects/${E2E_PROJECT_ID}`);
+  await page.goto(`/projects/${E2E_PROJECT.id}`);
   await expect(page.getByRole("heading", { name: "E2E RBAC Test Projekt" })).toBeVisible();
 
   const token = await apiToken(request, "site_manager");
@@ -161,23 +179,23 @@ test("site_manager can open own project and CANNOT open another SM's project", a
 });
 
 test("admin and management can edit a project they do not own (PATCH not blocked)", async ({ request }) => {
-  // Deliberately only touches E2E_PROJECT_ID (created by this audit, owned by
+  // Deliberately only touches E2E_PROJECT.id (created by this audit, owned by
   // the e2e_role_project_manager/site_manager test users) — never mutates the
   // pre-existing seed projects (1/2/3), to avoid leaving residue in real dev data.
   for (const role of ["admin", "management"] as Role[]) {
     const token = await apiToken(request, role);
-    const res = await request.patch(`/api/projects/${E2E_PROJECT_ID}`, {
+    const res = await request.patch(`/api/projects/${E2E_PROJECT.id}`, {
       headers: authHeader(token),
       data: { status_text: `rbac-audit-touch-${role}` },
     });
-    expect(res.ok(), `${role} PATCH /api/projects/${E2E_PROJECT_ID} (not their own) should succeed`).toBeTruthy();
+    expect(res.ok(), `${role} PATCH /api/projects/${E2E_PROJECT.id} (not their own) should succeed`).toBeTruthy();
   }
 });
 
 test("procurement/billing/subcontractor CANNOT edit any project via API", async ({ request }) => {
   for (const role of ["procurement", "billing", "subcontractor"] as Role[]) {
     const token = await apiToken(request, role);
-    for (const projectId of [E2E_PROJECT_ID, ...SEED_OWNED_PROJECT_IDS]) {
+    for (const projectId of [E2E_PROJECT.id, ...SEED_OWNED_PROJECT_IDS]) {
       const res = await request.patch(`/api/projects/${projectId}`, {
         headers: authHeader(token),
         data: { status_text: `rbac-audit-touch-${role}` },
@@ -190,7 +208,7 @@ test("procurement/billing/subcontractor CANNOT edit any project via API", async 
 test("project_manager/site_manager CAN edit own project via API, CANNOT edit others'", async ({ request }) => {
   for (const role of ["project_manager", "site_manager"] as Role[]) {
     const token = await apiToken(request, role);
-    const own = await request.patch(`/api/projects/${E2E_PROJECT_ID}`, {
+    const own = await request.patch(`/api/projects/${E2E_PROJECT.id}`, {
       headers: authHeader(token),
       data: { status_text: `rbac-audit-touch-${role}-own` },
     });
@@ -249,29 +267,28 @@ test("Finance API: partners LIST is open to any authenticated role (no gate)", a
 });
 
 test("Finance API: TIG create — finance roles + owning PM only, not other PM/SM/procurement/subcontractor", async ({ request }) => {
-  // partner_id 3 = "E2E RBAC Test Partner", created by admin ahead of this run for this purpose.
-  const tigBody = { partner_id: 3, date: "2026-08-12", period_start: "2026-08-01", period_end: "2026-08-12", net_value: "1000", vat_type: "standard_27" };
+  const tigBody = { partner_id: E2E_PARTNER.id, date: "2026-08-12", period_start: "2026-08-01", period_end: "2026-08-12", net_value: "1000", vat_type: "standard_27" };
 
   // A TIG requires an ACTIVE subcontractor contract for the same
   // (project, partner) pair (added 2026-08-12) — set one up via admin
   // first, since creating a contract is finance-role-only, unlike TIG
   // creation which is also opened to the owning PM below.
   const adminToken = await apiToken(request, "admin");
-  const contractRes = await request.post(`/api/finance/projects/${E2E_PROJECT_ID}/subcontractor-contracts`, {
+  const contractRes = await request.post(`/api/finance/projects/${E2E_PROJECT.id}/subcontractor-contracts`, {
     headers: authHeader(adminToken),
-    data: { partner_id: 3, scope_of_work: "RBAC teszt", value: "500000", vat_type: "standard_27", start_date: "2026-07-01", end_date: "2026-12-31" },
+    data: { partner_id: E2E_PARTNER.id, scope_of_work: "RBAC teszt", value: "500000", vat_type: "standard_27", start_date: "2026-07-01", end_date: "2026-12-31" },
   });
   expect(contractRes.ok(), "admin should be able to set up the prerequisite contract").toBeTruthy();
   const contract = await contractRes.json();
   const activateRes = await request.patch(
-    `/api/finance/projects/${E2E_PROJECT_ID}/subcontractor-contracts/${contract.id}/status`,
+    `/api/finance/projects/${E2E_PROJECT.id}/subcontractor-contracts/${contract.id}/status`,
     { headers: authHeader(adminToken), data: { status: "active" } },
   );
   expect(activateRes.ok(), "admin should be able to activate the prerequisite contract").toBeTruthy();
 
-  // owning PM (role project_manager, owns E2E_PROJECT_ID) — should succeed
+  // owning PM (role project_manager, owns E2E_PROJECT.id) — should succeed
   const pmToken = await apiToken(request, "project_manager");
-  const pmOwn = await request.post(`/api/finance/projects/${E2E_PROJECT_ID}/tigs`, { headers: authHeader(pmToken), data: tigBody });
+  const pmOwn = await request.post(`/api/finance/projects/${E2E_PROJECT.id}/tigs`, { headers: authHeader(pmToken), data: tigBody });
   expect(pmOwn.ok(), "owning PM should be able to create a TIG on own project").toBeTruthy();
 
   // same PM on a project they don't own — should 403
@@ -280,13 +297,13 @@ test("Finance API: TIG create — finance roles + owning PM only, not other PM/S
 
   // site_manager (even on own project) — should 403, TIG is finance-role or owning-PM only
   const smToken = await apiToken(request, "site_manager");
-  const smOwn = await request.post(`/api/finance/projects/${E2E_PROJECT_ID}/tigs`, { headers: authHeader(smToken), data: tigBody });
+  const smOwn = await request.post(`/api/finance/projects/${E2E_PROJECT.id}/tigs`, { headers: authHeader(smToken), data: tigBody });
   expect(smOwn.status(), "site_manager should be forbidden from creating a TIG even on own project").toBe(403);
 
   // procurement/subcontractor — should 403
   for (const role of ["procurement", "subcontractor"] as Role[]) {
     const token = await apiToken(request, role);
-    const res = await request.post(`/api/finance/projects/${E2E_PROJECT_ID}/tigs`, { headers: authHeader(token), data: tigBody });
+    const res = await request.post(`/api/finance/projects/${E2E_PROJECT.id}/tigs`, { headers: authHeader(token), data: tigBody });
     expect(res.status(), `${role} should be forbidden from creating a TIG`).toBe(403);
   }
 });
@@ -487,14 +504,14 @@ test("subcontractor: sees only primary nav, no CRM/finance/admin access, sees no
   }
 
   const token = await apiToken(request, "subcontractor");
-  const patch = await request.patch(`/api/projects/${E2E_PROJECT_ID}`, { headers: authHeader(token), data: { status_text: "sub-touch" } });
+  const patch = await request.patch(`/api/projects/${E2E_PROJECT.id}`, { headers: authHeader(token), data: { status_text: "sub-touch" } });
   expect(patch.status()).toBe(403);
   const partners = await request.post("/api/finance/partners", { headers: authHeader(token), data: { name: "x" } });
   expect(partners.status()).toBe(403);
 });
 
 test("subcontractor: project becomes visible once it has an active activity assigned to their role", async ({ request }) => {
-  // E2E_PROJECT_ID (created directly by admin for this audit, not via the
+  // E2E_PROJECT.id (created directly by admin for this audit, not via the
   // project wizard) has zero activities — use a seeded project instead,
   // which was created through the normal flow and has the default
   // auto-generated activity list. Ownership doesn't matter for this check.

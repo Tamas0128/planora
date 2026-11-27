@@ -11,8 +11,10 @@ import {
   BarChart2,
   Briefcase,
   Building2,
+  Calculator,
   CalendarDays,
   CheckSquare,
+  ClipboardList,
   FileStack,
   FolderOpen,
   Landmark,
@@ -280,6 +282,8 @@ const NAV_ADMIN: NavItem[] = [
   { href: "/document-templates", label: "Dokumentumsablonok", icon: FileStack, roles: ["admin"] },
   { href: "/own-companies",     label: "Cégadatok",      icon: Landmark,   roles: ["admin", "management", "billing"] },
   { href: "/partners",          label: "Alvállalkozói törzs", icon: Briefcase, roles: ["admin", "management", "billing"] },
+  { href: "/cost-estimate-rates", label: "Költségbecslés ártábla", icon: Calculator, roles: ["admin", "management", "billing"] },
+  { href: "/price-catalog", label: "Tételes ártábla", icon: ClipboardList, roles: ["admin", "management", "billing"] },
 ];
 
 interface AppLayoutProps {

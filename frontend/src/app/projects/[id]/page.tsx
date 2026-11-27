@@ -22,6 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import AppLayout from "@/components/AppLayout";
+import CostEstimateTab from "@/components/CostEstimateTab";
 import {
   Activity,
   api,
@@ -481,7 +482,15 @@ export default function ProjectDetailPage() {
   // when AppLayout already resolved /auth/me (avoids a flash of read-only UI).
   const [me, setMe] = useState<User | null>(() => getCachedUser());
   const [tab, setTab] = useState<
-    "info" | "schedule" | "documents" | "photos" | "prep" | "participants" | "log" | "finance"
+    | "info"
+    | "schedule"
+    | "documents"
+    | "photos"
+    | "prep"
+    | "participants"
+    | "log"
+    | "finance"
+    | "cost-estimate"
   >("info");
   const [prepFilter, setPrepFilter] = useState<"all" | "overdue" | "today" | "7d" | "14d">("all");
   const [editing, setEditing] = useState(false);
@@ -1291,6 +1300,7 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="participants">Résztvevők</TabsTrigger>
           <TabsTrigger value="log">Napló</TabsTrigger>
           <TabsTrigger value="finance">Pénzügy</TabsTrigger>
+          <TabsTrigger value="cost-estimate">Költségbecslés</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="mt-4">
@@ -3140,6 +3150,15 @@ export default function ProjectDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+
+        <TabsContent value="cost-estimate" className="mt-3">
+          <CostEstimateTab
+            projectId={project.id}
+            defaultFloorAreaSqm={project.floor_area_sqm}
+            hasCustomer={Boolean(project.customer_id)}
+            canEdit={canEdit}
+          />
         </TabsContent>
       </Tabs>
     </AppLayout>

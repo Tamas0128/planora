@@ -727,6 +727,139 @@ export interface ProjectFinanceOverviewRow {
   finance_status: string;
 }
 
+export type FinishLevel = "economy" | "standard" | "premium";
+export type WallType = "light_steel" | "clt" | "timber_frame" | "brick";
+export type RoofCoveringType = "tile" | "metal_sheet" | "shingle" | "flat_roof";
+export type FoundationType = "strip" | "slab" | "point";
+
+export interface RoughEstimateRate {
+  id: number;
+  category: string;
+  wall_type?: WallType;
+  roof_covering_type?: RoofCoveringType;
+  foundation_type?: FoundationType;
+  base_price: number;
+  unit_label: string;
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface RoughEstimateSettings {
+  economy_adjustment_pct: number;
+  premium_adjustment_pct: number;
+  updated_at: string;
+}
+
+export interface CostEstimateBreakdownLine {
+  category: string;
+  wall_type?: string | null;
+  roof_covering_type?: string | null;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+}
+
+export interface CostEstimateRough {
+  id: number;
+  project_id: number;
+  finish_level: FinishLevel;
+  floor_area_sqm: number;
+  exterior_wall_fm: number;
+  exterior_wall_type: WallType;
+  interior_wall_fm: number;
+  interior_wall_type: WallType;
+  has_basement: boolean;
+  basement_wall_fm: number;
+  walkable_slab_sqm: number;
+  light_slab_sqm: number;
+  roof_area_sqm: number;
+  roof_covering_type: RoofCoveringType;
+  foundation_type: FoundationType;
+  breakdown: CostEstimateBreakdownLine[];
+  total_net_min: number;
+  total_net_max: number;
+  notes?: string;
+  created_by_id?: number;
+  created_by_name?: string;
+  created_at: string;
+}
+
+export type PriceCatalogSource = "own" | "terc_import";
+
+export interface PriceCatalogItem {
+  id: number;
+  code: string;
+  description: string;
+  unit: string;
+  chapter: string;
+  unit_price_material: string;
+  unit_price_labor: string;
+  unit_price_total: string;
+  source: PriceCatalogSource;
+  source_reference?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CostEstimateDetailedItem {
+  id: number;
+  catalog_item_id?: number;
+  code?: string;
+  description: string;
+  unit: string;
+  chapter: string;
+  quantity: string;
+  unit_price_material: string;
+  unit_price_labor: string;
+  line_total: string;
+  sort_order: number;
+}
+
+export interface ChapterSubtotal {
+  chapter: string;
+  total: string;
+}
+
+export interface CostEstimateDetailed {
+  id: number;
+  project_id: number;
+  name: string;
+  notes?: string;
+  items: CostEstimateDetailedItem[];
+  chapter_subtotals: ChapterSubtotal[];
+  grand_total: string;
+  created_by_id?: number;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CostEstimateDetailedSummary {
+  id: number;
+  project_id: number;
+  name: string;
+  grand_total: string;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransferToQuoteResult {
+  quote_id: number;
+  quote_number: string;
+  customer_id: number;
+}
+
+export interface PriceCatalogImportParseResult {
+  columns: string[];
+  rows: (string | null)[][];
+  suggested_mapping: Record<string, number>;
+  row_count: number;
+  sheet_names: string[];
+  sheet_name: string;
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<{ access_token: string; refresh_token: string }>("/auth/login/json", {
@@ -1298,6 +1431,135 @@ export const api = {
 
   deleteGeneratedDocument: (docId: number) =>
     request<{ ok: boolean }>(`/generated-documents/${docId}`, { method: "DELETE" }),
+
+  costEstimateRates: () => request<RoughEstimateRate[]>("/cost-estimate-rates"),
+
+  updateCostEstimateRate: (id: number, data: Record<string, unknown>) =>
+    request<RoughEstimateRate>(`/cost-estimate-rates/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  costEstimateSettings: () => request<RoughEstimateSettings>("/cost-estimate-settings"),
+
+  updateCostEstimateSettings: (data: Record<string, unknown>) =>
+    request<RoughEstimateSettings>("/cost-estimate-settings", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  roughEstimates: (projectId: number) =>
+    request<CostEstimateRough[]>(`/projects/${projectId}/cost-estimates/rough`),
+
+  createRoughEstimate: (projectId: number, data: Record<string, unknown>) =>
+    request<CostEstimateRough>(`/projects/${projectId}/cost-estimates/rough`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  deleteRoughEstimate: (projectId: number, estimateId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/cost-estimates/rough/${estimateId}`, {
+      method: "DELETE",
+    }),
+
+  priceCatalogChapters: () => request<string[]>("/price-catalog/chapters"),
+
+  priceCatalogItems: (params: { search?: string; chapter?: string; active_only?: boolean; limit?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set("search", params.search);
+    if (params.chapter) qs.set("chapter", params.chapter);
+    if (params.active_only !== undefined) qs.set("active_only", String(params.active_only));
+    // Backend default is 50 — the admin list page wants the full catalog
+    // (up to the backend's own 1000-row cap) unless a caller asks for
+    // fewer, e.g. the detailed-budget "add from catalog" search box.
+    qs.set("limit", String(params.limit ?? 1000));
+    const query = qs.toString();
+    return request<PriceCatalogItem[]>(`/price-catalog?${query}`);
+  },
+
+  createPriceCatalogItem: (data: Record<string, unknown>) =>
+    request<PriceCatalogItem>("/price-catalog", { method: "POST", body: JSON.stringify(data) }),
+
+  updatePriceCatalogItem: (id: number, data: Record<string, unknown>) =>
+    request<PriceCatalogItem>(`/price-catalog/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deletePriceCatalogItem: (id: number) =>
+    request<{ ok: boolean }>(`/price-catalog/${id}`, { method: "DELETE" }),
+
+  parsePriceCatalogImport: (file: File, sheet?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (sheet) formData.append("sheet", sheet);
+    return request<PriceCatalogImportParseResult>("/price-catalog/import/parse", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  commitPriceCatalogImport: (data: {
+    rows: (string | null)[][];
+    mapping: Record<string, number>;
+    source_reference: string;
+  }) =>
+    request<{ created: number; updated: number; skipped: number }>("/price-catalog/import/commit", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  detailedEstimates: (projectId: number) =>
+    request<CostEstimateDetailedSummary[]>(`/projects/${projectId}/cost-estimates/detailed`),
+
+  createDetailedEstimate: (projectId: number, data: { name: string; notes?: string }) =>
+    request<CostEstimateDetailed>(`/projects/${projectId}/cost-estimates/detailed`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getDetailedEstimate: (projectId: number, estimateId: number) =>
+    request<CostEstimateDetailed>(`/projects/${projectId}/cost-estimates/detailed/${estimateId}`),
+
+  updateDetailedEstimate: (projectId: number, estimateId: number, data: Record<string, unknown>) =>
+    request<CostEstimateDetailed>(`/projects/${projectId}/cost-estimates/detailed/${estimateId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteDetailedEstimate: (projectId: number, estimateId: number) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/cost-estimates/detailed/${estimateId}`, {
+      method: "DELETE",
+    }),
+
+  addDetailedEstimateItem: (projectId: number, estimateId: number, data: Record<string, unknown>) =>
+    request<CostEstimateDetailed>(`/projects/${projectId}/cost-estimates/detailed/${estimateId}/items`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateDetailedEstimateItem: (
+    projectId: number,
+    estimateId: number,
+    itemId: number,
+    data: Record<string, unknown>
+  ) =>
+    request<CostEstimateDetailed>(
+      `/projects/${projectId}/cost-estimates/detailed/${estimateId}/items/${itemId}`,
+      { method: "PATCH", body: JSON.stringify(data) }
+    ),
+
+  deleteDetailedEstimateItem: (projectId: number, estimateId: number, itemId: number) =>
+    request<CostEstimateDetailed>(
+      `/projects/${projectId}/cost-estimates/detailed/${estimateId}/items/${itemId}`,
+      { method: "DELETE" }
+    ),
+
+  transferDetailedEstimateToQuote: (projectId: number, estimateId: number) =>
+    request<TransferToQuoteResult>(
+      `/projects/${projectId}/cost-estimates/detailed/${estimateId}/transfer-to-quote`,
+      { method: "POST" }
+    ),
+
+  exportDetailedEstimateXlsx: (projectId: number, estimateId: number, filename: string) =>
+    downloadFile(`/projects/${projectId}/cost-estimates/detailed/${estimateId}/export.xlsx`, filename),
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -1548,4 +1810,50 @@ export const GENERATED_DOCUMENT_STATUS_COLORS: Record<string, string> = {
   pending: "bg-warning-bg text-warning-foreground",
   ready: "bg-accent-200 text-accent-800",
   failed: "bg-destructive/10 text-destructive",
+};
+
+export const FINISH_LEVEL_LABELS: Record<string, string> = {
+  economy: "Gazdaságos",
+  standard: "Standard",
+  premium: "Prémium",
+};
+
+export const WALL_TYPE_LABELS: Record<string, string> = {
+  light_steel: "Könnyűszerkezet",
+  clt: "CLT",
+  timber_frame: "Faváz",
+  brick: "Tégla",
+};
+
+export const ROOF_COVERING_LABELS: Record<string, string> = {
+  tile: "Cserép",
+  metal_sheet: "Trapézlemez",
+  shingle: "Zsindely",
+  flat_roof: "Lapostető szigetelés",
+};
+
+export const FOUNDATION_TYPE_LABELS: Record<string, string> = {
+  strip: "Sávalap",
+  slab: "Lemezalap",
+  point: "Pontalap",
+};
+
+export const PRICE_CATALOG_SOURCE_LABELS: Record<string, string> = {
+  own: "Saját",
+  terc_import: "TERC import",
+};
+
+export const ROUGH_ESTIMATE_CATEGORY_LABELS: Record<string, string> = {
+  earthwork_foundation: "Földmunka + alapozás",
+  basement_wall: "Pinceszint (fal + szigetelés)",
+  exterior_wall: "Külső teherhordó fal",
+  interior_wall: "Belső válaszfal",
+  walkable_slab: "Járható födém",
+  light_slab: "Könnyű födém",
+  roof_structure: "Tetőszerkezet",
+  roof_covering: "Tetőhéjazat",
+  openings: "Nyílászárók",
+  mechanical: "Gépészet",
+  electrical: "Villamosság",
+  finishes: "Belső burkolat + festés",
 };
