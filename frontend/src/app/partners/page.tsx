@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Loader2, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import { api, getCachedUser, Partner, User } from "@/lib/api";
@@ -52,9 +52,17 @@ export default function PartnersPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<PartnerForm>(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   function load() {
-    api.financePartners().then(setPartners).catch(() => setPartners([]));
+    setLoading(true);
+    setLoadError(false);
+    api
+      .financePartners()
+      .then((data) => setPartners(data))
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {
@@ -123,28 +131,59 @@ export default function PartnersPage() {
               <TableHead>Kapcsolattartó</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead>E-mail</TableHead>
-              <TableHead></TableHead>
+              <TableHead>
+                <span className="sr-only">Műveletek</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {partners.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="text-xs font-medium">{p.name}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{p.tax_number || "—"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{p.billing_address || "—"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{p.contact_name || "—"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{p.phone || "—"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{p.email || "—"}</TableCell>
-                <TableCell>
-                  {canEdit && (
-                    <Button variant="ghost" size="icon" className="size-7" onClick={() => openEdit(p)}>
-                      <Pencil className="size-3.5" />
-                    </Button>
-                  )}
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="size-3.5 animate-spin" /> Betöltés...
+                  </span>
                 </TableCell>
               </TableRow>
-            ))}
-            {partners.length === 0 && (
+            )}
+            {!loading && loadError && (
+              <TableRow>
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <span>Nem sikerült betölteni a listát</span>
+                    <Button variant="outline" size="sm" onClick={load}>
+                      Újrapróbálkozás
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading &&
+              !loadError &&
+              partners.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="text-xs font-medium">{p.name}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{p.tax_number || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{p.billing_address || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{p.contact_name || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{p.phone || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{p.email || "—"}</TableCell>
+                  <TableCell>
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7"
+                        onClick={() => openEdit(p)}
+                        aria-label={`Szerkesztés: ${p.name}`}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            {!loading && !loadError && partners.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nincs felvitt alvállalkozó
@@ -162,11 +201,15 @@ export default function PartnersPage() {
               <DialogTitle>{editingId ? "Alvállalkozó szerkesztése" : "Új alvállalkozó"}</DialogTitle>
             </DialogHeader>
             <div className="grid max-h-[70vh] gap-3 overflow-y-auto py-2 pr-1">
+              <div>
+                <h3 className="text-xs font-semibold text-foreground">Cégadatok</h3>
+                <p className="text-[11px] text-muted-foreground">A cég azonosítására és számlázására vonatkozó adatok.</p>
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="p-name">Cégnév</Label>
                 <Input id="p-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="p-tax">Adószám</Label>
                   <Input id="p-tax" value={form.tax_number} onChange={(e) => setForm({ ...form, tax_number: e.target.value })} />
@@ -188,7 +231,12 @@ export default function PartnersPage() {
                 <Label htmlFor="p-bank">Bankszámlaszám</Label>
                 <Input id="p-bank" value={form.bank_account_number} onChange={(e) => setForm({ ...form, bank_account_number: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="pt-1">
+                <h3 className="text-xs font-semibold text-foreground">Képviselő</h3>
+                <p className="text-[11px] text-muted-foreground">A céget szerződésben képviselő személy.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="p-rep-name">Képviselő neve</Label>
                   <Input id="p-rep-name" value={form.representative_name} onChange={(e) => setForm({ ...form, representative_name: e.target.value })} />
@@ -198,7 +246,12 @@ export default function PartnersPage() {
                   <Input id="p-rep-title" value={form.representative_title} onChange={(e) => setForm({ ...form, representative_title: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+
+              <div className="pt-1">
+                <h3 className="text-xs font-semibold text-foreground">Kapcsolattartó</h3>
+                <p className="text-[11px] text-muted-foreground">Napi kapcsolattartásra szolgáló elérhetőség.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="p-contact-name">Kapcsolattartó neve</Label>
                   <Input id="p-contact-name" value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />

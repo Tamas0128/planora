@@ -130,14 +130,13 @@ function TaskCardBody({ item }: { item: TaskBoardItem }) {
         <div className="flex items-start gap-2">
           <p className="min-w-0 flex-1 text-[13.5px] font-semibold leading-tight text-foreground">{item.activity_name}</p>
           <div className="relative size-6 shrink-0">
-            <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
+            <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90" role="img" aria-label={`${pct}% kész`}>
               <circle cx="12" cy="12" r={PROGRESS_RING_RADIUS} fill="none" stroke="var(--color-neutral-200)" strokeWidth="3.5" />
               <circle
                 cx="12" cy="12" r={PROGRESS_RING_RADIUS} fill="none" stroke="var(--color-accent-500)" strokeWidth="3.5"
                 strokeDasharray={PROGRESS_RING_CIRCUMFERENCE} strokeDashoffset={dashoffset} strokeLinecap="round"
               />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-[7.5px] font-extrabold text-foreground">{pct}</span>
           </div>
         </div>
         <p className="truncate text-[11px] text-muted-foreground">{item.project_name}</p>
@@ -530,7 +529,7 @@ function RightPanel({
               Szerkesztés
             </Button>
             <AlertDialog>
-              <AlertDialogTrigger render={<Button variant="outline" className="flex-1 text-destructive" />}>
+              <AlertDialogTrigger render={<Button variant="outline" className="flex-1 border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/10 hover:text-destructive" />}>
                 Törlés
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -751,53 +750,58 @@ export default function KanbanPage() {
     <AppLayout header={pageHeader} mainClassName="flex flex-1 overflow-hidden p-0">
       <div className="flex h-full overflow-hidden">
         {/* Board */}
-        <div className="flex-1 overflow-x-auto overflow-y-auto bg-muted/60">
-          {loading ? (
-            <div className="flex h-full items-center justify-center">
-              <span className="text-[13px] text-muted-foreground">Betöltés…</span>
-            </div>
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="flex min-w-max gap-4 p-4">
-                {ACTIVITY_STATUS_ORDER.map((status) => {
-                  const items = (board[status] ?? []).filter(matches);
-                  return (
-                    <div key={status} className="flex w-[240px] shrink-0 flex-col">
-                      <div className="mb-2 flex items-baseline justify-between">
-                        <h3 className="flex-1 text-[12.5px] font-extrabold uppercase tracking-wide text-foreground">{ACTIVITY_STATUS_LABELS[status]}</h3>
-                        <span className="text-[11px] font-bold text-muted-foreground">
-                          {items.length}
-                        </span>
-                      </div>
-                      <div className="mb-2.5 h-0.5 bg-border" />
-                      <KanbanColumn status={status}>
-                        {items.map((item) => (
-                          <DraggableTaskCard
-                            key={item.activity_id}
-                            item={item}
-                            selected={selected?.activity_id === item.activity_id}
-                            onClick={() => setSelected(selected?.activity_id === item.activity_id ? null : item)}
-                          />
-                        ))}
-                        {items.length === 0 && (
-                          <div className="flex items-center justify-center border-2 border-dashed border-border py-10">
-                            <p className="text-[12px] text-muted-foreground">Nincs feladat</p>
-                          </div>
-                        )}
-                      </KanbanColumn>
-                    </div>
-                  );
-                })}
+        <div className="relative flex-1 overflow-hidden">
+          <div className="h-full overflow-x-auto overflow-y-auto bg-muted/60">
+            {loading ? (
+              <div className="flex h-full items-center justify-center">
+                <span className="text-[13px] text-muted-foreground">Betöltés…</span>
               </div>
-              <DragOverlay>
-                {draggedItem ? <div className="w-[224px]"><TaskCardBody item={draggedItem} /></div> : null}
-              </DragOverlay>
-            </DndContext>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="flex min-w-max gap-4 p-4">
+                  {ACTIVITY_STATUS_ORDER.map((status) => {
+                    const items = (board[status] ?? []).filter(matches);
+                    return (
+                      <div key={status} className="flex w-[240px] shrink-0 flex-col">
+                        <div className="mb-2 flex items-baseline justify-between">
+                          <h3 className="flex-1 text-[12.5px] font-extrabold uppercase tracking-wide text-foreground">{ACTIVITY_STATUS_LABELS[status]}</h3>
+                          <span className="text-[11px] font-bold text-muted-foreground">
+                            {items.length}
+                          </span>
+                        </div>
+                        <div className="mb-2.5 h-0.5 bg-border" />
+                        <KanbanColumn status={status}>
+                          {items.map((item) => (
+                            <DraggableTaskCard
+                              key={item.activity_id}
+                              item={item}
+                              selected={selected?.activity_id === item.activity_id}
+                              onClick={() => setSelected(selected?.activity_id === item.activity_id ? null : item)}
+                            />
+                          ))}
+                          {items.length === 0 && (
+                            <div className="flex items-center justify-center border-2 border-dashed border-border py-10">
+                              <p className="text-[12px] text-muted-foreground">Nincs feladat</p>
+                            </div>
+                          )}
+                        </KanbanColumn>
+                      </div>
+                    );
+                  })}
+                </div>
+                <DragOverlay>
+                  {draggedItem ? <div className="w-[224px]"><TaskCardBody item={draggedItem} /></div> : null}
+                </DragOverlay>
+              </DndContext>
+            )}
+          </div>
+          {!loading && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-muted/90 via-muted/40 to-transparent" />
           )}
         </div>
 

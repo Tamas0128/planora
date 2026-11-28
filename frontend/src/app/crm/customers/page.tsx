@@ -63,6 +63,7 @@ export default function CrmCustomersPage() {
   const [me, setMe] = useState<User | null>(null);
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [customers, setCustomers] = useState<CrmCustomer[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [nameFilter, setNameFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -77,7 +78,16 @@ export default function CrmCustomersPage() {
     if (nameFilter.trim()) params.name = nameFilter.trim();
     if (typeFilter !== "all") params.type = typeFilter;
     if (statusFilter !== "all") params.status = statusFilter;
-    api.crmCustomers(params).then(setCustomers).catch(console.error);
+    api
+      .crmCustomers(params)
+      .then((data) => {
+        setCustomers(data);
+        setLoadError(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoadError(true);
+      });
   }
 
   useEffect(() => {
@@ -211,6 +221,14 @@ export default function CrmCustomersPage() {
           </SelectContent>
         </Select>
       </div>
+
+      {canImport && (
+        <p className="mb-3 text-xs text-muted-foreground">
+          Import elvárt oszlopai: <span className="font-medium">type, name, owner_id</span> (kötelező), valamint
+          opcionálisan relationship_type, status, phone, email, tax_number, billing_address, mailing_address,
+          company_registry_number, bank_account_number, representative_name, representative_title, contact_name.
+        </p>
+      )}
 
       {importResults && (
         <Card className="mb-3 p-3">
@@ -363,10 +381,24 @@ export default function CrmCustomersPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {customers.length === 0 && (
+            {loadError && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-8 text-center">
+                  <p className="text-destructive">Nem sikerült betölteni az ügyfeleket</p>
+                  <Button variant="outline" size="sm" className="mt-2" onClick={load}>
+                    Újra próbálom
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+            {!loadError && customers.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                  Nincs ügyfél
+                  <p>Nincs ügyfél</p>
+                  <p className="mt-1 text-xs">
+                    Kezdd az első ügyfél felvételével a fenti &quot;+ Új ügyfél&quot; gombbal, vagy importálj egy
+                    CSV-t.
+                  </p>
                 </TableCell>
               </TableRow>
             )}

@@ -10,6 +10,7 @@ import {
   Calendar,
   CheckSquare,
   ChevronDown,
+  ChevronRight,
   Circle,
   ClipboardList,
   Clock,
@@ -354,6 +355,7 @@ const PAGE_SIZE = 15;
 export default function MyTasksPage() {
   const [items, setItems] = useState<PrepTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -372,9 +374,13 @@ export default function MyTasksPage() {
   const [newTaskForm, setNewTaskForm] = useState(makeNewTaskForm);
 
   function load() {
+    setLoadError(false);
     return api.myTasks()
       .then(setItems)
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        setLoadError(true);
+      });
   }
 
   useEffect(() => {
@@ -489,8 +495,13 @@ export default function MyTasksPage() {
   const selected = items.find((i) => taskKey(i) === selectedKey) ?? null;
 
   async function handleStatusChange(item: PrepTask, status: string) {
-    await api.updateActivity(item.project_id, item.activity_id, { status });
-    await load();
+    try {
+      await api.updateActivity(item.project_id, item.activity_id, { status });
+      await load();
+      toast.success(`Státusz frissítve: ${STATUS_LABEL[status] ?? status}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a státusz módosítása során");
+    }
   }
 
   return (
@@ -500,6 +511,9 @@ export default function MyTasksPage() {
           <h1 className="text-lg font-heading font-bold text-foreground">Saját feladatok</h1>
           <p className="text-xs text-muted-foreground">
             A szerepkörödhöz rendelt nyitott tevékenységek
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+            Alapértelmezett sorrend: előbb a lejárt feladatok, majd sürgősség és felelősségi kör szerint.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -514,7 +528,7 @@ export default function MyTasksPage() {
         </div>
       </div>
 
-      {!loading && items.length > 0 && (
+      {!loading && !loadError && items.length > 0 && (
         <div className="mb-3 space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Időszak</span>
@@ -599,6 +613,25 @@ export default function MyTasksPage() {
                 </div>
               ))}
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Ban className="mb-4 size-12 text-destructive/40" />
+              <p className="text-lg font-semibold text-foreground/80">Nem sikerült betölteni a feladatokat</p>
+              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                Hiba történt az adatok lekérése közben. Ellenőrizd a kapcsolatot, és próbáld újra.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setLoading(true);
+                  load().finally(() => setLoading(false));
+                }}
+              >
+                Újrapróbálkozás
+              </Button>
+            </div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <CheckSquare className="mb-4 size-12 text-muted-foreground/40" />
@@ -658,32 +691,40 @@ export default function MyTasksPage() {
                     </button>
                     {!isCollapsed && (
                       <>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              {SORT_COLUMNS.map((col) => (
-                                <SortableHead
-                                  key={col.key}
-                                  label={col.label}
-                                  sortKeyName={col.key}
-                                  sortKey={sortKey}
-                                  sortDir={sortDir}
-                                  onClick={() => toggleSort(col.key)}
+                        <div className="relative">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                {SORT_COLUMNS.map((col) => (
+                                  <SortableHead
+                                    key={col.key}
+                                    label={col.label}
+                                    sortKeyName={col.key}
+                                    sortKey={sortKey}
+                                    sortDir={sortDir}
+                                    onClick={() => toggleSort(col.key)}
+                                  />
+                                ))}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {sortItems(groupItems, sortKey, sortDir).slice(0, visible).map((item) => (
+                                <TaskTableRow
+                                  key={taskKey(item)}
+                                  item={item}
+                                  selected={selectedKey === taskKey(item)}
+                                  onClick={() => setSelectedKey(selectedKey === taskKey(item) ? null : taskKey(item))}
                                 />
                               ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {sortItems(groupItems, sortKey, sortDir).slice(0, visible).map((item) => (
-                              <TaskTableRow
-                                key={taskKey(item)}
-                                item={item}
-                                selected={selectedKey === taskKey(item)}
-                                onClick={() => setSelectedKey(selectedKey === taskKey(item) ? null : taskKey(item))}
-                              />
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableBody>
+                          </Table>
+                          <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-0 right-0 flex w-7 items-center justify-end bg-gradient-to-l from-card to-transparent sm:hidden"
+                          >
+                            <ChevronRight className="size-3.5 text-muted-foreground/70" />
+                          </div>
+                        </div>
                         {visible < groupItems.length && (
                           <div className="border-t border-border px-3 py-1.5">
                             <Button

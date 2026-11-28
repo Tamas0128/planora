@@ -159,6 +159,7 @@ export default function ActivityTemplatesPage() {
     try {
       await api.updateActivityTemplate(id, { [field]: value });
       loadTemplates();
+      toast.success("Mentve");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
       loadTemplates();
@@ -175,6 +176,7 @@ export default function ActivityTemplatesPage() {
     try {
       await api.updateActivityTemplate(id, { name: trimmed });
       loadTemplates();
+      toast.success("Mentve");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
       loadTemplates();
@@ -185,6 +187,7 @@ export default function ActivityTemplatesPage() {
     try {
       await api.updateActivityTemplate(id, { responsible_role: role });
       loadTemplates();
+      toast.success("Mentve");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
     }
@@ -196,6 +199,7 @@ export default function ActivityTemplatesPage() {
       if (category !== "documentation") patch.documentation_subtype = null;
       await api.updateActivityTemplate(id, patch);
       loadTemplates();
+      toast.success("Mentve");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
     }
@@ -264,6 +268,12 @@ export default function ActivityTemplatesPage() {
   }
 
   async function toggleAllInclude(include: boolean) {
+    const confirmed = confirm(
+      include
+        ? "Biztosan bekapcsolod az összes tevékenység sablonnál az alapból bekerülést? Ez minden ezután létrehozott projekt alap ütemtervét módosítja."
+        : "Biztosan kikapcsolod az összes tevékenység sablonnál az alapból bekerülést? Ez minden ezután létrehozott projekt alap ütemtervét módosítja.",
+    );
+    if (!confirmed) return;
     try {
       await api.setAllTemplatesIncludeByDefault(include);
       loadTemplates();
@@ -326,8 +336,8 @@ export default function ActivityTemplatesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[70px]">Sorszám</TableHead>
-              <TableHead className="min-w-[160px]">Tevékenység</TableHead>
+              <TableHead className="sticky left-0 z-10 w-[100px] bg-card">Sorszám</TableHead>
+              <TableHead className="sticky left-[100px] z-10 min-w-[160px] border-r bg-card">Tevékenység</TableHead>
               <TableHead className="min-w-[150px]">Kategória</TableHead>
               <TableHead className="min-w-[120px]">Felelős</TableHead>
               <TableHead className="min-w-[90px]">Futási idő (nap)</TableHead>
@@ -358,7 +368,7 @@ export default function ActivityTemplatesPage() {
             {templates.map((t) => (
               <SortableTemplateRow key={t.id} template={t} dragEnabled={!!canEdit && editing}>
                 {(dragHandle) => (<>
-                <TableCell>
+                <TableCell className="sticky left-0 z-10 w-[100px] bg-card">
                   <div className="flex items-center gap-1.5">
                     {dragHandle}
                     {canEdit && editing ? (
@@ -376,14 +386,15 @@ export default function ActivityTemplatesPage() {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">
+                <TableCell className="sticky left-[100px] z-10 border-r bg-card font-medium">
                   {canEdit && editing ? (
                     <Input
                       value={t.name}
                       aria-label="Tevékenység neve"
+                      title={t.name}
                       onChange={(e) => updateLocal(t.id, { name: e.target.value })}
                       onBlur={(e) => commitName(t.id, e.target.value)}
-                      className="min-w-[140px]"
+                      className="min-w-[180px]"
                     />
                   ) : (
                     <span className="text-xs">{t.name}</span>

@@ -34,12 +34,23 @@ export default function CalendarPage() {
   const [month, setMonth] = useState(today.getMonth());
   const [tasks, setTasks] = useState<PrepTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
+  function loadTasks() {
+    setLoading(true);
+    setError(false);
     api.prepCenter("all")
       .then(setTasks)
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        setError(true);
+      })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadTasks();
   }, []);
 
   function prevMonth() {
@@ -49,6 +60,9 @@ export default function CalendarPage() {
   function nextMonth() {
     if (month === 11) { setMonth(0); setYear((y) => y + 1); }
     else setMonth((m) => m + 1);
+  }
+  function toggleDayExpanded(dateStr: string) {
+    setExpandedDays((prev) => ({ ...prev, [dateStr]: !prev[dateStr] }));
   }
 
   const cells = useMemo(() => {
@@ -131,6 +145,15 @@ export default function CalendarPage() {
         </span>
       </div>
 
+      {error && (
+        <div className="mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+          <span>Nem sikerült betölteni a naptárat.</span>
+          <Button variant="outline" size="sm" onClick={loadTasks}>
+            Újra
+          </Button>
+        </div>
+      )}
+
       <div className={cn("overflow-hidden rounded-xl border border-border bg-card shadow-sm", loading && "opacity-60")}>
         {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-border bg-muted">
@@ -181,13 +204,13 @@ export default function CalendarPage() {
                       </span>
                     </div>
                     <div className="space-y-0.5">
-                      {events.slice(0, 3).map((ev, j) => (
+                      {(expandedDays[dateStr] ? events : events.slice(0, 3)).map((ev, j) => (
                         <Link
                           key={j}
                           href={`/projects/${ev.task.project_id}`}
                           title={`${ev.task.project_name} – ${ev.task.activity_name}`}
                           className={cn(
-                            "block truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight",
+                            "block truncate rounded px-0.5 py-0 text-[9px] font-medium leading-tight sm:px-1 sm:py-0.5 sm:text-[10px]",
                             ev.type === "prep"
                               ? "bg-warning-bg text-warning-foreground hover:bg-warning-bg/80"
                               : "bg-neutral-200 text-neutral-800 hover:bg-neutral-300",
@@ -197,9 +220,13 @@ export default function CalendarPage() {
                         </Link>
                       ))}
                       {events.length > 3 && (
-                        <p className="px-1 text-[10px] text-muted-foreground">
-                          +{events.length - 3} további
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => toggleDayExpanded(dateStr)}
+                          className="block w-full px-1 text-left text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                        >
+                          {expandedDays[dateStr] ? "kevesebb" : `+${events.length - 3} további`}
+                        </button>
                       )}
                     </div>
                   </>

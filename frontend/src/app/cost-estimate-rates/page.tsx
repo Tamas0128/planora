@@ -64,6 +64,7 @@ export default function CostEstimateRatesPage() {
     try {
       const updated = await api.updateCostEstimateRate(rate.id, { base_price: num });
       setRates((prev) => prev.map((r) => (r.id === rate.id ? updated : r)));
+      toast.success("Ár mentve");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
     } finally {
@@ -73,6 +74,13 @@ export default function CostEstimateRatesPage() {
 
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
+    if (
+      !window.confirm(
+        "A globális százalék módosítása azonnal újraszámolja az összes gazdaságos/prémium árat. Biztosan mented?"
+      )
+    ) {
+      return;
+    }
     setSavingSettings(true);
     try {
       const updated = await api.updateCostEstimateSettings({
@@ -116,6 +124,8 @@ export default function CostEstimateRatesPage() {
               id="ces-economy"
               type="number"
               step="1"
+              min="-90"
+              max="200"
               disabled={!canEdit}
               value={settingsForm.economy_adjustment_pct}
               onChange={(e) => setSettingsForm({ ...settingsForm, economy_adjustment_pct: e.target.value })}
@@ -128,6 +138,8 @@ export default function CostEstimateRatesPage() {
               id="ces-premium"
               type="number"
               step="1"
+              min="-90"
+              max="200"
               disabled={!canEdit}
               value={settingsForm.premium_adjustment_pct}
               onChange={(e) => setSettingsForm({ ...settingsForm, premium_adjustment_pct: e.target.value })}
@@ -146,7 +158,17 @@ export default function CostEstimateRatesPage() {
         </form>
       </Card>
 
-      <Card className="overflow-x-auto py-0">
+      <Card
+        className="overflow-x-auto py-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, var(--card) 0%, transparent 24px), linear-gradient(to left, var(--card) 0%, transparent 24px), linear-gradient(to right, rgba(0,0,0,0.18), transparent 10px), linear-gradient(to left, rgba(0,0,0,0.18), transparent 10px)",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "24px 100%, 24px 100%, 10px 100%, 10px 100%",
+          backgroundPosition: "0 0, 100% 0, 0 0, 100% 0",
+          backgroundAttachment: "local, local, scroll, scroll",
+        }}
+      >
         <Table>
           <TableHeader>
             <TableRow>
@@ -159,9 +181,12 @@ export default function CostEstimateRatesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.entries(grouped).map(([category, rows]) =>
+            {Object.entries(grouped).map(([category, rows], groupIdx) =>
               rows.map((rate, idx) => (
-                <TableRow key={rate.id}>
+                <TableRow
+                  key={rate.id}
+                  className={idx === 0 && groupIdx > 0 ? "border-t-2 border-t-border" : undefined}
+                >
                   <TableCell className="text-xs font-medium">
                     {idx === 0 ? (ROUGH_ESTIMATE_CATEGORY_LABELS[category] ?? category) : ""}
                   </TableCell>

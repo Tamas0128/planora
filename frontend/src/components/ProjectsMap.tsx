@@ -5,20 +5,28 @@ import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import { useRouter } from "next/navigation";
 import { ProjectCard, STATUS_LABELS } from "@/lib/api";
-import { HEALTH_CFG } from "@/lib/project-utils";
+import { DEFAULT_CFG, HEALTH_CFG, STATUS_CFG } from "@/lib/project-utils";
 
 // Leaflet's default marker icon paths break under webpack/Next.js bundling
-// (they resolve to file paths that don't exist in the built output) — point
-// them at the CDN-hosted assets instead of trying to bundle the PNGs.
-const DEFAULT_ICON = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+// (they resolve to file paths that don't exist in the built output), so pins
+// are built as colored divIcons instead of the stock PNG marker. Colors reuse
+// the same STATUS_CFG.progressBar classes the Kanban/List/Card views already
+// use, so a pin's color matches its status badge everywhere else in the app.
+const STATUS_ICON_CACHE: Record<string, L.DivIcon> = {};
+
+function statusIcon(status: string): L.DivIcon {
+  if (!STATUS_ICON_CACHE[status]) {
+    const cfg = STATUS_CFG[status] ?? DEFAULT_CFG;
+    STATUS_ICON_CACHE[status] = L.divIcon({
+      className: "",
+      html: `<span class="block size-5 rounded-full border-2 border-white shadow-md ${cfg.progressBar}"></span>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+      popupAnchor: [0, -10],
+    });
+  }
+  return STATUS_ICON_CACHE[status];
+}
 
 const BUDAPEST_CENTER: [number, number] = [47.4979, 19.0402];
 
@@ -40,7 +48,7 @@ export default function ProjectsMap({ projects }: { projects: ProjectCard[] }) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {withCoords.map((p) => (
-          <Marker key={p.id} position={[p.latitude, p.longitude]} icon={DEFAULT_ICON}>
+          <Marker key={p.id} position={[p.latitude, p.longitude]} icon={statusIcon(p.status)}>
             <Popup>
               <div className="min-w-[160px] text-sm">
                 <p className="font-semibold">{p.name}</p>

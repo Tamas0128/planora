@@ -69,10 +69,20 @@ const ANY = "__any__";
 function OverviewTab({ projects, users }: { projects: ProjectCard[]; users: UserBrief[] }) {
   const [rows, setRows] = useState<ProjectFinanceOverviewRow[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [projectId, setProjectId] = useState(ANY);
   const [managerId, setManagerId] = useState(ANY);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const checkWidth = () => setIsNarrow(window.innerWidth < 640);
+    checkWidth();
+    window.addEventListener("resize", checkWidth);
+    return () => window.removeEventListener("resize", checkWidth);
+  }, []);
 
   useEffect(() => {
     const params: Record<string, string> = {};
@@ -81,10 +91,35 @@ function OverviewTab({ projects, users }: { projects: ProjectCard[]; users: User
     if (dateFrom) params.date_from = dateFrom;
     if (dateTo) params.date_to = dateTo;
     setLoading(true);
-    api.financeOverview(params).then(setRows).catch(() => setRows(null)).finally(() => setLoading(false));
-  }, [projectId, managerId, dateFrom, dateTo]);
+    api
+      .financeOverview(params)
+      .then((data) => {
+        setRows(data);
+        setError(false);
+      })
+      .catch(() => {
+        setRows(null);
+        setError(true);
+      })
+      .finally(() => setLoading(false));
+  }, [projectId, managerId, dateFrom, dateTo, retryKey]);
 
   const managers = users.filter((u) => u.role === "project_manager");
+  const allZero =
+    !!rows &&
+    rows.length > 0 &&
+    rows.every((r) =>
+      [
+        r.contract_gross,
+        r.received_gross,
+        r.invoiced_gross,
+        r.subcontractor_paid_gross,
+        r.subcontractor_invoiced_gross,
+        r.cash_flow_balance,
+        r.overdue_receivable,
+        r.overdue_payable,
+      ].every((v) => !v || Number(v) === 0)
+    );
 
   return (
     <div className={loading ? "opacity-60" : ""}>
@@ -119,7 +154,7 @@ function OverviewTab({ projects, users }: { projects: ProjectCard[]; users: User
         </div>
       </div>
 
-      {rows && rows.length > 0 && (
+      {rows && rows.length > 0 && !allZero && (
         <Card className="mb-3">
           <CardHeader>
             <CardTitle>Cash flow projektenként</CardTitle>
@@ -128,7 +163,15 @@ function OverviewTab({ projects, users }: { projects: ProjectCard[]; users: User
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows.map((r) => ({ name: r.project_name, value: Number(r.cash_flow_balance) }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={50} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: isNarrow ? 9 : 10 }}
+                  interval={isNarrow ? "preserveStartEnd" : 0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={55}
+                  tickFormatter={(v: string) => (isNarrow && v.length > 10 ? `${v.slice(0, 10)}…` : v)}
+                />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(Number(v) / 1_000_000).toLocaleString("hu-HU", { maximumFractionDigits: 1 })} M`} />
                 <Tooltip formatter={(v) => formatHuf(v as number)} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
@@ -158,30 +201,50 @@ function OverviewTab({ projects, users }: { projects: ProjectCard[]; users: User
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(rows ?? []).map((r) => (
-              <TableRow key={r.project_id}>
-                <TableCell className="font-medium">
-                  <Link href={`/projects/${r.project_id}`} className="hover:underline">
-                    {r.project_name} <span className="text-muted-foreground">({r.project_code})</span>
-                  </Link>
+            {error && (
+              <TableRow>
+                <TableCell colSpan={9} className="py-8 text-center">
+                  <span className="text-destructive">Nem sikerült betölteni a pénzügyi adatokat.</span>{" "}
+                  <button
+                    type="button"
+                    onClick={() => setRetryKey((k) => k + 1)}
+                    className="underline text-foreground"
+                  >
+                    Újra próbálom
+                  </button>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{r.customer_name ?? "—"}</TableCell>
-                <TableCell>{formatHuf(r.contract_gross)}</TableCell>
-                <TableCell>{formatHuf(r.received_gross)} <span className="text-muted-foreground">/ {formatHuf(r.invoiced_gross)}</span></TableCell>
-                <TableCell>{formatHuf(r.subcontractor_paid_gross)} <span className="text-muted-foreground">/ {formatHuf(r.subcontractor_invoiced_gross)}</span></TableCell>
-                <TableCell className={cn(Number(r.cash_flow_balance) < 0 && "text-destructive")}>
-                  {formatHuf(r.cash_flow_balance)}
-                </TableCell>
-                <TableCell className={cn(Number(r.overdue_receivable) > 0 && "text-destructive")}>
-                  {formatHuf(r.overdue_receivable)}
-                </TableCell>
-                <TableCell className={cn(Number(r.overdue_payable) > 0 && "text-destructive")}>
-                  {formatHuf(r.overdue_payable)}
-                </TableCell>
-                <TableCell><FinanceStatusBadge status={r.finance_status} /></TableCell>
               </TableRow>
-            ))}
-            {rows && rows.length === 0 && (
+            )}
+            {!error && allZero && (
+              <TableRow>
+                <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">Nincs pénzügyi adat</TableCell>
+              </TableRow>
+            )}
+            {!error && !allZero &&
+              (rows ?? []).map((r) => (
+                <TableRow key={r.project_id}>
+                  <TableCell className="font-medium">
+                    <Link href={`/projects/${r.project_id}`} className="hover:underline">
+                      {r.project_name} <span className="text-muted-foreground">({r.project_code})</span>
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{r.customer_name ?? "—"}</TableCell>
+                  <TableCell>{formatHuf(r.contract_gross)}</TableCell>
+                  <TableCell>{formatHuf(r.received_gross)} <span className="text-muted-foreground">/ {formatHuf(r.invoiced_gross)}</span></TableCell>
+                  <TableCell>{formatHuf(r.subcontractor_paid_gross)} <span className="text-muted-foreground">/ {formatHuf(r.subcontractor_invoiced_gross)}</span></TableCell>
+                  <TableCell className={cn(Number(r.cash_flow_balance) < 0 && "text-destructive")}>
+                    {formatHuf(r.cash_flow_balance)}
+                  </TableCell>
+                  <TableCell className={cn(Number(r.overdue_receivable) > 0 && "text-destructive")}>
+                    {formatHuf(r.overdue_receivable)}
+                  </TableCell>
+                  <TableCell className={cn(Number(r.overdue_payable) > 0 && "text-destructive")}>
+                    {formatHuf(r.overdue_payable)}
+                  </TableCell>
+                  <TableCell><FinanceStatusBadge status={r.finance_status} /></TableCell>
+                </TableRow>
+              ))}
+            {!error && !allZero && rows && rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">Nincs megjeleníthető projekt</TableCell>
               </TableRow>
@@ -196,6 +259,8 @@ function OverviewTab({ projects, users }: { projects: ProjectCard[]; users: User
 function TigsTab({ projects, partners }: { projects: ProjectCard[]; partners: Partner[] }) {
   const [tigs, setTigs] = useState<Tig[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [projectId, setProjectId] = useState(ANY);
   const [partnerId, setPartnerId] = useState(ANY);
 
@@ -204,8 +269,18 @@ function TigsTab({ projects, partners }: { projects: ProjectCard[]; partners: Pa
     if (projectId !== ANY) params.project_id = projectId;
     if (partnerId !== ANY) params.partner_id = partnerId;
     setLoading(true);
-    api.financeAllTigs(params).then(setTigs).catch(() => setTigs(null)).finally(() => setLoading(false));
-  }, [projectId, partnerId]);
+    api
+      .financeAllTigs(params)
+      .then((data) => {
+        setTigs(data);
+        setError(false);
+      })
+      .catch(() => {
+        setTigs(null);
+        setError(true);
+      })
+      .finally(() => setLoading(false));
+  }, [projectId, partnerId, retryKey]);
 
   return (
     <div className={loading ? "opacity-60" : ""}>
@@ -245,26 +320,41 @@ function TigsTab({ projects, partners }: { projects: ProjectCard[]; partners: Pa
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(tigs ?? []).map((t) => {
-              const partner = partners.find((p) => p.id === t.partner_id);
-              return (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">
-                    <Link href={`/projects/${t.project_id}`} className="hover:underline">{t.project_name}</Link>
-                  </TableCell>
-                  <TableCell>{partner?.name ?? `#${t.partner_id}`}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(t.period_start).toLocaleDateString("hu-HU")} – {new Date(t.period_end).toLocaleDateString("hu-HU")}
-                  </TableCell>
-                  <TableCell>{formatHuf(t.net_value)} / {formatHuf(t.gross_value)}</TableCell>
-                  <TableCell className={cn(t.invoice_count === 0 && "text-warning-foreground")}>
-                    {t.invoice_count === 0 ? "Nincs számla" : `${formatHuf(t.consumed_amount)} (${t.invoice_count} db)`}
-                  </TableCell>
-                  <TableCell><Badge className={TIG_STATUS_COLORS[t.status] ?? ""}>{TIG_STATUS_LABELS[t.status] ?? t.status}</Badge></TableCell>
-                </TableRow>
-              );
-            })}
-            {tigs && tigs.length === 0 && (
+            {error && (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center">
+                  <span className="text-destructive">Nem sikerült betölteni a TIG-eket.</span>{" "}
+                  <button
+                    type="button"
+                    onClick={() => setRetryKey((k) => k + 1)}
+                    className="underline text-foreground"
+                  >
+                    Újra próbálom
+                  </button>
+                </TableCell>
+              </TableRow>
+            )}
+            {!error &&
+              (tigs ?? []).map((t) => {
+                const partner = partners.find((p) => p.id === t.partner_id);
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell className="font-medium">
+                      <Link href={`/projects/${t.project_id}`} className="hover:underline">{t.project_name}</Link>
+                    </TableCell>
+                    <TableCell>{partner?.name ?? `#${t.partner_id}`}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(t.period_start).toLocaleDateString("hu-HU")} – {new Date(t.period_end).toLocaleDateString("hu-HU")}
+                    </TableCell>
+                    <TableCell>{formatHuf(t.net_value)} / {formatHuf(t.gross_value)}</TableCell>
+                    <TableCell className={cn(t.invoice_count === 0 && "text-warning-foreground")}>
+                      {t.invoice_count === 0 ? "Nincs számla" : `${formatHuf(t.consumed_amount)} (${t.invoice_count} db)`}
+                    </TableCell>
+                    <TableCell><Badge className={TIG_STATUS_COLORS[t.status] ?? ""}>{TIG_STATUS_LABELS[t.status] ?? t.status}</Badge></TableCell>
+                  </TableRow>
+                );
+              })}
+            {!error && tigs && tigs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Nincs TIG</TableCell>
               </TableRow>
@@ -279,6 +369,8 @@ function TigsTab({ projects, partners }: { projects: ProjectCard[]; partners: Pa
 function SubcontractorInvoicesTable({ projects, partners }: { projects: ProjectCard[]; partners: Partner[] }) {
   const [invoices, setInvoices] = useState<SubcontractorInvoice[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [projectId, setProjectId] = useState(ANY);
   const [partnerId, setPartnerId] = useState(ANY);
   const [overdueOnly, setOverdueOnly] = useState(false);
@@ -289,8 +381,18 @@ function SubcontractorInvoicesTable({ projects, partners }: { projects: ProjectC
     if (partnerId !== ANY) params.partner_id = partnerId;
     if (overdueOnly) params.overdue_only = "true";
     setLoading(true);
-    api.financeAllSubcontractorInvoices(params).then(setInvoices).catch(() => setInvoices(null)).finally(() => setLoading(false));
-  }, [projectId, partnerId, overdueOnly]);
+    api
+      .financeAllSubcontractorInvoices(params)
+      .then((data) => {
+        setInvoices(data);
+        setError(false);
+      })
+      .catch(() => {
+        setInvoices(null);
+        setError(true);
+      })
+      .finally(() => setLoading(false));
+  }, [projectId, partnerId, overdueOnly, retryKey]);
 
   return (
     <div className={loading ? "opacity-60" : ""}>
@@ -334,23 +436,38 @@ function SubcontractorInvoicesTable({ projects, partners }: { projects: ProjectC
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(invoices ?? []).map((inv) => {
-              const partner = partners.find((p) => p.id === inv.partner_id);
-              const overdue = inv.due_date < new Date().toISOString().slice(0, 10) && !inv.payment_date;
-              return (
-                <TableRow key={inv.id}>
-                  <TableCell className="font-medium">
-                    <Link href={`/projects/${inv.project_id}`} className="hover:underline">{inv.project_name}</Link>
-                  </TableCell>
-                  <TableCell>{partner?.name ?? `#${inv.partner_id}`}</TableCell>
-                  <TableCell>{inv.invoice_number}{!inv.tig_id && <span className="ml-1 text-[10px] text-warning-foreground">nincs TIG</span>}</TableCell>
-                  <TableCell className={cn(overdue && "text-destructive")}>{new Date(inv.due_date).toLocaleDateString("hu-HU")}</TableCell>
-                  <TableCell>{formatHuf(inv.net_value)} / {formatHuf(inv.gross_value)}</TableCell>
-                  <TableCell><Badge className={SUBCONTRACTOR_INVOICE_STATUS_COLORS[inv.status] ?? ""}>{SUBCONTRACTOR_INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge></TableCell>
-                </TableRow>
-              );
-            })}
-            {invoices && invoices.length === 0 && (
+            {error && (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center">
+                  <span className="text-destructive">Nem sikerült betölteni a számlákat.</span>{" "}
+                  <button
+                    type="button"
+                    onClick={() => setRetryKey((k) => k + 1)}
+                    className="underline text-foreground"
+                  >
+                    Újra próbálom
+                  </button>
+                </TableCell>
+              </TableRow>
+            )}
+            {!error &&
+              (invoices ?? []).map((inv) => {
+                const partner = partners.find((p) => p.id === inv.partner_id);
+                const overdue = inv.due_date < new Date().toISOString().slice(0, 10) && !inv.payment_date;
+                return (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-medium">
+                      <Link href={`/projects/${inv.project_id}`} className="hover:underline">{inv.project_name}</Link>
+                    </TableCell>
+                    <TableCell>{partner?.name ?? `#${inv.partner_id}`}</TableCell>
+                    <TableCell>{inv.invoice_number}{!inv.tig_id && <span className="ml-1 text-[10px] text-warning-foreground">nincs TIG</span>}</TableCell>
+                    <TableCell className={cn(overdue && "text-destructive")}>{new Date(inv.due_date).toLocaleDateString("hu-HU")}</TableCell>
+                    <TableCell>{formatHuf(inv.net_value)} / {formatHuf(inv.gross_value)}</TableCell>
+                    <TableCell><Badge className={SUBCONTRACTOR_INVOICE_STATUS_COLORS[inv.status] ?? ""}>{SUBCONTRACTOR_INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge></TableCell>
+                  </TableRow>
+                );
+              })}
+            {!error && invoices && invoices.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Nincs alvállalkozói számla</TableCell>
               </TableRow>
@@ -365,6 +482,8 @@ function SubcontractorInvoicesTable({ projects, partners }: { projects: ProjectC
 function CustomerInvoicesTable({ projects }: { projects: ProjectCard[] }) {
   const [invoices, setInvoices] = useState<CustomerInvoice[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [projectId, setProjectId] = useState(ANY);
   const [overdueOnly, setOverdueOnly] = useState(false);
 
@@ -373,8 +492,18 @@ function CustomerInvoicesTable({ projects }: { projects: ProjectCard[] }) {
     if (projectId !== ANY) params.project_id = projectId;
     if (overdueOnly) params.overdue_only = "true";
     setLoading(true);
-    api.financeAllCustomerInvoices(params).then(setInvoices).catch(() => setInvoices(null)).finally(() => setLoading(false));
-  }, [projectId, overdueOnly]);
+    api
+      .financeAllCustomerInvoices(params)
+      .then((data) => {
+        setInvoices(data);
+        setError(false);
+      })
+      .catch(() => {
+        setInvoices(null);
+        setError(true);
+      })
+      .finally(() => setLoading(false));
+  }, [projectId, overdueOnly, retryKey]);
 
   return (
     <div className={loading ? "opacity-60" : ""}>
@@ -408,22 +537,37 @@ function CustomerInvoicesTable({ projects }: { projects: ProjectCard[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(invoices ?? []).map((inv) => {
-              const overdue = inv.due_date < new Date().toISOString().slice(0, 10) && !inv.payment_received_date;
-              return (
-                <TableRow key={inv.id}>
-                  <TableCell className="font-medium">
-                    <Link href={`/projects/${inv.project_id}`} className="hover:underline">{inv.project_name}</Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{inv.customer_name ?? "Nincs megrendelő"}</TableCell>
-                  <TableCell>{inv.invoice_number}</TableCell>
-                  <TableCell className={cn(overdue && "text-destructive")}>{new Date(inv.due_date).toLocaleDateString("hu-HU")}</TableCell>
-                  <TableCell>{formatHuf(inv.net_value)} / {formatHuf(inv.gross_value)}</TableCell>
-                  <TableCell><Badge className={CUSTOMER_INVOICE_STATUS_COLORS[inv.status] ?? ""}>{CUSTOMER_INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge></TableCell>
-                </TableRow>
-              );
-            })}
-            {invoices && invoices.length === 0 && (
+            {error && (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center">
+                  <span className="text-destructive">Nem sikerült betölteni a számlákat.</span>{" "}
+                  <button
+                    type="button"
+                    onClick={() => setRetryKey((k) => k + 1)}
+                    className="underline text-foreground"
+                  >
+                    Újra próbálom
+                  </button>
+                </TableCell>
+              </TableRow>
+            )}
+            {!error &&
+              (invoices ?? []).map((inv) => {
+                const overdue = inv.due_date < new Date().toISOString().slice(0, 10) && !inv.payment_received_date;
+                return (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-medium">
+                      <Link href={`/projects/${inv.project_id}`} className="hover:underline">{inv.project_name}</Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{inv.customer_name ?? "Nincs megrendelő"}</TableCell>
+                    <TableCell>{inv.invoice_number}</TableCell>
+                    <TableCell className={cn(overdue && "text-destructive")}>{new Date(inv.due_date).toLocaleDateString("hu-HU")}</TableCell>
+                    <TableCell>{formatHuf(inv.net_value)} / {formatHuf(inv.gross_value)}</TableCell>
+                    <TableCell><Badge className={CUSTOMER_INVOICE_STATUS_COLORS[inv.status] ?? ""}>{CUSTOMER_INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge></TableCell>
+                  </TableRow>
+                );
+              })}
+            {!error && invoices && invoices.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Nincs ügyfél számla</TableCell>
               </TableRow>

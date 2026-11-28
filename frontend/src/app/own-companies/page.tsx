@@ -49,6 +49,8 @@ function toForm(c: OwnCompany): OwnCompanyForm {
 
 export default function OwnCompaniesPage() {
   const [companies, setCompanies] = useState<OwnCompany[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(true);
+  const [companiesError, setCompaniesError] = useState(false);
   const [me, setMe] = useState<User | null>(() => getCachedUser());
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -56,7 +58,13 @@ export default function OwnCompaniesPage() {
   const [form, setForm] = useState<OwnCompanyForm>(emptyForm);
 
   function load() {
-    api.listOwnCompanies().then(setCompanies).catch(() => setCompanies([]));
+    setCompaniesLoading(true);
+    setCompaniesError(false);
+    api
+      .listOwnCompanies()
+      .then((data) => setCompanies(data))
+      .catch(() => setCompaniesError(true))
+      .finally(() => setCompaniesLoading(false));
   }
 
   useEffect(() => {
@@ -100,9 +108,13 @@ export default function OwnCompaniesPage() {
   }
 
   async function toggleActive(company: OwnCompany) {
+    if (company.is_active && !confirm(`Biztosan inaktiválod a "${company.name}" céget?`)) {
+      return;
+    }
     try {
       const updated = await api.updateOwnCompany(company.id, { is_active: !company.is_active });
       setCompanies((prev) => prev.map((c) => (c.id === company.id ? updated : c)));
+      toast.success(updated.is_active ? "Cég aktiválva" : "Cég inaktiválva");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
     }
@@ -155,17 +167,43 @@ export default function OwnCompaniesPage() {
                 </TableCell>
                 <TableCell>
                   {isAdmin && (
-                    <Button variant="ghost" size="icon" className="size-7" onClick={() => openEdit(c)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      aria-label="Cég szerkesztése"
+                      title="Cég szerkesztése"
+                      onClick={() => openEdit(c)}
+                    >
                       <Pencil className="size-3.5" />
                     </Button>
                   )}
                 </TableCell>
               </TableRow>
             ))}
-            {companies.length === 0 && (
+            {!companiesLoading && !companiesError && companies.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                   Nincs felvitt saját cég
+                </TableCell>
+              </TableRow>
+            )}
+            {companiesLoading && (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                  Betöltés...
+                </TableCell>
+              </TableRow>
+            )}
+            {!companiesLoading && companiesError && (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <span>Nem sikerült betölteni a cégeket</span>
+                    <Button variant="outline" size="sm" onClick={load}>
+                      Próbáld újra
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -187,11 +225,21 @@ export default function OwnCompaniesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="oc-tax">Adószám</Label>
-                  <Input id="oc-tax" value={form.tax_number} onChange={(e) => setForm({ ...form, tax_number: e.target.value })} />
+                  <Input
+                    id="oc-tax"
+                    placeholder="12345678-1-42"
+                    value={form.tax_number}
+                    onChange={(e) => setForm({ ...form, tax_number: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="oc-registry">Cégjegyzékszám</Label>
-                  <Input id="oc-registry" value={form.company_registry_number} onChange={(e) => setForm({ ...form, company_registry_number: e.target.value })} />
+                  <Input
+                    id="oc-registry"
+                    placeholder="01-09-123456"
+                    value={form.company_registry_number}
+                    onChange={(e) => setForm({ ...form, company_registry_number: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -204,7 +252,12 @@ export default function OwnCompaniesPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="oc-bank">Bankszámlaszám</Label>
-                <Input id="oc-bank" value={form.bank_account_number} onChange={(e) => setForm({ ...form, bank_account_number: e.target.value })} />
+                <Input
+                  id="oc-bank"
+                  placeholder="12345678-12345678-12345678"
+                  value={form.bank_account_number}
+                  onChange={(e) => setForm({ ...form, bank_account_number: e.target.value })}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -216,7 +269,7 @@ export default function OwnCompaniesPage() {
                   <Input id="oc-rep-title" value={form.representative_title} onChange={(e) => setForm({ ...form, representative_title: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="oc-contact-name">Kapcsolattartó neve</Label>
                   <Input id="oc-contact-name" value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />

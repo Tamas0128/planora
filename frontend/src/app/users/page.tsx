@@ -81,6 +81,7 @@ function UserAvatarCell({ user, onUploaded }: { user: User; onUploaded: () => vo
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
         title="Profilkép módosítása"
+        aria-label="Profilkép módosítása"
         className="rounded-full disabled:opacity-50"
       >
         <Avatar size="sm">
@@ -133,13 +134,25 @@ export default function UsersPage() {
   }
 
   async function toggleActive(user: User) {
-    await api.updateUser(user.id, { is_active: !user.is_active });
-    load();
+    if (user.id === me?.id) return;
+    try {
+      await api.updateUser(user.id, { is_active: !user.is_active });
+      load();
+      toast.success(user.is_active ? "Felhasználó letiltva" : "Felhasználó aktiválva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
   }
 
   async function changeRole(user: User, role: string) {
-    await api.updateUser(user.id, { role });
-    load();
+    if (user.id === me?.id) return;
+    try {
+      await api.updateUser(user.id, { role });
+      load();
+      toast.success("Szerepkör módosítva");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    }
   }
 
   if (me && me.role !== "admin") {
@@ -251,40 +264,63 @@ export default function UsersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>
-                  <UserAvatarCell user={user} onUploaded={load} />
-                </TableCell>
-                <TableCell className="font-medium">{user.username}</TableCell>
-                <TableCell>{user.full_name}</TableCell>
-                <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                <TableCell>
-                  <Select value={user.role} onValueChange={(v) => changeRole(user, v as string)}>
-                    <SelectTrigger size="sm">
-                      <SelectValue>{(v: string) => ROLE_OPTIONS.find(([val]) => val === v)?.[1] ?? v}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  {user.is_active ? (
-                    <Badge className="bg-accent-100 text-accent-700">Aktív</Badge>
-                  ) : (
-                    <Badge variant="secondary">Inaktív</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="link" className="h-auto p-0" onClick={() => toggleActive(user)}>
-                    {user.is_active ? "Letiltás" : "Aktiválás"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {users.map((user) => {
+              const isSelf = user.id === me?.id;
+              return (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <UserAvatarCell user={user} onUploaded={load} />
+                  </TableCell>
+                  <TableCell className="font-medium">{user.username}</TableCell>
+                  <TableCell>{user.full_name}</TableCell>
+                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                  <TableCell>
+                    {isSelf ? (
+                      <span title="A saját szerepkörödet nem módosíthatod">
+                        {ROLE_OPTIONS.find(([val]) => val === user.role)?.[1] ?? user.role}
+                      </span>
+                    ) : (
+                      <Select value={user.role} onValueChange={(v) => changeRole(user, v as string)}>
+                        <SelectTrigger size="sm">
+                          <SelectValue>{(v: string) => ROLE_OPTIONS.find(([val]) => val === v)?.[1] ?? v}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLE_OPTIONS.map(([value, label]) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {user.is_active ? (
+                      <Badge className="bg-accent-100 text-accent-700">Aktív</Badge>
+                    ) : (
+                      <Badge variant="secondary">Inaktív</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {isSelf ? (
+                      <span className="text-xs text-muted-foreground" title="Saját magadat nem tilthatod le">
+                        Saját fiók
+                      </span>
+                    ) : (
+                      <Button
+                        variant="link"
+                        className="h-auto p-0"
+                        onClick={() => {
+                          if (!user.is_active || confirm(`Biztosan letiltod ${user.full_name} felhasználót?`)) {
+                            toggleActive(user);
+                          }
+                        }}
+                      >
+                        {user.is_active ? "Letiltás" : "Aktiválás"}
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {users.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">

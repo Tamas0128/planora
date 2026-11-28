@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Building2, Clock, Gauge, GripVertical, TrendingDown } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -80,6 +80,18 @@ function loadWidgetOrder(): string[] {
   return DEFAULT_WIDGET_ORDER;
 }
 
+/* ─── Kis hibajelzés visszatöltés gombbal (lista panelekhez) ─── */
+function ErrorNotice({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-6 text-center">
+      <p className="text-xs text-critical">Nem sikerült betölteni</p>
+      <button type="button" onClick={onRetry} className="text-[11px] text-primary hover:underline">
+        Újra próbálom
+      </button>
+    </div>
+  );
+}
+
 /* ─── CSS donut chart ────────────────────────────────────────── */
 function DonutChart({ segments, total }: { segments: { color: string; pct: number }[]; total: number }) {
   let acc = 0;
@@ -99,10 +111,11 @@ function DonutChart({ segments, total }: { segments: { color: string; pct: numbe
 
 /* ─── Stat kártya (kompakt info-box) ─────────────────────────── */
 function StatCard({
-  label, value, sub, icon: Icon, iconBg, iconColor, href,
+  label, value, sub, icon: Icon, iconBg, iconColor, href, error, onRetry,
 }: {
   label: string; value: string | number | null; sub?: string;
   icon: LucideIcon; iconBg: string; iconColor: string; href: string;
+  error?: boolean; onRetry?: () => void;
 }) {
   return (
     <Link href={href} className="block">
@@ -111,13 +124,21 @@ function StatCard({
           <Icon className={cn("size-4.5", iconColor)} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-          {value === null ? (
+          <p title={label} className="text-[10px] font-semibold uppercase tracking-wide leading-snug text-muted-foreground">{label}</p>
+          {error ? (
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRetry?.(); }}
+              className="mt-1 block text-left text-[11px] font-semibold text-critical hover:underline"
+            >
+              Nem sikerült betölteni · Újra
+            </button>
+          ) : value === null ? (
             <div className="mt-1 h-5 w-1/2 animate-pulse rounded bg-muted" />
           ) : (
             <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
           )}
-          {sub && <p className="truncate text-[10px] text-muted-foreground">{sub}</p>}
+          {sub && !error && <p className="truncate text-[10px] text-muted-foreground">{sub}</p>}
         </div>
       </Card>
     </Link>
@@ -151,10 +172,15 @@ function SortableWidget({ id, className, children }: { id: string; className?: s
 /* ─── Fő oldal ───────────────────────────────────────────────── */
 export default function DashboardPage() {
   const [stats, setStats]       = useState<DashboardStats | null>(null);
+  const [statsError, setStatsError] = useState(false);
   const [kanban, setKanban]     = useState<Record<string, ProjectCard[]>>({});
+  const [kanbanError, setKanbanError] = useState(false);
   const [projects, setProjects] = useState<ProjectCard[]>([]);
+  const [projectsError, setProjectsError] = useState(false);
   const [tasks, setTasks]       = useState<PrepTask[]>([]);
+  const [tasksError, setTasksError] = useState(false);
   const [digest, setDigest]     = useState<DigestPreview | null>(null);
+  const [digestError, setDigestError] = useState(false);
   const [me, setMe]             = useState<{ full_name: string } | null>(null);
   const [widgetOrder, setWidgetOrder] = useState<string[]>(loadWidgetOrder);
 
@@ -163,14 +189,39 @@ export default function DashboardPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  useEffect(() => {
-    api.dashboardStats().then(setStats).catch(console.error);
-    api.kanban().then(setKanban).catch(console.error);
-    api.projects().then(setProjects).catch(console.error);
-    api.prepCenter("all").then(setTasks).catch(console.error);
-    api.me().then(setMe).catch(console.error);
-    api.digestPreview().then(setDigest).catch(console.error);
+  const fetchStats = useCallback(() => {
+    setStatsError(false);
+    api.dashboardStats().then(setStats).catch(() => setStatsError(true));
   }, []);
+
+  const fetchKanban = useCallback(() => {
+    setKanbanError(false);
+    api.kanban().then(setKanban).catch(() => setKanbanError(true));
+  }, []);
+
+  const fetchProjects = useCallback(() => {
+    setProjectsError(false);
+    api.projects().then(setProjects).catch(() => setProjectsError(true));
+  }, []);
+
+  const fetchTasks = useCallback(() => {
+    setTasksError(false);
+    api.prepCenter("all").then(setTasks).catch(() => setTasksError(true));
+  }, []);
+
+  const fetchDigest = useCallback(() => {
+    setDigestError(false);
+    api.digestPreview().then(setDigest).catch(() => setDigestError(true));
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    fetchKanban();
+    fetchProjects();
+    fetchTasks();
+    api.me().then(setMe).catch(console.error);
+    fetchDigest();
+  }, [fetchStats, fetchKanban, fetchProjects, fetchTasks, fetchDigest]);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -236,21 +287,27 @@ export default function DashboardPage() {
           </Link>
         </div>
         <div className="p-3">
-          <DonutChart segments={donutSegments} total={total} />
-          <div className="mt-3 space-y-1.5">
-            {STATUS_ORDER.map((key) => {
-              const count = kanban[key]?.length ?? 0;
-              const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
-              return (
-                <div key={key} className="flex items-center gap-2 text-[11px]">
-                  <span className="size-2 shrink-0 rounded-full" style={{ background: STATUS_CFG[key].dot }} />
-                  <span className="flex-1 text-foreground/80">{STATUS_CFG[key].label}</span>
-                  <span className="font-semibold text-foreground">{count}</span>
-                  <span className="w-8 text-right text-muted-foreground">{pct}%</span>
-                </div>
-              );
-            })}
-          </div>
+          {kanbanError ? (
+            <ErrorNotice onRetry={fetchKanban} />
+          ) : (
+            <>
+              <DonutChart segments={donutSegments} total={total} />
+              <div className="mt-3 space-y-1.5">
+                {STATUS_ORDER.map((key) => {
+                  const count = kanban[key]?.length ?? 0;
+                  const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
+                  return (
+                    <div key={key} className="flex items-center gap-2 text-[11px]">
+                      <span className="size-2 shrink-0 rounded-full" style={{ background: STATUS_CFG[key].dot }} />
+                      <span className="flex-1 text-foreground/80">{STATUS_CFG[key].label}</span>
+                      <span className="font-semibold text-foreground">{count}</span>
+                      <span className="w-8 text-right text-muted-foreground">{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </Card>
     ),
@@ -263,7 +320,9 @@ export default function DashboardPage() {
           </Link>
         </div>
         <div className="divide-y divide-border">
-          {upcomingProjects.length === 0 ? (
+          {projectsError ? (
+            <ErrorNotice onRetry={fetchProjects} />
+          ) : upcomingProjects.length === 0 ? (
             <p className="py-6 text-center text-xs text-muted-foreground">Nincs projekt</p>
           ) : (
             upcomingProjects.map((p) => {
@@ -300,32 +359,38 @@ export default function DashboardPage() {
             Mind <ArrowUpRight className="size-3" />
           </Link>
         </div>
-        {overdueTasks.length > 0 && (
+        {!tasksError && overdueTasks.length > 0 && (
           <div className="border-b border-critical-bg bg-critical-bg/60 px-3 py-1">
             <p className="text-[10px] font-bold uppercase tracking-wide text-destructive">Lejárt · {overdueTasks.length}</p>
           </div>
         )}
         <div className="divide-y divide-border">
-          {[...overdueTasks, ...activeTasks].map((t) => (
-            <Link
-              key={`${t.project_id}-${t.activity_id}`}
-              href={`/projects/${t.project_id}`}
-              className={cn(
-                "flex items-start gap-2 px-2.5 py-1.5 hover:bg-muted transition-colors",
-                t.is_overdue ? "border-l-[2px] border-l-destructive" : "border-l-[2px] border-l-border",
+          {tasksError ? (
+            <ErrorNotice onRetry={fetchTasks} />
+          ) : (
+            <>
+              {[...overdueTasks, ...activeTasks].map((t) => (
+                <Link
+                  key={`${t.project_id}-${t.activity_id}`}
+                  href={`/projects/${t.project_id}`}
+                  className={cn(
+                    "flex items-start gap-2 px-2.5 py-1.5 hover:bg-muted transition-colors",
+                    t.is_overdue ? "border-l-[2px] border-l-destructive" : "border-l-[2px] border-l-border",
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-semibold text-foreground">{t.activity_name}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{t.project_name}</p>
+                  </div>
+                  <Badge className={cn("mt-0.5 shrink-0 px-1.5 py-0 text-[9px]", TASK_STATUS[t.status]?.cls ?? "bg-neutral-100 text-neutral-700")}>
+                    {TASK_STATUS[t.status]?.label ?? t.status}
+                  </Badge>
+                </Link>
+              ))}
+              {tasks.length === 0 && (
+                <p className="py-6 text-center text-xs text-muted-foreground">Nincs feladat</p>
               )}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-semibold text-foreground">{t.activity_name}</p>
-                <p className="truncate text-[10px] text-muted-foreground">{t.project_name}</p>
-              </div>
-              <Badge className={cn("mt-0.5 shrink-0 px-1.5 py-0 text-[9px]", TASK_STATUS[t.status]?.cls ?? "bg-neutral-100 text-neutral-700")}>
-                {TASK_STATUS[t.status]?.label ?? t.status}
-              </Badge>
-            </Link>
-          ))}
-          {tasks.length === 0 && (
-            <p className="py-6 text-center text-xs text-muted-foreground">Nincs feladat</p>
+            </>
           )}
         </div>
       </Card>
@@ -336,7 +401,9 @@ export default function DashboardPage() {
           <h2 className="text-[13px] font-semibold text-foreground">Napi összefoglaló</h2>
         </div>
         <div className="max-h-[280px] space-y-3 overflow-y-auto p-3">
-          {!digest || (digest.overdue.length === 0 && digest.upcoming.length === 0) ? (
+          {digestError ? (
+            <ErrorNotice onRetry={fetchDigest} />
+          ) : !digest || (digest.overdue.length === 0 && digest.upcoming.length === 0) ? (
             <p className="py-6 text-center text-xs text-muted-foreground">Nincs lejárt vagy közelgő előkészítés</p>
           ) : (
             <>
@@ -391,7 +458,9 @@ export default function DashboardPage() {
             <span className="flex-1 text-right">+90 nap</span>
           </div>
           <div className="space-y-1.5">
-            {ganttProjects.length === 0 ? (
+            {projectsError ? (
+              <ErrorNotice onRetry={fetchProjects} />
+            ) : ganttProjects.length === 0 ? (
               <p className="py-6 text-center text-xs text-muted-foreground">Nincs közelgő projekt</p>
             ) : (
               ganttProjects.map((p) => (
@@ -405,10 +474,10 @@ export default function DashboardPage() {
                       style={{ width: `${p.pct}%` }}
                       title={`${p.days} nap múlva`}
                     />
-                    <span className="absolute right-1.5 top-0 flex h-full items-center text-[9px] font-semibold text-white mix-blend-overlay">
-                      {p.days}n
-                    </span>
                   </div>
+                  <span className="w-7 shrink-0 text-right text-[9px] font-semibold text-muted-foreground group-hover:text-foreground">
+                    {p.days}n
+                  </span>
                 </Link>
               ))
             )}
@@ -430,27 +499,45 @@ export default function DashboardPage() {
 
       {/* ── 4 Stat kártya ── */}
       <div className="mb-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <StatCard label="Aktív projekt"      value={stats?.total_projects ?? null}    sub="Összesen"            icon={Building2}    iconBg="bg-accent"       iconColor="text-accent-foreground" href="/projects" />
-        <StatCard label="Lejárt feladat"     value={stats?.overdue_tasks ?? null}     sub="Azonnal"             icon={Clock}        iconBg="bg-critical-bg"  iconColor="text-critical"          href="/prep-center?filter=overdue" />
-        <StatCard label="Csúszó projekt"     value={stats?.slipping_projects ?? null} sub="Határidőn túl"       icon={TrendingDown} iconBg="bg-warning-bg"   iconColor="text-warning-foreground" href="/projects" />
-        <StatCard label="Átlag teljesítmény" value={avgCompletion !== null ? `${avgCompletion}%` : null} sub="Összesen" icon={Gauge} iconBg="bg-neutral-100" iconColor="text-neutral-700" href="/projects" />
+        <StatCard label="Aktív projekt"      value={stats?.total_projects ?? null}    sub="Összesen"            icon={Building2}    iconBg="bg-accent"       iconColor="text-accent-foreground" href="/projects" error={statsError} onRetry={fetchStats} />
+        <StatCard label="Lejárt feladat"     value={stats?.overdue_tasks ?? null}     sub="Azonnal"             icon={Clock}        iconBg="bg-critical-bg"  iconColor="text-critical"          href="/prep-center?filter=overdue" error={statsError} onRetry={fetchStats} />
+        <StatCard label="Csúszó projekt"     value={stats?.slipping_projects ?? null} sub="Határidőn túl"       icon={TrendingDown} iconBg="bg-warning-bg"   iconColor="text-warning-foreground" href="/projects" error={statsError} onRetry={fetchStats} />
+        <StatCard label="Átlag teljesítmény" value={avgCompletion !== null ? `${avgCompletion}%` : null} sub="Összesen" icon={Gauge} iconBg="bg-neutral-100" iconColor="text-neutral-700" href="/projects" error={kanbanError} onRetry={fetchKanban} />
       </div>
 
       {/* ── Vezetői KPI-k ── */}
       <div className="mb-4 grid grid-cols-3 gap-2.5">
         <Card className="p-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Határidőre készül</p>
-          <p className="mt-1 text-xl font-bold leading-tight text-foreground">
-            {stats ? `${stats.on_time_delivery_pct}%` : "…"}
-          </p>
+          {statsError ? (
+            <button type="button" onClick={fetchStats} className="mt-1 block text-left text-[11px] font-semibold text-critical hover:underline">
+              Nem sikerült betölteni · Újra
+            </button>
+          ) : (
+            <p className="mt-1 text-xl font-bold leading-tight text-foreground">
+              {stats ? `${stats.on_time_delivery_pct}%` : "…"}
+            </p>
+          )}
         </Card>
         <Card className="p-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Havi átadások</p>
-          <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats?.handovers_this_month ?? "…"}</p>
+          {statsError ? (
+            <button type="button" onClick={fetchStats} className="mt-1 block text-left text-[11px] font-semibold text-critical hover:underline">
+              Nem sikerült betölteni · Újra
+            </button>
+          ) : (
+            <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats?.handovers_this_month ?? "…"}</p>
+          )}
         </Card>
         <Card className="p-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Nyitott előkészítés</p>
-          <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats?.open_prep_tasks_total ?? "…"}</p>
+          {statsError ? (
+            <button type="button" onClick={fetchStats} className="mt-1 block text-left text-[11px] font-semibold text-critical hover:underline">
+              Nem sikerült betölteni · Újra
+            </button>
+          ) : (
+            <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats?.open_prep_tasks_total ?? "…"}</p>
+          )}
         </Card>
       </div>
 

@@ -414,8 +414,11 @@ export default function ProjectsPage() {
               return (
                 <tr
                   key={p.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => router.push(`/projects/${p.id}`)}
-                  className="cursor-pointer transition-colors hover:bg-muted"
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && router.push(`/projects/${p.id}`)}
+                  className="cursor-pointer transition-colors hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
                 >
                   <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
                     <input

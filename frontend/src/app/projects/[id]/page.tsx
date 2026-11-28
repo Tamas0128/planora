@@ -1295,18 +1295,18 @@ export default function ProjectDetailPage() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-        <TabsList>
-          <TabsTrigger value="info">Áttekintés</TabsTrigger>
-          <TabsTrigger value="schedule">Ütemterv</TabsTrigger>
-          <TabsTrigger value="documents">Dokumentumok</TabsTrigger>
-          <TabsTrigger value="photos">Fotók</TabsTrigger>
-          <TabsTrigger value="prep">Előkészítés</TabsTrigger>
-          <TabsTrigger value="participants">Résztvevők</TabsTrigger>
-          <TabsTrigger value="log">Napló</TabsTrigger>
-          <TabsTrigger value="finance">Pénzügy</TabsTrigger>
-          <TabsTrigger value="cost-estimate">Költségbecslés</TabsTrigger>
-          <TabsTrigger value="trade-items">Munkanemek</TabsTrigger>
-          <TabsTrigger value="specs">Műszaki adatlap</TabsTrigger>
+        <TabsList className="max-w-full justify-start overflow-x-auto">
+          <TabsTrigger value="info" className="flex-none">Áttekintés</TabsTrigger>
+          <TabsTrigger value="schedule" className="flex-none">Ütemterv</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-none">Dokumentumok</TabsTrigger>
+          <TabsTrigger value="photos" className="flex-none">Fotók</TabsTrigger>
+          <TabsTrigger value="prep" className="flex-none">Előkészítés</TabsTrigger>
+          <TabsTrigger value="participants" className="flex-none">Résztvevők</TabsTrigger>
+          <TabsTrigger value="log" className="flex-none">Napló</TabsTrigger>
+          <TabsTrigger value="finance" className="flex-none">Pénzügy</TabsTrigger>
+          <TabsTrigger value="cost-estimate" className="flex-none">Költségbecslés</TabsTrigger>
+          <TabsTrigger value="trade-items" className="flex-none">Munkanemek</TabsTrigger>
+          <TabsTrigger value="specs" className="flex-none">Műszaki adatlap</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="mt-4">

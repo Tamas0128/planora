@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlarmClock, Building2, FileClock, ListChecks } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
@@ -24,12 +24,25 @@ const TYPE_DOT: Record<string, string> = {
 };
 const TYPE_ORDER = ["person", "company", "sole_proprietor"];
 
+/* ─── Kis hibajelzés visszatöltés gombbal (lista panelekhez) ─── */
+function ErrorNotice({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-6 text-center">
+      <p className="text-xs text-critical">Nem sikerült betölteni</p>
+      <button type="button" onClick={onRetry} className="text-[11px] text-primary hover:underline">
+        Újra próbálom
+      </button>
+    </div>
+  );
+}
+
 /* ─── Stat kártya (kompakt info-box, a sima Dashboard mintájára) ─── */
 function StatCard({
-  label, value, sub, icon: Icon, iconBg, iconColor, href,
+  label, value, sub, icon: Icon, iconBg, iconColor, href, error, onRetry,
 }: {
   label: string; value: string | number | null; sub?: string;
   icon: LucideIcon; iconBg: string; iconColor: string; href: string;
+  error?: boolean; onRetry?: () => void;
 }) {
   return (
     <Link href={href} className="block">
@@ -38,13 +51,21 @@ function StatCard({
           <Icon className={cn("size-4.5", iconColor)} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-          {value === null ? (
+          <p title={label} className="text-[10px] font-semibold uppercase tracking-wide leading-snug text-muted-foreground">{label}</p>
+          {error ? (
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRetry?.(); }}
+              className="mt-1 block text-left text-[11px] font-semibold text-critical hover:underline"
+            >
+              Nem sikerült betölteni · Újra
+            </button>
+          ) : value === null ? (
             <div className="mt-1 h-5 w-1/2 animate-pulse rounded bg-muted" />
           ) : (
             <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
           )}
-          {sub && <p className="truncate text-[10px] text-muted-foreground">{sub}</p>}
+          {sub && !error && <p title={sub} className="text-[10px] leading-snug text-muted-foreground">{sub}</p>}
         </div>
       </Card>
     </Link>
@@ -53,19 +74,38 @@ function StatCard({
 
 export default function CrmDashboardPage() {
   const [stats, setStats] = useState<CrmDashboardStats | null>(null);
+  const [statsError, setStatsError] = useState(false);
   const [customers, setCustomers] = useState<CrmCustomer[]>([]);
+  const [customersError, setCustomersError] = useState(false);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
+  const [tasksError, setTasksError] = useState(false);
   const [contracts, setContracts] = useState<CrmContract[]>([]);
+  const [contractsError, setContractsError] = useState(false);
   const [me, setMe] = useState<{ full_name: string } | null>(null);
 
-  useEffect(() => {
-    api.crmDashboardStats().then(setStats).catch(console.error);
-    api.crmCustomers().then(setCustomers).catch(console.error);
-    api.me().then(setMe).catch(console.error);
-    // Both already scoped by the backend the same way the standalone list
-    // endpoints are (owner-chain for tasks, customer-owner for contracts) —
-    // reused as-is, no dashboard-specific endpoint needed.
-    api.crmTasks({ status: "open" }).then((t) => setTasks(t.slice(0, 6))).catch(console.error);
+  const fetchStats = useCallback(() => {
+    setStatsError(false);
+    api.crmDashboardStats().then(setStats).catch(() => setStatsError(true));
+  }, []);
+
+  const fetchCustomers = useCallback(() => {
+    setCustomersError(false);
+    api.crmCustomers().then(setCustomers).catch(() => setCustomersError(true));
+  }, []);
+
+  const fetchTasks = useCallback(() => {
+    setTasksError(false);
+    // Already scoped by the backend the same way the standalone list
+    // endpoint is (owner-chain for tasks) — reused as-is, no
+    // dashboard-specific endpoint needed.
+    api.crmTasks({ status: "open" }).then((t) => setTasks(t.slice(0, 6))).catch(() => setTasksError(true));
+  }, []);
+
+  const fetchContracts = useCallback(() => {
+    setContractsError(false);
+    // Already scoped by the backend the same way the standalone list
+    // endpoint is (customer-owner for contracts) — reused as-is, no
+    // dashboard-specific endpoint needed.
     api.crmContracts({ status: "active" }).then((all) => {
       const today = Date.now();
       const horizon = today + 30 * 86400000;
@@ -76,8 +116,16 @@ export default function CrmDashboardPage() {
         })
         .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
       setContracts(expiring.slice(0, 6));
-    }).catch(console.error);
+    }).catch(() => setContractsError(true));
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+    fetchCustomers();
+    api.me().then(setMe).catch(console.error);
+    fetchTasks();
+    fetchContracts();
+  }, [fetchStats, fetchCustomers, fetchTasks, fetchContracts]);
 
   const recentCustomers = useMemo(
     () => [...customers].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8),
@@ -96,24 +144,48 @@ export default function CrmDashboardPage() {
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <StatCard label="Ügyfelek összesen" value={stats?.total_customers ?? null} sub="Összesen" icon={Building2} iconBg="bg-accent" iconColor="text-accent-foreground" href="/crm/customers" />
-        <StatCard label="Nyitott feladatok" value={stats?.open_tasks ?? null} sub="Saját" icon={ListChecks} iconBg="bg-warning-bg" iconColor="text-warning-foreground" href="/crm/customers" />
-        <StatCard label="Lejáró szerződések" value={stats?.expiring_contracts_30d ?? null} sub="30 napon belül" icon={AlarmClock} iconBg="bg-critical-bg" iconColor="text-critical" href="/crm/customers" />
-        <StatCard label="Függő ajánlatok" value={stats?.pending_quotes ?? null} sub="Kiküldve / jóváhagyásra vár" icon={FileClock} iconBg="bg-neutral-100" iconColor="text-neutral-700" href="/crm/customers" />
+        <StatCard label="Ügyfelek összesen" value={stats?.total_customers ?? null} sub="Összesen" icon={Building2} iconBg="bg-accent" iconColor="text-accent-foreground" href="/crm/customers" error={statsError} onRetry={fetchStats} />
+        <StatCard label="Nyitott feladatok" value={stats?.open_tasks ?? null} sub="Saját" icon={ListChecks} iconBg="bg-warning-bg" iconColor="text-warning-foreground" href="/crm/customers" error={statsError} onRetry={fetchStats} />
+        <StatCard label="Lejáró szerződések" value={stats?.expiring_contracts_30d ?? null} sub="30 napon belül" icon={AlarmClock} iconBg="bg-critical-bg" iconColor="text-critical" href="/crm/customers" error={statsError} onRetry={fetchStats} />
+        <StatCard label="Függő ajánlatok" value={stats?.pending_quotes ?? null} sub="Kiküldve / jóváhagyásra vár" icon={FileClock} iconBg="bg-neutral-100" iconColor="text-neutral-700" href="/crm/customers" error={statsError} onRetry={fetchStats} />
       </div>
 
       <div className="mb-4 grid grid-cols-3 gap-2.5">
         <Card className="p-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Aktív ügyfelek</p>
-          <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats?.active_customers ?? "…"}</p>
+          {statsError ? (
+            <button type="button" onClick={fetchStats} className="mt-1 block text-left text-[11px] font-semibold text-critical hover:underline">
+              Nem sikerült betölteni · Újra
+            </button>
+          ) : stats ? (
+            <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats.active_customers}</p>
+          ) : (
+            <div className="mt-1 h-5 w-1/2 animate-pulse rounded bg-muted" />
+          )}
         </Card>
         <Card className="p-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Új ügyfelek (30 nap)</p>
-          <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats?.new_customers_30d ?? "…"}</p>
+          {statsError ? (
+            <button type="button" onClick={fetchStats} className="mt-1 block text-left text-[11px] font-semibold text-critical hover:underline">
+              Nem sikerült betölteni · Újra
+            </button>
+          ) : stats ? (
+            <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats.new_customers_30d}</p>
+          ) : (
+            <div className="mt-1 h-5 w-1/2 animate-pulse rounded bg-muted" />
+          )}
         </Card>
         <Card className="p-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Aktív szerződések</p>
-          <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats?.active_contracts ?? "…"}</p>
+          {statsError ? (
+            <button type="button" onClick={fetchStats} className="mt-1 block text-left text-[11px] font-semibold text-critical hover:underline">
+              Nem sikerült betölteni · Újra
+            </button>
+          ) : stats ? (
+            <p className="mt-1 text-xl font-bold leading-tight text-foreground">{stats.active_contracts}</p>
+          ) : (
+            <div className="mt-1 h-5 w-1/2 animate-pulse rounded bg-muted" />
+          )}
         </Card>
       </div>
 
@@ -124,7 +196,9 @@ export default function CrmDashboardPage() {
             <Link href="/crm/customers" className="text-[11px] text-primary hover:underline">Összes</Link>
           </div>
           <div className="p-3">
-            {!stats || totalByType === 0 ? (
+            {statsError ? (
+              <ErrorNotice onRetry={fetchStats} />
+            ) : !stats || totalByType === 0 ? (
               <p className="py-6 text-center text-xs text-muted-foreground">Nincs ügyfél</p>
             ) : (
               <div className="space-y-1.5">
@@ -151,7 +225,9 @@ export default function CrmDashboardPage() {
             <Link href="/crm/customers" className="flex items-center gap-0.5 text-[11px] text-primary hover:underline">Mind</Link>
           </div>
           <div className="divide-y divide-border">
-            {recentCustomers.length === 0 ? (
+            {customersError ? (
+              <ErrorNotice onRetry={fetchCustomers} />
+            ) : recentCustomers.length === 0 ? (
               <p className="py-6 text-center text-xs text-muted-foreground">Nincs ügyfél</p>
             ) : (
               recentCustomers.map((c) => (
@@ -177,7 +253,9 @@ export default function CrmDashboardPage() {
             <h2 className="text-[13px] font-semibold text-foreground">Nyitott feladatok</h2>
           </div>
           <div className="divide-y divide-border">
-            {tasks.length === 0 ? (
+            {tasksError ? (
+              <ErrorNotice onRetry={fetchTasks} />
+            ) : tasks.length === 0 ? (
               <p className="py-6 text-center text-xs text-muted-foreground">Nincs nyitott feladat</p>
             ) : (
               tasks.slice(0, 6).map((t) => (
@@ -200,7 +278,9 @@ export default function CrmDashboardPage() {
             <span className="text-[10px] text-muted-foreground">30 napon belül</span>
           </div>
           <div className="divide-y divide-border">
-            {contracts.length === 0 ? (
+            {contractsError ? (
+              <ErrorNotice onRetry={fetchContracts} />
+            ) : contracts.length === 0 ? (
               <p className="py-6 text-center text-xs text-muted-foreground">Nincs lejáró szerződés</p>
             ) : (
               contracts.slice(0, 6).map((c) => (

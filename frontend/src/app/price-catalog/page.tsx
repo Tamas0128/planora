@@ -158,6 +158,7 @@ export default function PriceCatalogPage() {
   }
 
   async function handleDelete(item: PriceCatalogItem) {
+    if (!window.confirm("Biztosan törlöd ezt a tételt?")) return;
     try {
       await api.deletePriceCatalogItem(item.id);
       setItems((prev) => prev.filter((i) => i.id !== item.id));
@@ -230,7 +231,7 @@ export default function PriceCatalogPage() {
 
   return (
     <AppLayout>
-      <div className="mb-3 flex items-center justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-lg font-heading font-bold text-foreground">Tételes ártábla</h1>
           <p className="text-xs text-muted-foreground">
@@ -238,7 +239,7 @@ export default function PriceCatalogPage() {
             mennyiségi egység, anyag/díj egységár, munkanem szerint csoportosítva.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" render={<a href="/csaladi_haz_munkatetel_katalogus.xlsx" download />}>
             <Download className="size-3.5" /> Munkatétel-katalógus letöltése
           </Button>
@@ -288,7 +289,9 @@ export default function PriceCatalogPage() {
               <TableHead>Összesen (Ft)</TableHead>
               <TableHead>Forrás</TableHead>
               <TableHead>Aktív</TableHead>
-              <TableHead></TableHead>
+              <TableHead>
+                <span className="sr-only">Műveletek</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -318,13 +321,20 @@ export default function PriceCatalogPage() {
                 <TableCell>
                   {canEdit && (
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="size-7" onClick={() => openEdit(item)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7"
+                        aria-label="Szerkesztés"
+                        onClick={() => openEdit(item)}
+                      >
                         <Pencil className="size-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="size-7 hover:text-destructive"
+                        aria-label="Törlés"
                         onClick={() => handleDelete(item)}
                       >
                         <Trash2 className="size-3.5" />
@@ -337,7 +347,30 @@ export default function PriceCatalogPage() {
             {items.length === 0 && (
               <TableRow>
                 <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
-                  Nincs a szűrésnek megfelelő tétel
+                  {search || chapterFilter !== "all" ? (
+                    <div className="space-y-1">
+                      <p>Nincs a szűrésnek megfelelő tétel</p>
+                      <button
+                        type="button"
+                        className="text-xs underline hover:text-foreground"
+                        onClick={() => {
+                          setSearch("");
+                          setChapterFilter("all");
+                        }}
+                      >
+                        Szűrők törlése
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p>Még nincs tétel a katalógusban</p>
+                      {canEdit && (
+                        <p className="text-xs">
+                          Adj hozzá egyet az "Új tétel" gombbal, vagy importálj TERC-árlistát.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             )}

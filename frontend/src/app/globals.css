@@ -50,7 +50,11 @@
   --popover: #fdf6ee;
   --popover-foreground: #2b271f;
 
-  --primary: #6f7e56;
+  /* Darkened from #6f7e56 — that shade only cleared 4.1:1 against
+     --primary-foreground, short of the 4.5:1 WCAG AA floor for body text
+     (confirmed by Impeccable's detector on every page in the Nov 2026
+     critique sweep). Same hue, just dark enough to clear AA (~4.6:1). */
+  --primary: #67754f;
   --primary-foreground: #faf6ee;
   --secondary: var(--color-neutral-200);
   --secondary-foreground: #2b271f;

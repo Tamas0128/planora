@@ -40,13 +40,26 @@ const emptyForm = {
 
 export default function DocumentTemplatesPage() {
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [me, setMe] = useState<User | null>(() => getCachedUser());
   const [showNew, setShowNew] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
 
   function loadTemplates() {
-    api.listDocumentTemplates().then(setTemplates).catch(() => setTemplates([]));
+    return api
+      .listDocumentTemplates()
+      .then((data) => {
+        setTemplates(data);
+        setLoadError(false);
+      })
+      .catch(() => {
+        setTemplates([]);
+        setLoadError(true);
+      })
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {
@@ -57,11 +70,20 @@ export default function DocumentTemplatesPage() {
   const isAdmin = me?.role === "admin";
 
   async function toggleActive(template: DocumentTemplate) {
+    if (template.is_active) {
+      const confirmed = window.confirm(
+        `Biztosan inaktiválod a "${template.name}" sablont? A dokumentumgenerálás más részei is használhatják ezt a sablont.`
+      );
+      if (!confirmed) return;
+    }
+    setTogglingId(template.id);
     try {
       await api.updateDocumentTemplate(template.id, { is_active: !template.is_active });
-      loadTemplates();
+      await loadTemplates();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Hiba a mentés során");
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -107,56 +129,63 @@ export default function DocumentTemplatesPage() {
         )}
       </div>
 
-      <Card className="overflow-x-auto py-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Család</TableHead>
-              <TableHead>Altípus</TableHead>
-              <TableHead>Épülettípus</TableHead>
-              <TableHead>Pénznem</TableHead>
-              <TableHead>Elektronikus</TableHead>
-              <TableHead>Csúszás-variáns</TableHead>
-              <TableHead>Név</TableHead>
-              <TableHead>Verzió</TableHead>
-              <TableHead>Aktív</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {templates.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell className="text-xs">{DOCUMENT_FAMILY_LABELS[t.family] ?? t.family}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{TIG_DOCUMENT_SUBTYPE_LABELS[t.doc_subtype] ?? t.doc_subtype}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{t.building_type ? (BUILDING_LABELS[t.building_type] ?? t.building_type) : "Bármely"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{t.currency ?? "Bármely"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{t.is_electronic ? "Igen" : "—"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{t.is_delay_variant ? "Igen" : "—"}</TableCell>
-                <TableCell className="text-xs font-medium">{t.name}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">v{t.version}</TableCell>
-                <TableCell>
-                  {isAdmin ? (
-                    <Checkbox
-                      checked={t.is_active}
-                      aria-label="Sablon aktív"
-                      onCheckedChange={() => toggleActive(t)}
-                    />
-                  ) : (
-                    <Badge variant={t.is_active ? "default" : "outline"} className="text-xs">
-                      {t.is_active ? "Aktív" : "Inaktív"}
-                    </Badge>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-            {templates.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
-                  Nincs feltöltött sablon
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+      <Card className="py-0">
+        {(loading || loadError || templates.length === 0) && (
+          <div className="py-8 text-center text-xs text-muted-foreground">
+            {loading
+              ? "Sablonok betöltése..."
+              : loadError
+                ? "Hiba a sablonok betöltése során. Próbáld újra később."
+                : "Nincs feltöltött sablon"}
+          </div>
+        )}
+        {!loading && !loadError && templates.length > 0 && (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Család</TableHead>
+                  <TableHead>Altípus</TableHead>
+                  <TableHead>Épülettípus</TableHead>
+                  <TableHead>Pénznem</TableHead>
+                  <TableHead>Elektronikus</TableHead>
+                  <TableHead>Csúszás-variáns</TableHead>
+                  <TableHead>Név</TableHead>
+                  <TableHead>Verzió</TableHead>
+                  <TableHead>Aktív</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {templates.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell className="text-xs">{DOCUMENT_FAMILY_LABELS[t.family] ?? t.family}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{TIG_DOCUMENT_SUBTYPE_LABELS[t.doc_subtype] ?? t.doc_subtype}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{t.building_type ? (BUILDING_LABELS[t.building_type] ?? t.building_type) : "Bármely"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{t.currency ?? "Bármely"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{t.is_electronic ? "Igen" : "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{t.is_delay_variant ? "Igen" : "—"}</TableCell>
+                    <TableCell className="text-xs font-medium">{t.name}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">v{t.version}</TableCell>
+                    <TableCell>
+                      {isAdmin ? (
+                        <Checkbox
+                          checked={t.is_active}
+                          aria-label="Sablon aktív"
+                          disabled={togglingId === t.id}
+                          onCheckedChange={() => toggleActive(t)}
+                        />
+                      ) : (
+                        <Badge variant={t.is_active ? "default" : "outline"} className="text-xs">
+                          {t.is_active ? "Aktív" : "Inaktív"}
+                        </Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </Card>
 
       <Dialog open={showNew} onOpenChange={setShowNew}>
@@ -167,7 +196,7 @@ export default function DocumentTemplatesPage() {
               <div className="space-y-1.5">
                 <Label>Dokumentumcsalád</Label>
                 <Select value={form.family} onValueChange={(v) => setForm({ ...form, family: v as string })}>
-                  <SelectTrigger className="w-full"><SelectValue>{(v: string) => DOCUMENT_FAMILY_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {FAMILY_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
                   </SelectContent>
@@ -176,7 +205,7 @@ export default function DocumentTemplatesPage() {
               <div className="space-y-1.5">
                 <Label>Altípus</Label>
                 <Select value={form.doc_subtype} onValueChange={(v) => setForm({ ...form, doc_subtype: v as string })}>
-                  <SelectTrigger className="w-full"><SelectValue>{(v: string) => TIG_DOCUMENT_SUBTYPE_LABELS[v] ?? v}</SelectValue></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {SUBTYPE_OPTIONS.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
                   </SelectContent>
@@ -187,7 +216,7 @@ export default function DocumentTemplatesPage() {
                 <Label>Épülettípus</Label>
                 <Select value={form.building_type || "any"} onValueChange={(v) => setForm({ ...form, building_type: v === "any" ? "" : (v as string) })}>
                   <SelectTrigger className="w-full">
-                    <SelectValue>{(v: string) => (v === "any" ? "Bármely (catch-all)" : BUILDING_LABELS[v] ?? v)}</SelectValue>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">Bármely (catch-all)</SelectItem>
@@ -199,7 +228,7 @@ export default function DocumentTemplatesPage() {
                 <Label>Pénznem</Label>
                 <Select value={form.currency || "any"} onValueChange={(v) => setForm({ ...form, currency: v === "any" ? "" : (v as string) })}>
                   <SelectTrigger className="w-full">
-                    <SelectValue>{(v: string) => (v === "any" ? "Bármely (catch-all)" : v)}</SelectValue>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">Bármely (catch-all)</SelectItem>
